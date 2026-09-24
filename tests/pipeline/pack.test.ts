@@ -75,7 +75,7 @@ describe("packMapFolder on nested folders", () => {
     fs.cpSync(FIXTURE_MAP, dir, { recursive: true });
     fs.mkdirSync(path.join(dir, "war3mapImported", "ui", "icons"), { recursive: true });
     fs.writeFileSync(path.join(dir, "war3mapImported", "ui", "icons", "a.blp"), new Uint8Array([1, 2, 3]));
-    fs.mkdirSync(path.join(dir, "_Locales"));
+    fs.mkdirSync(path.join(dir, "_Locales"), { recursive: true }); // the editor leaves it empty; git drops it
 
     const names = listMapFiles(dir);
     expect(names).toContain("war3mapImported\\ui\\icons\\a.blp");
