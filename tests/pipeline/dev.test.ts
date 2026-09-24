@@ -82,8 +82,8 @@ describe("watchFolders", () => {
 class DevProcess {
   output = "";
   private readonly child: ChildProcess;
-  constructor(cwd: string) {
-    this.child = spawn(process.execPath, ["scripts/dev.ts"], { cwd, stdio: ["ignore", "pipe", "pipe"] });
+  constructor(cwd: string, args: string[] = []) {
+    this.child = spawn(process.execPath, ["scripts/dev.ts", ...args], { cwd, stdio: ["ignore", "pipe", "pipe"] });
     this.child.stdout!.on("data", (chunk: Buffer) => (this.output += chunk.toString("utf8")));
     this.child.stderr!.on("data", (chunk: Buffer) => (this.output += chunk.toString("utf8")));
   }
@@ -99,12 +99,17 @@ class DevProcess {
       await sleep(50);
     }
   }
+  /** Resolves with the exit code once the process has exited and its output is drained. */
+  exited(): Promise<number | null> {
+    if (this.child.exitCode !== null && this.child.stdout!.readableEnded && this.child.stderr!.readableEnded) return Promise.resolve(this.child.exitCode);
+    return new Promise((resolve) => this.child.on("close", (code) => resolve(code)));
+  }
   stop(): void {
     this.child.kill();
   }
 }
 
-const BUILT = /^Built dist[\\/]reforged-ts-template\.w3m \(\d+ bytes\)$/m;
+const BUILT = /^Built dist[\\/]reforged-ts-template\.w3m \(\d+ bytes, mode dev\)$/m;
 const FAILED = /^Build failed: /m;
 
 describe("node scripts/dev.ts (pnpm dev)", () => {
@@ -119,7 +124,7 @@ describe("node scripts/dev.ts (pnpm dev)", () => {
 
     // The build's own writes (output folder) and generated files do not retrigger: no loop.
     fs.mkdirSync(path.join(project, "src", "generated"), { recursive: true });
-    fs.writeFileSync(path.join(project, "src", "generated", "env.ts"), "export const DEV_MODE = true;\n");
+    fs.writeFileSync(path.join(project, "src", "generated", "env.ts"), "export const devMode: boolean = true;\n");
     fs.writeFileSync(path.join(project, "dist", "scratch.txt"), "x");
     await sleep(1500);
     expect(dev.count(BUILT)).toBe(1);
@@ -150,5 +155,20 @@ describe("node scripts/dev.ts (pnpm dev)", () => {
     await sleep(1000);
     expect(dev.count(BUILT)).toBe(4);
     expect(dev.count(FAILED)).toBe(1);
+  });
+
+  it("takes --mode from the command line like pnpm build", async () => {
+    const project = copyProject();
+    dev = new DevProcess(project, ["--mode", "release"]);
+    await dev.waitFor(/^Built dist[\\/]reforged-ts-template\.w3m \(\d+ bytes, mode release\)$/m, 1);
+    expect(fs.readFileSync(path.join(project, "src", "generated", "env.ts"), "utf8")).toContain("devMode: boolean = false");
+  });
+
+  it("exits 1 on an invalid --mode without watching", async () => {
+    const project = copyProject();
+    dev = new DevProcess(project, ["--mode", "fast"]);
+    expect(await dev.exited()).toBe(1);
+    expect(dev.output).toMatch(FAILED);
+    expect(dev.output).not.toMatch(/Watching/);
   });
 });

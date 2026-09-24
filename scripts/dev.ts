@@ -79,7 +79,7 @@ export function watchFolders(options: WatchOptions): { close(): void } {
 function buildAndReport(config: ResolvedConfig): void {
   try {
     const result = build(config);
-    console.log(`Built ${path.relative(config.root, result.archive)} (${result.size} bytes)`);
+    console.log(`Built ${path.relative(config.root, result.archive)} (${result.size} bytes, mode ${config.mode})`);
   } catch (error) {
     console.error(error instanceof BuildError ? `Build failed: ${error.message}` : error);
   }
@@ -95,7 +95,7 @@ export function startDev(config: ResolvedConfig, debounceMs = DEBOUNCE_MS): { cl
   const sourceFolder = path.join(config.root, "src");
   const watcher = watchFolders({
     folders: [sourceFolder, config.mapFolder],
-    ignore: [path.join(sourceFolder, "generated"), config.outputFolder],
+    ignore: [config.generatedFolder, config.outputFolder],
     debounceMs,
     onChange: () => {
       console.log("Change detected, rebuilding...");
@@ -108,11 +108,11 @@ export function startDev(config: ResolvedConfig, debounceMs = DEBOUNCE_MS): { cl
   return watcher;
 }
 
-/** Command line: `node scripts/dev.ts`, run from the repository root. Runs until interrupted. */
+/** Command line: `node scripts/dev.ts [--mode dev|release]`, run from the repository root. Runs until interrupted. */
 async function main(): Promise<void> {
   let config: ResolvedConfig;
   try {
-    config = await loadConfig(path.resolve(CONFIG_FILE));
+    config = await loadConfig(path.resolve(CONFIG_FILE), process.argv.slice(2));
   } catch (error) {
     console.error(error instanceof BuildError ? `Build failed: ${error.message}` : error);
     process.exitCode = 1;
