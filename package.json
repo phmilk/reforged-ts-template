@@ -10,6 +10,7 @@
     "node": ">=24"
   },
   "scripts": {
+    "prepare": "node scripts/generate.ts",
     "build": "node scripts/build.ts",
     "test:pipeline": "vitest run --project pipeline",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.scripts.json"

@@ -6,6 +6,7 @@ import { composeMapScript } from "./compose.ts";
 import { CONFIG_FILE, loadConfig, type ResolvedConfig } from "./config.ts";
 import { BuildError } from "./errors.ts";
 import { packMapFolder } from "./pack.ts";
+import { generate } from "./generate.ts";
 import { EDITOR_SCRIPT, cleanOutputFolder, readEditorScript, stageMapFolder, stagingFolderFor } from "./stage.ts";
 
 export interface BuildResult {
@@ -21,7 +22,7 @@ export interface BuildResult {
 
 /**
  * Runs the pipeline once: clean the output folder, stage the map folder,
- * compile the bundle, compose the map script into the staging folder, pack
+ * regenerate the generated folder (env file for the effective mode), compile the bundle, compose the map script into the staging folder, pack
  * the staging folder and write the archive. The map folder and the tsconfig
  * are only read.
  */
@@ -32,6 +33,9 @@ export function build(config: ResolvedConfig): BuildResult {
   cleanOutputFolder(config.outputFolder);
   const stagingFolder = stagingFolderFor(config.outputFolder, config.mapFolder);
   stageMapFolder(config.mapFolder, stagingFolder);
+
+  // Before compiling: the source imports the generated files.
+  generate(config);
 
   const bundleFile = path.join(config.outputFolder, "bundle.lua");
   const bundle = compileBundle(config.tsconfig, bundleFile);
@@ -44,12 +48,12 @@ export function build(config: ResolvedConfig): BuildResult {
   return { stagingFolder, bundleFile, archive, size: archiveBytes.byteLength };
 }
 
-/** Command line: `node scripts/build.ts`, run from the repository root. Exits non-zero on any failure. */
+/** Command line: `node scripts/build.ts [--mode dev|release]`, run from the repository root. Exits non-zero on any failure. */
 async function main(): Promise<void> {
   try {
-    const config = await loadConfig(path.resolve(CONFIG_FILE));
+    const config = await loadConfig(path.resolve(CONFIG_FILE), process.argv.slice(2));
     const result = build(config);
-    console.log(`Built ${path.relative(config.root, result.archive)} (${result.size} bytes)`);
+    console.log(`Built ${path.relative(config.root, result.archive)} (${result.size} bytes, mode ${config.mode})`);
   } catch (error) {
     console.error(error instanceof BuildError ? `Build failed: ${error.message}` : error);
     process.exitCode = 1;
