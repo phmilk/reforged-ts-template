@@ -1,0 +1,30 @@
+{
+  "name": "reforged-ts-template",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Warcraft III 3.0.0 map project: TypeScript compiled to Lua with typescript-to-lua and reforged-ts.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node scripts/build.ts",
+    "test:pipeline": "vitest run --project pipeline",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.scripts.json"
+  },
+  "dependencies": {
+    "reforged-ts": "^1.0.0",
+    "reforged-types": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@typescript-to-lua/language-extensions": "^1.19.0",
+    "mdx-m3-viewer-th": "5.13.4",
+    "reforged-test": "^1.0.0",
+    "typescript": "6.0.2",
+    "typescript-to-lua": "^1.37.1",
+    "vitest": "^5.0.1"
+  }
+}

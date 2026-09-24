@@ -1,0 +1,7 @@
+node_modules/
+
+# Output folder: the staged map folder, the Lua bundle and the packed archive.
+dist/
+
+*.tsbuildinfo
+*.log
