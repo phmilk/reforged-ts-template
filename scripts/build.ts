@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import { compileBundle } from "./compile.ts";
 import { composeMapScript } from "./compose.ts";
 import { CONFIG_FILE, loadConfig, type ResolvedConfig } from "./config.ts";
+import { writeEditorGlobals } from "./editor-globals.ts";
 import { BuildError } from "./errors.ts";
 import { packMapFolder } from "./pack.ts";
 import { EDITOR_SCRIPT, cleanOutputFolder, readEditorScript, stageMapFolder, stagingFolderFor } from "./stage.ts";
@@ -20,14 +21,17 @@ export interface BuildResult {
 }
 
 /**
- * Runs the pipeline once: clean the output folder, stage the map folder,
- * compile the bundle, compose the map script into the staging folder, pack
- * the staging folder and write the archive. The map folder and the tsconfig
- * are only read.
+ * Runs the pipeline once: generate the editor globals into src/generated,
+ * clean the output folder, stage the map folder, compile the bundle, compose
+ * the map script into the staging folder, pack the staging folder and write
+ * the archive. The map folder and the tsconfig are only read.
  */
 export function build(config: ResolvedConfig): BuildResult {
   // Fail on a map folder without the editor script before touching the output folder.
   const editorScript = readEditorScript(config.mapFolder);
+
+  // Editor globals (#93): typings and harness stub into src/generated, before the compile reads them.
+  for (const warning of writeEditorGlobals(config.root, editorScript).warnings) console.warn(`Warning: ${warning}`);
 
   cleanOutputFolder(config.outputFolder);
   const stagingFolder = stagingFolderFor(config.outputFolder, config.mapFolder);
