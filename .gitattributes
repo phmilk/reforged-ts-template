@@ -1,0 +1,2 @@
+# The World Editor owns every file under maps/; git stores them byte for byte.
+maps/** -text -diff
