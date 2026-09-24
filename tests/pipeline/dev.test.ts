@@ -1,0 +1,154 @@
+import { spawn, type ChildProcess } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
+import { afterEach, describe, expect, it } from "vitest";
+import { debounce, watchFolders, type Timers } from "../../scripts/dev.ts";
+import { copyProject, makeTempDir } from "./helpers.ts";
+
+/** A manual clock: timers fire only when the test advances time. */
+function fakeTimers(): Timers & { advance(ms: number): void } {
+  let now = 0;
+  let next = 0;
+  const pending = new Map<number, { at: number; callback: () => void }>();
+  return {
+    setTimeout(callback, ms) {
+      pending.set(++next, { at: now + ms, callback });
+      return next;
+    },
+    clearTimeout(handle) {
+      pending.delete(handle as number);
+    },
+    advance(ms) {
+      now += ms;
+      for (const [id, timer] of [...pending].sort((a, b) => a[1].at - b[1].at)) {
+        if (timer.at <= now) {
+          pending.delete(id);
+          timer.callback();
+        }
+      }
+    },
+  };
+}
+
+describe("debounce", () => {
+  it("runs once, a window after the last call of a burst", () => {
+    const timers = fakeTimers();
+    let runs = 0;
+    const trigger = debounce(() => runs++, 300, timers);
+
+    for (let i = 0; i < 10; i++) {
+      trigger();
+      timers.advance(100);
+    }
+    expect(runs).toBe(0);
+    timers.advance(199);
+    expect(runs).toBe(0);
+    timers.advance(1);
+    expect(runs).toBe(1);
+
+    trigger();
+    timers.advance(300);
+    expect(runs).toBe(2);
+  });
+});
+
+describe("watchFolders", () => {
+  const closers: Array<{ close(): void }> = [];
+  afterEach(() => closers.splice(0).forEach((watcher) => watcher.close()));
+
+  it("turns a burst of file changes into one call and drops changes under ignored folders", async () => {
+    const dir = makeTempDir();
+    fs.mkdirSync(path.join(dir, "nested", "deep"), { recursive: true });
+    fs.mkdirSync(path.join(dir, "generated"));
+    let calls = 0;
+    closers.push(watchFolders({ folders: [dir], ignore: [path.join(dir, "generated")], debounceMs: 100, onChange: () => calls++ }));
+    await sleep(100);
+
+    for (let i = 0; i < 20; i++) fs.writeFileSync(path.join(dir, "nested", "deep", `f${i % 3}.ts`), `// ${i}\n`);
+    await sleep(500);
+    expect(calls).toBe(1);
+
+    fs.writeFileSync(path.join(dir, "generated", "env.ts"), "export {};\n");
+    fs.rmSync(path.join(dir, "generated"), { recursive: true });
+    fs.mkdirSync(path.join(dir, "generated"));
+    fs.writeFileSync(path.join(dir, "generated", "env.ts"), "export {};\n");
+    await sleep(500);
+    expect(calls).toBe(1);
+  });
+});
+
+/** `node scripts/dev.ts` in a throwaway project, with its output collected as it arrives. */
+class DevProcess {
+  output = "";
+  private readonly child: ChildProcess;
+  constructor(cwd: string) {
+    this.child = spawn(process.execPath, ["scripts/dev.ts"], { cwd, stdio: ["ignore", "pipe", "pipe"] });
+    this.child.stdout!.on("data", (chunk: Buffer) => (this.output += chunk.toString("utf8")));
+    this.child.stderr!.on("data", (chunk: Buffer) => (this.output += chunk.toString("utf8")));
+  }
+  count(pattern: RegExp): number {
+    return this.output.match(new RegExp(pattern.source, pattern.flags + "g"))?.length ?? 0;
+  }
+  /** Waits until `pattern` has appeared `times` times in the output. */
+  async waitFor(pattern: RegExp, times: number, timeoutMs = 30_000): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    while (this.count(pattern) < times) {
+      if (this.child.exitCode !== null) throw new Error(`dev exited (${this.child.exitCode}):\n${this.output}`);
+      if (Date.now() > deadline) throw new Error(`timed out waiting for ${times} x ${pattern}:\n${this.output}`);
+      await sleep(50);
+    }
+  }
+  stop(): void {
+    this.child.kill();
+  }
+}
+
+const BUILT = /^Built dist[\\/]reforged-ts-template\.w3m \(\d+ bytes\)$/m;
+const FAILED = /^Build failed: /m;
+
+describe("node scripts/dev.ts (pnpm dev)", () => {
+  let dev: DevProcess | undefined;
+  afterEach(() => dev?.stop());
+
+  it("builds on start, rebuilds on changes in the source and map folders, survives a compile error, and never retriggers itself", async () => {
+    const project = copyProject();
+    dev = new DevProcess(project);
+    await dev.waitFor(/^Watching src and maps[\\/]reforged-ts-template\.w3m for changes/m, 1);
+    expect(dev.count(BUILT)).toBe(1);
+
+    // The build's own writes (output folder) and generated files do not retrigger: no loop.
+    fs.mkdirSync(path.join(project, "src", "generated"), { recursive: true });
+    fs.writeFileSync(path.join(project, "src", "generated", "env.ts"), "export const DEV_MODE = true;\n");
+    fs.writeFileSync(path.join(project, "dist", "scratch.txt"), "x");
+    await sleep(1500);
+    expect(dev.count(BUILT)).toBe(1);
+    expect(dev.count(/Change detected/)).toBe(0);
+
+    // A burst in the source folder: one rebuild.
+    const entry = path.join(project, "src", "main.ts");
+    const original = fs.readFileSync(entry, "utf8");
+    for (let i = 0; i < 5; i++) fs.writeFileSync(entry, `${original}// edit ${i}\n`);
+    await dev.waitFor(BUILT, 2);
+    await sleep(1000);
+    expect(dev.count(BUILT)).toBe(2);
+    expect(fs.readFileSync(path.join(project, "dist", "bundle.lua"), "utf8")).toContain("reforged-ts-template: map script loaded");
+
+    // A change in the map folder (as an editor save would make): a rebuild.
+    fs.appendFileSync(path.join(project, "maps", "reforged-ts-template.w3m", "war3map.lua"), "\n-- saved again\n");
+    await dev.waitFor(BUILT, 3);
+
+    // A compile error prints the diagnostics and the watch keeps running.
+    const broken = path.join(project, "src", "broken.ts");
+    fs.writeFileSync(broken, 'export const n: number = "not a number";\n');
+    await dev.waitFor(FAILED, 1);
+    expect(dev.output).toMatch(/src[\\/]broken\.ts\(1,14\): error TS2322/);
+
+    // The fix rebuilds without a restart.
+    fs.writeFileSync(broken, "export const n: number = 1;\n");
+    await dev.waitFor(BUILT, 4);
+    await sleep(1000);
+    expect(dev.count(BUILT)).toBe(4);
+    expect(dev.count(FAILED)).toBe(1);
+  });
+});

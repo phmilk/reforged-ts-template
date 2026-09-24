@@ -12,7 +12,8 @@
   "scripts": {
     "build": "node scripts/build.ts",
     "test:pipeline": "vitest run --project pipeline",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.scripts.json"
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.scripts.json",
+    "dev": "node scripts/dev.ts"
   },
   "dependencies": {
     "reforged-ts": "^1.0.0",
