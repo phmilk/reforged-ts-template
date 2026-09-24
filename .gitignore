@@ -5,3 +5,6 @@ dist/
 
 *.tsbuildinfo
 *.log
+
+# Written by the pipeline (install, build, watch); regenerated, never committed.
+src/generated/
