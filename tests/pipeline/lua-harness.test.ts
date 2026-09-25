@@ -100,13 +100,18 @@ describe("pnpm test: the Lua harness", () => {
     const byName = Object.fromEntries(run.tests.map((test) => [test.fullName, test]));
     expect(Object.keys(byName).sort(), run.output).toEqual(
       [
-        "tests/lua/harness.test.ts the harness runs Natives on the stubs and logs each call",
-        "tests/lua/harness.test.ts the harness declares the editor's globals, nil until the editor script creates them",
+        "tests/lua/main.test.ts the starter source prints its line when the game starts",
+        "tests/lua/main.test.ts the starter source runs the Subscription's handler when a unit dies",
+        "tests/lua/main.test.ts the starter source starts a Timer repeating every 60 seconds",
         "tests/lua/spawn.test.ts spawn reads the editor variable from the generated stub",
         "tests/lua/spawn.test.ts spawn fails on a Native no stub defines",
         "tests/lua/spawn.test.ts spawn uses the map-specific stub",
       ].sort(),
     );
+    // The starter's test still passes beside a second map-specific stub file.
+    for (const test of run.tests.filter((test) => test.fullName.startsWith("tests/lua/main.test.ts"))) {
+      expect(test.status, test.fullName).toBe("passed");
+    }
     expect(byName["tests/lua/spawn.test.ts spawn reads the editor variable from the generated stub"]?.status).toBe("passed");
     expect(byName["tests/lua/spawn.test.ts spawn uses the map-specific stub"]?.status).toBe("passed");
     const unstubbed = byName["tests/lua/spawn.test.ts spawn fails on a Native no stub defines"];

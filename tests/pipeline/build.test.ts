@@ -45,7 +45,7 @@ describe("node scripts/build.ts (pnpm build)", () => {
     const bundle = fs.readFileSync(path.join(project, "dist", "bundle.lua"));
     const script = openArchive(archive).get("war3map.lua")!.bytes();
     expect(new Uint8Array(script)).toEqual(new Uint8Array([...editorScript, 0x0a, ...bundle]));
-    expect(bundle.toString("utf8")).toContain('print("reforged-ts-template: map script loaded")');
+    expect(bundle.toString("utf8")).toContain('print("reforged-ts-template: game started")');
 
     // Nothing written into the map folder (so no percent character introduced there); tsconfig untouched.
     expect(hashTree(path.join(project, MAP))).toEqual(mapBefore);

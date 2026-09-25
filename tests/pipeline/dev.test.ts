@@ -174,7 +174,7 @@ describe("node scripts/dev.ts (pnpm dev)", () => {
     await dev.waitFor(BUILT, 2);
     await sleep(1000);
     expect(dev.count(BUILT)).toBe(2);
-    expect(fs.readFileSync(path.join(project, "dist", "bundle.lua"), "utf8")).toContain("reforged-ts-template: map script loaded");
+    expect(fs.readFileSync(path.join(project, "dist", "bundle.lua"), "utf8")).toContain("reforged-ts-template: game started");
 
     // A change in the map folder (as an editor save would make): a rebuild.
     fs.appendFileSync(path.join(project, "maps", "reforged-ts-template.w3m", "war3map.lua"), "\n-- saved again\n");
