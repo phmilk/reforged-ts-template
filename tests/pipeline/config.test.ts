@@ -127,13 +127,15 @@ function fakeProbe(platform: NodeJS.Platform, existing: string[], env: Record<st
 const X86 = "C:\\Program Files (x86)\\Warcraft III\\_retail_\\x86_64\\Warcraft III.exe";
 const X64 = "C:\\Program Files\\Warcraft III\\_retail_\\x86_64\\Warcraft III.exe";
 const MAC = "/Applications/Warcraft III/_retail_/x86_64/Warcraft III.app/Contents/MacOS/Warcraft III";
+/** An executable outside the well-known locations (absolute on this machine, like a real override). */
+const ELSEWHERE = path.resolve("elsewhere", "wc3");
 const windowsEnv = { "ProgramFiles(x86)": "C:\\Program Files (x86)", ProgramFiles: "C:\\Program Files" };
 
 describe("loadLaunchConfig (executable detection, injected probe)", () => {
   it("lets the gameExecutable override win over the environment variable and the well-known locations", async () => {
     const file = writeConfig({ mapFolder: "m.w3x", gameExecutable: "game/wc3.exe" });
     const override = path.join(path.dirname(file), "game", "wc3.exe");
-    const probe = fakeProbe("win32", [override, X86, "/elsewhere/wc3"], { ...windowsEnv, [EXECUTABLE_ENV]: "/elsewhere/wc3" });
+    const probe = fakeProbe("win32", [override, X86, ELSEWHERE], { ...windowsEnv, [EXECUTABLE_ENV]: ELSEWHERE });
     const config = await loadLaunchConfig(file, [], probe);
     expect(config.game).toEqual({ executable: override, extraArgs: [] });
     expect(probe.asked).toEqual([override]);
@@ -159,8 +161,8 @@ describe("loadLaunchConfig (executable detection, injected probe)", () => {
 
   it("honours the environment variable, before the well-known locations", async () => {
     const file = writeConfig({ mapFolder: "m.w3x" });
-    expect((await loadLaunchConfig(file, [], fakeProbe("linux", ["/opt/wc3/wc3"], { [EXECUTABLE_ENV]: "/opt/wc3/wc3" }))).game.executable).toBe("/opt/wc3/wc3");
-    const env = { ...windowsEnv, [EXECUTABLE_ENV]: "D:\\Games\\WC3\\Warcraft III.exe" };
+    expect((await loadLaunchConfig(file, [], fakeProbe("linux", [ELSEWHERE], { [EXECUTABLE_ENV]: ELSEWHERE }))).game.executable).toBe(ELSEWHERE);
+    const env = { ...windowsEnv, [EXECUTABLE_ENV]: path.win32.join("Games", "WC3", "Warcraft III.exe") };
     expect((await loadLaunchConfig(file, [], fakeProbe("win32", [X86, env[EXECUTABLE_ENV]], env))).game.executable).toBe(env[EXECUTABLE_ENV]);
   });
 
