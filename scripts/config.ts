@@ -19,13 +19,15 @@ export interface Config {
    * `WC3_EXECUTABLE` environment variable, then the Battle.net install
    * locations). With `winePath` set, a path Wine understands (e.g. a
    * `C:\...` path inside the prefix). `pnpm build` never needs it.
+   * `reforged.config.ts` is committed: a path of one machine belongs in
+   * `WC3_EXECUTABLE` instead.
    */
   gameExecutable?: string;
   /** Appended to the launch arguments of `pnpm test:map`. Default none. */
   extraLaunchArgs?: string[];
   /** Launches the game through Wine (`wine`, or a path to it). The map folder is then given as a `Z:` path. */
   winePath?: string;
-  /** `WINEPREFIX` for the Wine launch. Default: Wine's own. */
+  /** `WINEPREFIX` for the Wine launch. Default: Wine's own (the `WINEPREFIX` environment variable, where a prefix of one machine belongs). */
   winePrefix?: string;
 }
 
