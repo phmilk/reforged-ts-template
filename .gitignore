@@ -11,3 +11,7 @@ dist-test/
 
 # Written by the pipeline (install, build, watch); regenerated, never committed.
 src/generated/
+
+# pnpm use:local: the tarballs packed from a local reforged-ts checkout and
+# the list the pnpm hook (.pnpmfile.cjs) reads. `pnpm use:local --reset` removes it.
+.local-packages/

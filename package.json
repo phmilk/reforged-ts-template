@@ -17,7 +17,8 @@
     "test:lua": "vitest run --project lua",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tests/lua/tsconfig.json --noEmit && tsc -p tsconfig.scripts.json",
     "dev": "node scripts/dev.ts",
-    "test:map": "node scripts/launch.ts"
+    "test:map": "node scripts/launch.ts",
+    "use:local": "node scripts/use-local.ts"
   },
   "dependencies": {
     "reforged-ts": "^1.0.0",

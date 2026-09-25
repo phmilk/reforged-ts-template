@@ -56,3 +56,10 @@ export function runScript(cwd: string, script: string, args: string[] = []): Com
   const result = spawnSync(process.execPath, [script, ...args], { cwd, encoding: "utf8" });
   return { status: result.status, stdout: result.stdout, stderr: result.stderr };
 }
+
+/** Runs git in `cwd` with a throwaway identity and no line-ending conversion; throws on failure. Returns its stdout. */
+export function git(cwd: string, ...args: string[]): string {
+  const result = spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "core.autocrlf=false", ...args], { cwd, encoding: "utf8" });
+  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
+  return result.stdout;
+}
