@@ -4,6 +4,14 @@ This repository is a Map project template: a Warcraft III 3.0.0 map whose code i
 
 ## Agent skills
 
+### Issue tracker
+
+Issues live in this repo's GitHub Issues and are driven with the `gh` CLI; the library's live in `phmilk/reforged-ts`. The Template's specs carry the `spec` label and their tickets are sub-issues with native "blocked by" dependencies. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical triage labels are used as-is: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. Two kind labels sit next to them: `spec` on an issue created with `to-spec`, `ticket` on one created with `to-tickets`. See `docs/agents/triage-labels.md`.
+
 ### Domain docs
 
 Single-context: `CONTEXT.md` at the repo root and ADRs under `docs/adr/` (none yet). See `docs/agents/domain.md`.
