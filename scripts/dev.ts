@@ -1,9 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
-import { build } from "./build.ts";
-import { CONFIG_FILE, loadConfig, type ResolvedConfig } from "./config.ts";
-import { BuildError } from "./errors.ts";
+import { build, builtMessage } from "./build.ts";
+import { printFailure, runAsEntry } from "./cli.ts";
+import { CONFIG_FILE, isInside, loadConfig, type ResolvedConfig } from "./config.ts";
 
 /** Quiet time after the last change before the build runs: an editor save writes many files. */
 export const DEBOUNCE_MS = 300;
@@ -47,30 +46,56 @@ export interface WatchOptions {
   timers?: Timers;
 }
 
-const isInside = (file: string, folder: string): boolean => {
-  const rel = path.relative(folder, file);
-  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
-};
-
 /**
  * Node's built-in recursive watch over `folders`, debounced. Changes under an
  * ignored folder never trigger; a change whose file name the platform does not
  * report does.
+ *
+ * A watched folder may be deleted and created again (an editor saving a map
+ * folder that way): on Linux the recursive watch stays on the deleted folder
+ * and goes silent. So each folder's parent is also watched, without
+ * recursion, for that one name; when it is removed or created the change
+ * triggers and the folder's watch is re-armed on whatever is there now (none
+ * while the folder is missing).
  */
 export function watchFolders(options: WatchOptions): { close(): void } {
   const trigger = debounce(options.onChange, options.debounceMs ?? DEBOUNCE_MS, options.timers);
-  const watchers = options.folders.map((folder) =>
-    fs
-      .watch(folder, { recursive: true }, (_event, filename) => {
-        if (filename !== null && options.ignore.some((ignored) => isInside(path.resolve(folder, filename), ignored))) return;
+  const ignored = (file: string) => options.ignore.some((folder) => isInside(file, folder));
+  const closers = options.folders.map((folder) => {
+    let inner: fs.FSWatcher | undefined;
+    const arm = () => {
+      inner?.close();
+      inner = undefined;
+      if (!fs.statSync(folder, { throwIfNoEntry: false })?.isDirectory()) return;
+      inner = fs
+        .watch(folder, { recursive: true }, (_event, filename) => {
+          if (filename !== null && ignored(path.resolve(folder, filename))) return;
+          trigger();
+        })
+        .on("error", (error) => {
+          console.error(`Watch error on ${folder}:`, error);
+          arm();
+        });
+    };
+    const name = path.basename(folder);
+    const parent = fs
+      .watch(path.dirname(folder), (event, filename) => {
+        if (filename !== null && filename !== name) return;
+        if (ignored(folder)) return;
+        if (event === "rename") arm();
         trigger();
       })
-      .on("error", (error) => console.error(`Watch error on ${folder}:`, error)),
-  );
+      .on("error", (error) => console.error(`Watch error on ${path.dirname(folder)}:`, error));
+    arm();
+    return () => {
+      parent.close();
+      inner?.close();
+    };
+  });
   return {
     close() {
       trigger.cancel();
-      for (const watcher of watchers) watcher.close();
+      for (const close of closers) close();
     },
   };
 }
@@ -78,10 +103,9 @@ export function watchFolders(options: WatchOptions): { close(): void } {
 /** Runs the build command's `build` and prints its outcome; never throws, so the watch survives a failing build. */
 function buildAndReport(config: ResolvedConfig): void {
   try {
-    const result = build(config);
-    console.log(`Built ${path.relative(config.root, result.archive)} (${result.size} bytes, mode ${config.mode})`);
+    console.log(builtMessage(config, build(config)));
   } catch (error) {
-    console.error(error instanceof BuildError ? `Build failed: ${error.message}` : error);
+    printFailure("Build", error);
   }
 }
 
@@ -92,7 +116,7 @@ function buildAndReport(config: ResolvedConfig): void {
  * retriggers itself.
  */
 export function startDev(config: ResolvedConfig, debounceMs = DEBOUNCE_MS): { close(): void } {
-  const sourceFolder = path.join(config.root, "src");
+  const { sourceFolder } = config;
   const watcher = watchFolders({
     folders: [sourceFolder, config.mapFolder],
     ignore: [config.generatedFolder, config.outputFolder],
@@ -109,17 +133,6 @@ export function startDev(config: ResolvedConfig, debounceMs = DEBOUNCE_MS): { cl
 }
 
 /** Command line: `node scripts/dev.ts [--mode dev|release]`, run from the repository root. Runs until interrupted. */
-async function main(): Promise<void> {
-  let config: ResolvedConfig;
-  try {
-    config = await loadConfig(path.resolve(CONFIG_FILE), process.argv.slice(2));
-  } catch (error) {
-    console.error(error instanceof BuildError ? `Build failed: ${error.message}` : error);
-    process.exitCode = 1;
-    return;
-  }
-  startDev(config);
-}
-
-// Run only as the entry script (import.meta.main needs Node 24.2; the floor is 24.0).
-if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) await main();
+await runAsEntry(import.meta.url, "Build", async () => {
+  startDev(await loadConfig(path.resolve(CONFIG_FILE), process.argv.slice(2)));
+});

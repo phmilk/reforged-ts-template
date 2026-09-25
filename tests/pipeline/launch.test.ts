@@ -6,19 +6,19 @@ import { EXECUTABLE_ENV } from "../../scripts/config.ts";
 import { LAUNCH_ARGS, launchCommand } from "../../scripts/launch.ts";
 import { copyProject, makeTempDir } from "./helpers.ts";
 
-const staging = path.resolve("/home/me/project/dist/staging/my-map.w3x");
+const staging = path.resolve("project", "dist", "staging", "my-map.w3x");
 
 describe("launchCommand", () => {
   it("builds the native argument list confirmed in game: -loadfile <staging folder> -launch -editor -windowmode windowed", () => {
-    expect(launchCommand({ executable: "/games/wc3", extraArgs: [] }, staging)).toEqual({
-      command: "/games/wc3",
+    expect(launchCommand({ executable: "wc3", extraArgs: [] }, staging)).toEqual({
+      command: "wc3",
       args: ["-loadfile", staging, "-launch", "-editor", "-windowmode", "windowed"],
       env: {},
     });
   });
 
   it("appends the extra arguments", () => {
-    expect(launchCommand({ executable: "/games/wc3", extraArgs: ["-nowfpause", "-graphicsapi", "Direct3D11"] }, staging).args).toEqual([
+    expect(launchCommand({ executable: "wc3", extraArgs: ["-nowfpause", "-graphicsapi", "Direct3D11"] }, staging).args).toEqual([
       "-loadfile",
       staging,
       ...LAUNCH_ARGS,
@@ -30,10 +30,11 @@ describe("launchCommand", () => {
 
   it.skipIf(process.platform === "win32")("runs through Wine with the folder as a Z: path and the prefix set", () => {
     const exe = "C:\\Program Files (x86)\\Warcraft III\\_retail_\\x86_64\\Warcraft III.exe";
-    expect(launchCommand({ executable: exe, extraArgs: ["-nowfpause"], winePath: "/usr/bin/wine", winePrefix: "/home/me/.wine-wc3" }, staging)).toEqual({
-      command: "/usr/bin/wine",
-      args: [exe, "-loadfile", "Z:/home/me/project/dist/staging/my-map.w3x", "-launch", "-editor", "-windowmode", "windowed", "-nowfpause"],
-      env: { WINEPREFIX: "/home/me/.wine-wc3" },
+    const winePrefix = path.resolve("wine-wc3");
+    expect(launchCommand({ executable: exe, extraArgs: ["-nowfpause"], winePath: "wine", winePrefix }, staging)).toEqual({
+      command: "wine",
+      args: [exe, "-loadfile", `Z:${staging}`, "-launch", "-editor", "-windowmode", "windowed", "-nowfpause"],
+      env: { WINEPREFIX: winePrefix },
     });
     expect(launchCommand({ executable: exe, extraArgs: [], winePath: "wine" }, staging).env).toEqual({});
   });

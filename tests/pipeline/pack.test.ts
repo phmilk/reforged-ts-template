@@ -96,3 +96,30 @@ describe("packMapFolder on nested folders", () => {
     expect(map.has("war3map.imp")).toBe(true);
   });
 });
+
+/** A `war3map.imp` as the editor writes it: version 1, then (flag, NUL-terminated path) per import. */
+function editorImportsFile(entries: Array<[flag: number, path: string]>): Uint8Array {
+  const parts: number[] = [1, 0, 0, 0, entries.length, 0, 0, 0];
+  for (const [flag, name] of entries) parts.push(flag, ...Buffer.from(name, "latin1"), 0);
+  return new Uint8Array(parts);
+}
+
+describe("packMapFolder on a map folder with the editor's war3map.imp", () => {
+  it("stores the editor's imports file byte for byte instead of generating one", () => {
+    const dir = makeTempDir();
+    fs.cpSync(FIXTURE_MAP, dir, { recursive: true });
+    fs.mkdirSync(path.join(dir, "war3mapImported"));
+    fs.writeFileSync(path.join(dir, "war3mapImported", "a.blp"), new Uint8Array([1, 2, 3]));
+    // Flag 13 (a custom path) and a path the folder does not hold: a generated list would differ on both.
+    const editorImp = editorImportsFile([
+      [13, "war3mapImported\\a.blp"],
+      [13, "war3mapImported\\missing.mdx"],
+    ]);
+    fs.writeFileSync(path.join(dir, "war3map.imp"), editorImp);
+
+    const map = openArchive(packMapFolder(dir));
+    expect(fileBytes(map, "war3map.imp")).toEqual(editorImp);
+    expect(map.getFileNames().sort()).toEqual([...listMapFiles(dir), "(listfile)"].sort());
+    expect(fileBytes(map, "war3mapImported\\a.blp")).toEqual(new Uint8Array([1, 2, 3]));
+  });
+});
