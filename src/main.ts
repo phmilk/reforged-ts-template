@@ -5,13 +5,13 @@ import { devMode } from "./generated/env";
 // `pnpm build` generates devMode = true, `pnpm build --mode release` false.
 Reforged.configure({ devMode });
 
-// An Init stage: the game has started. Create handles from an Init stage,
+// An Init stage: the game has started. Create Handles from an Init stage,
 // never while the script loads.
 Init.onGameStart(() => {
   print("reforged-ts-template: game started");
 
   // A Subscription: a handler on an Event descriptor. on() returns it; call
-  // destroy() on it to stop listening.
+  // destroy() on it to end the Subscription.
   on(UnitEvents.death, ({ unit }) => {
     print(`${unit.name} died`);
   });
