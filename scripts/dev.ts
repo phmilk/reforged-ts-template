@@ -3,7 +3,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { build } from "./build.ts";
 import { CONFIG_FILE, loadConfig, type ResolvedConfig } from "./config.ts";
-import { BuildError } from "./errors.ts";
+import { AuthorError } from "./errors.ts";
 
 /** Quiet time after the last change before the build runs: an editor save writes many files. */
 export const DEBOUNCE_MS = 300;
@@ -81,7 +81,7 @@ function buildAndReport(config: ResolvedConfig): void {
     const result = build(config);
     console.log(`Built ${path.relative(config.root, result.archive)} (${result.size} bytes, mode ${config.mode})`);
   } catch (error) {
-    console.error(error instanceof BuildError ? `Build failed: ${error.message}` : error);
+    console.error(error instanceof AuthorError ? `Build failed: ${error.message}` : error);
   }
 }
 
@@ -114,7 +114,7 @@ async function main(): Promise<void> {
   try {
     config = await loadConfig(path.resolve(CONFIG_FILE), process.argv.slice(2));
   } catch (error) {
-    console.error(error instanceof BuildError ? `Build failed: ${error.message}` : error);
+    console.error(error instanceof AuthorError ? `Build failed: ${error.message}` : error);
     process.exitCode = 1;
     return;
   }

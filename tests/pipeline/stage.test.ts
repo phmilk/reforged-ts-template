@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { BuildError } from "../../scripts/errors.ts";
+import { AuthorError } from "../../scripts/errors.ts";
 import { readEditorScript, stageMapFolder } from "../../scripts/stage.ts";
 import { FIXTURE_MAP, hashTree, makeTempDir } from "./helpers.ts";
 
@@ -15,7 +15,7 @@ describe("readEditorScript", () => {
     fs.cpSync(FIXTURE_MAP, dir, { recursive: true });
     fs.rmSync(path.join(dir, "war3map.lua"));
     fs.writeFileSync(path.join(dir, "war3map.j"), "function main takes nothing returns nothing\nendfunction\n");
-    expect(() => readEditorScript(dir)).toThrow(BuildError);
+    expect(() => readEditorScript(dir)).toThrow(AuthorError);
     expect(() => readEditorScript(dir)).toThrow(/jass-map\.w3x has no war3map\.lua: the map was not saved with Lua as the script language/);
   });
 

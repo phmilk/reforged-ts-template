@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
-import { BuildError } from "./errors.ts";
+import { AuthorError } from "./errors.ts";
 
 /** What the root configuration file default-exports. Paths are relative to the repository root. */
 export interface Config {
@@ -57,7 +57,7 @@ export const CONFIG_FILE = "reforged.config.ts";
 /** Applies the defaults and resolves every path against `root`. */
 export function resolveConfig(config: Config, root: string, overrides: CommandLineOptions = {}): ResolvedConfig {
   if (typeof config?.mapFolder !== "string" || config.mapFolder === "") {
-    throw new BuildError(`${CONFIG_FILE}: \`mapFolder\` is required (the map folder saved by the World Editor, e.g. "maps/my-map.w3x").`);
+    throw new AuthorError(`${CONFIG_FILE}: \`mapFolder\` is required (the map folder saved by the World Editor, e.g. "maps/my-map.w3x").`);
   }
   const mapFolder = path.resolve(root, config.mapFolder);
   const outputFolder = path.resolve(root, config.outputFolder ?? "dist");
@@ -68,13 +68,13 @@ export function resolveConfig(config: Config, root: string, overrides: CommandLi
   };
   // The output folder is deleted on every build: never let it cover the repository or the map folder.
   if (inside(root, outputFolder) || inside(path.join(root, "src"), outputFolder) || inside(mapFolder, outputFolder) || inside(outputFolder, mapFolder)) {
-    throw new BuildError(`${CONFIG_FILE}: \`outputFolder\` must be a folder of its own, not the repository root, the source folder, or inside or around the map folder.`);
+    throw new AuthorError(`${CONFIG_FILE}: \`outputFolder\` must be a folder of its own, not the repository root, the source folder, or inside or around the map folder.`);
   }
   if (archiveName !== path.basename(archiveName) || archiveName === "") {
-    throw new BuildError(`${CONFIG_FILE}: \`archiveName\` must be a file name, not a path.`);
+    throw new AuthorError(`${CONFIG_FILE}: \`archiveName\` must be a file name, not a path.`);
   }
   if (config.mode !== undefined && !isMode(config.mode)) {
-    throw new BuildError(`${CONFIG_FILE}: \`mode\` must be ${MODES.map((m) => `"${m}"`).join(" or ")}, got ${JSON.stringify(config.mode)}.`);
+    throw new AuthorError(`${CONFIG_FILE}: \`mode\` must be ${MODES.map((m) => `"${m}"`).join(" or ")}, got ${JSON.stringify(config.mode)}.`);
   }
   const mode = overrides.mode ?? config.mode ?? "dev";
   return {
@@ -90,17 +90,17 @@ export function resolveConfig(config: Config, root: string, overrides: CommandLi
 
 const isMode = (value: unknown): value is Mode => MODES.includes(value as Mode);
 
-/** Parses a pipeline script's arguments (`process.argv.slice(2)`). Unknown flags and bad values are a BuildError. */
+/** Parses a pipeline script's arguments (`process.argv.slice(2)`). Unknown flags and bad values are an AuthorError. */
 export function parseCommandLine(argv: readonly string[]): CommandLineOptions {
   let values: { mode?: string };
   try {
     ({ values } = parseArgs({ args: [...argv], options: { mode: { type: "string" } }, strict: true, allowPositionals: false }));
   } catch (error) {
-    throw new BuildError(`${(error as Error).message}. Usage: --mode dev|release`);
+    throw new AuthorError(`${(error as Error).message}. Usage: --mode dev|release`);
   }
   if (values.mode === undefined) return {};
   if (!isMode(values.mode)) {
-    throw new BuildError(`--mode must be ${MODES.join(" or ")}, got ${JSON.stringify(values.mode)}.`);
+    throw new AuthorError(`--mode must be ${MODES.join(" or ")}, got ${JSON.stringify(values.mode)}.`);
   }
   return { mode: values.mode };
 }
@@ -186,19 +186,19 @@ export interface LaunchConfig extends ResolvedConfig {
 /**
  * Finds the game: `gameExecutable` if set, else the `WC3_EXECUTABLE`
  * environment variable, else the first existing well-known location. Nothing
- * found is a BuildError naming the config field.
+ * found is an AuthorError naming the config field.
  */
 export function resolveGameLaunch(config: Config, root: string, probe: ExecutableProbe): GameLaunch {
   const optionalString = (field: "gameExecutable" | "winePath" | "winePrefix") => {
     const value = config[field];
     if (value !== undefined && (typeof value !== "string" || value === "")) {
-      throw new BuildError(`${CONFIG_FILE}: \`${field}\` must be a non-empty string.`);
+      throw new AuthorError(`${CONFIG_FILE}: \`${field}\` must be a non-empty string.`);
     }
     return value;
   };
   const extraArgs = config.extraLaunchArgs ?? [];
   if (!Array.isArray(extraArgs) || !extraArgs.every((arg) => typeof arg === "string")) {
-    throw new BuildError(`${CONFIG_FILE}: \`extraLaunchArgs\` must be an array of strings.`);
+    throw new AuthorError(`${CONFIG_FILE}: \`extraLaunchArgs\` must be an array of strings.`);
   }
   const winePath = optionalString("winePath");
   const winePrefix = optionalString("winePrefix");
@@ -213,7 +213,7 @@ export function resolveGameLaunch(config: Config, root: string, probe: Executabl
     if (winePath !== undefined) return { executable: override, extraArgs: [...extraArgs], ...wine };
     const executable = path.resolve(root, override);
     if (!probe.exists(executable)) {
-      throw new BuildError(`${CONFIG_FILE}: \`gameExecutable\` is set to "${override}", which does not exist.`);
+      throw new AuthorError(`${CONFIG_FILE}: \`gameExecutable\` is set to "${override}", which does not exist.`);
     }
     return { executable, extraArgs: [...extraArgs], ...wine };
   }
@@ -223,7 +223,7 @@ export function resolveGameLaunch(config: Config, root: string, probe: Executabl
   const executable = candidates.find((file) => probe.exists(file));
   if (executable === undefined) {
     const looked = candidates.length > 0 ? ` Looked at: ${candidates.map((c) => `"${c}"`).join(", ")}.` : "";
-    throw new BuildError(
+    throw new AuthorError(
       `Warcraft III was not found. Set \`gameExecutable\` in ${CONFIG_FILE} (or the ${EXECUTABLE_ENV} environment variable) to the game's executable.${looked}`,
     );
   }

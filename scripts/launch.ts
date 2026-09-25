@@ -3,7 +3,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { build } from "./build.ts";
 import { CONFIG_FILE, loadLaunchConfig, type GameLaunch } from "./config.ts";
-import { BuildError } from "./errors.ts";
+import { AuthorError } from "./errors.ts";
 
 /**
  * Confirmed in game on 3.0.0.24268 (#32): `-launch` skips the menus, `-editor`
@@ -37,14 +37,14 @@ export function launchCommand(game: GameLaunch, mapFolder: string): LaunchComman
   };
 }
 
-/** Starts the game detached (it outlives this script). A missing program is a BuildError, not a stack trace. */
+/** Starts the game detached (it outlives this script). A missing program is an AuthorError, not a stack trace. */
 export function startGame(command: LaunchCommand): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(command.command, command.args, { detached: true, stdio: "ignore", env: { ...process.env, ...command.env } });
     child.once("error", (error: NodeJS.ErrnoException) => {
       reject(
         error.code === "ENOENT"
-          ? new BuildError(`Could not start "${command.command}": no such file. Check \`gameExecutable\` / \`winePath\` in ${CONFIG_FILE}.`)
+          ? new AuthorError(`Could not start "${command.command}": no such file. Check \`gameExecutable\` / \`winePath\` in ${CONFIG_FILE}.`)
           : error,
       );
     });
@@ -69,7 +69,7 @@ async function main(): Promise<void> {
     await startGame(command);
     console.log(`Launched ${config.game.executable} on ${path.relative(config.root, result.stagingFolder)}`);
   } catch (error) {
-    console.error(error instanceof BuildError ? `test:map failed: ${error.message}` : error);
+    console.error(error instanceof AuthorError ? `test:map failed: ${error.message}` : error);
     process.exitCode = 1;
   }
 }

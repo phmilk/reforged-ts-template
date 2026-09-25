@@ -3,7 +3,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { CONFIG_FILE, loadConfig, type Mode, type ResolvedConfig } from "./config.ts";
 import { generateEditorGlobalsFiles } from "./editor-globals.ts";
-import { BuildError } from "./errors.ts";
+import { AuthorError } from "./errors.ts";
 
 /** One file the pipeline writes into the generated folder. */
 export interface GeneratedFile {
@@ -69,7 +69,7 @@ async function main(): Promise<void> {
     const files = generate(config);
     console.log(`Generated ${files.map((file) => path.relative(config.root, file)).join(", ")} (mode ${config.mode})`);
   } catch (error) {
-    console.error(error instanceof BuildError ? `Generate failed: ${error.message}` : error);
+    console.error(error instanceof AuthorError ? `Generate failed: ${error.message}` : error);
     process.exitCode = 1;
   }
 }

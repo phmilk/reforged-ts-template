@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import ts from "typescript";
 import tstl from "typescript-to-lua";
-import { BuildError } from "./errors.ts";
+import { AuthorError } from "./errors.ts";
 
 /**
  * Compiles the tstl project into one Lua bundle written at `bundleFile` and
@@ -19,10 +19,10 @@ export function compileBundle(tsconfig: string, bundleFile: string): Uint8Array 
       getNewLine: () => "\n",
     };
     const text = ts.formatDiagnostics(result.diagnostics, host).trimEnd();
-    throw new BuildError(`typescript-to-lua failed (${errors.length} error${errors.length === 1 ? "" : "s"}):\n${text}`);
+    throw new AuthorError(`typescript-to-lua failed (${errors.length} error${errors.length === 1 ? "" : "s"}):\n${text}`);
   }
   if (!fs.existsSync(bundleFile)) {
-    throw new BuildError(`typescript-to-lua wrote no bundle at ${bundleFile}; check luaBundle and luaBundleEntry in the tsconfig.`);
+    throw new AuthorError(`typescript-to-lua wrote no bundle at ${bundleFile}; check luaBundle and luaBundleEntry in the tsconfig.`);
   }
   return new Uint8Array(fs.readFileSync(bundleFile));
 }

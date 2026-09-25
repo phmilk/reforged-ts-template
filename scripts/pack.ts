@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { BuildError } from "./errors.ts";
+import { AuthorError } from "./errors.ts";
 
 // Deep import of the parser only: the package root pulls in the WebGL viewer.
 // Loaded through require because the module is CommonJS with a `default` export.
@@ -21,7 +21,7 @@ export class OpaqueW3iMap extends War3Map {
   override save(): Uint8Array {
     this.setImportsFile();
     const bytes = this.archive.save();
-    if (!bytes) throw new BuildError("The MPQ writer failed to save the archive.");
+    if (!bytes) throw new AuthorError("The MPQ writer failed to save the archive.");
     return bytes;
   }
 }
@@ -62,12 +62,12 @@ export function packMapFolder(folder: string): Uint8Array {
   const names = listMapFiles(folder);
   const map = new OpaqueW3iMap();
   if (!map.archive.resizeHashtable(names.length + 2)) {
-    throw new BuildError(`The MPQ writer could not size its hash table for ${names.length} files.`);
+    throw new AuthorError(`The MPQ writer could not size its hash table for ${names.length} files.`);
   }
   for (const name of names) {
     const bytes = readPlain(path.join(folder, ...name.split("\\")));
     if (!map.import(name, bytes as unknown as ArrayBuffer)) {
-      throw new BuildError(`The MPQ writer could not add ${name} to the archive.`);
+      throw new AuthorError(`The MPQ writer could not add ${name} to the archive.`);
     }
   }
   return map.save();

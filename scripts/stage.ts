@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { BuildError } from "./errors.ts";
+import { AuthorError } from "./errors.ts";
 
 /** The script the World Editor writes into a map folder saved with Lua as the script language. */
 export const EDITOR_SCRIPT = "war3map.lua";
@@ -22,11 +22,11 @@ export function stagingFolderFor(outputFolder: string, mapFolder: string): strin
  */
 export function readEditorScript(mapFolder: string): Uint8Array {
   if (!fs.statSync(mapFolder, { throwIfNoEntry: false })?.isDirectory()) {
-    throw new BuildError(`Map folder not found: ${mapFolder}. Save the map as a folder from the World Editor (File > Save Map As, "Folder").`);
+    throw new AuthorError(`Map folder not found: ${mapFolder}. Save the map as a folder from the World Editor (File > Save Map As, "Folder").`);
   }
   const file = path.join(mapFolder, EDITOR_SCRIPT);
   if (!fs.statSync(file, { throwIfNoEntry: false })?.isFile()) {
-    throw new BuildError(
+    throw new AuthorError(
       `${path.basename(mapFolder)} has no ${EDITOR_SCRIPT}: the map was not saved with Lua as the script language. ` +
         `In the World Editor, set Scenario > Map Options > Script Language to Lua and save the map again.`,
     );

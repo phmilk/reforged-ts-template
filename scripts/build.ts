@@ -4,7 +4,7 @@ import { pathToFileURL } from "node:url";
 import { compileBundle } from "./compile.ts";
 import { composeMapScript } from "./compose.ts";
 import { CONFIG_FILE, loadConfig, type ResolvedConfig } from "./config.ts";
-import { BuildError } from "./errors.ts";
+import { AuthorError } from "./errors.ts";
 import { packMapFolder } from "./pack.ts";
 import { generate } from "./generate.ts";
 import { EDITOR_SCRIPT, cleanOutputFolder, readEditorScript, stageMapFolder, stagingFolderFor } from "./stage.ts";
@@ -58,7 +58,7 @@ async function main(): Promise<void> {
     const result = build(config);
     console.log(`Built ${path.relative(config.root, result.archive)} (${result.size} bytes, mode ${config.mode})`);
   } catch (error) {
-    console.error(error instanceof BuildError ? `Build failed: ${error.message}` : error);
+    console.error(error instanceof AuthorError ? `Build failed: ${error.message}` : error);
     process.exitCode = 1;
   }
 }
