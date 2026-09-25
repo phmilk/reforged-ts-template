@@ -4,7 +4,7 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { afterEach, describe, expect, it } from "vitest";
 import { debounce, watchFolders, type Timers } from "../../scripts/dev.ts";
-import { copyProject, makeTempDir } from "./helpers.ts";
+import { copyProject, ENTRY_MODULE, makeTempDir } from "./helpers.ts";
 
 /** A manual clock: timers fire only when the test advances time. */
 function fakeTimers(): Timers & { advance(ms: number): void } {
@@ -174,7 +174,7 @@ describe("node scripts/dev.ts (pnpm dev)", () => {
     await dev.waitFor(BUILT, 2);
     await sleep(1000);
     expect(dev.count(BUILT)).toBe(2);
-    expect(fs.readFileSync(path.join(project, "dist", "bundle.lua"), "utf8")).toContain("reforged-ts-template: map script loaded");
+    expect(fs.readFileSync(path.join(project, "dist", "bundle.lua"), "utf8")).toContain(ENTRY_MODULE);
 
     // A change in the map folder (as an editor save would make): a rebuild.
     fs.appendFileSync(path.join(project, "maps", "reforged-ts-template.w3m", "war3map.lua"), "\n-- saved again\n");
