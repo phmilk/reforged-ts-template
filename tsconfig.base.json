@@ -1,0 +1,21 @@
+{
+  // The language settings shared by the map's compile (tsconfig.json: one Lua
+  // bundle) and the Lua tests' compile (tests/lua/tsconfig.json: one module
+  // per file for the harness). No bundle options here: typescript-to-lua
+  // merges `tstl` through `extends`, and a bundle option cannot be unset.
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["ESNext"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["@typescript-to-lua/language-extensions", "reforged-types/3.0.0"]
+  },
+  "tstl": {
+    "luaTarget": "5.3",
+    "noHeader": true,
+    "noImplicitSelf": true,
+    "sourceMapTraceback": false
+  }
+}

@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { resolveConfig } from "../../scripts/config.ts";
-import { envFileContents, generate, type Generator } from "../../scripts/generate.ts";
-import { makeTempDir } from "./helpers.ts";
+import { GENERATORS, envFileContents, generate, generateEnv, type Generator } from "../../scripts/generate.ts";
+import { FIXTURE_MAP, makeTempDir } from "./helpers.ts";
 
 const configIn = (root: string, mode: "dev" | "release" = "dev") => resolveConfig({ mapFolder: "maps/m.w3x", mode }, root);
 
@@ -19,21 +19,21 @@ describe("envFileContents", () => {
 describe("generate", () => {
   it("creates the generated folder and writes the env file for the effective mode", () => {
     const root = makeTempDir();
-    expect(generate(configIn(root, "release"))).toEqual([path.join(root, "src", "generated", "env.ts")]);
+    expect(generate(configIn(root, "release"), [generateEnv])).toEqual([path.join(root, "src", "generated", "env.ts")]);
     expect(fs.readFileSync(path.join(root, "src", "generated", "env.ts"), "utf8")).toBe(envFileContents("release"));
   });
 
   it("rewrites a file whose text changed and leaves an unchanged one alone", () => {
     const root = makeTempDir();
     const env = path.join(root, "src", "generated", "env.ts");
-    generate(configIn(root, "dev"));
+    generate(configIn(root, "dev"), [generateEnv]);
     const old = new Date(2000, 0, 1);
     fs.utimesSync(env, old, old);
 
-    generate(configIn(root, "dev"));
+    generate(configIn(root, "dev"), [generateEnv]);
     expect(fs.statSync(env).mtime).toEqual(old);
 
-    generate(configIn(root, "release"));
+    generate(configIn(root, "release"), [generateEnv]);
     expect(fs.readFileSync(env, "utf8")).toBe(envFileContents("release"));
   });
 
@@ -48,5 +48,25 @@ describe("generate", () => {
   it("refuses a writer whose file name leaves the generated folder", () => {
     const escape: Generator = () => [{ name: "../main.ts", contents: "" }];
     expect(() => generate(configIn(makeTempDir()), [escape])).toThrow(/bare file name/);
+  });
+});
+
+describe("GENERATORS", () => {
+  it("writes the env file and both editor-globals files from the map folder", () => {
+    const root = makeTempDir();
+    const files = generate(resolveConfig({ mapFolder: FIXTURE_MAP }, root), GENERATORS, () => {});
+    expect(files.map((file) => path.relative(root, file))).toEqual(
+      ["env.ts", "editor-globals.d.ts", "editor-globals.lua"].map((name) => path.join("src", "generated", name)),
+    );
+  });
+
+  it("passes the editor-globals warnings to warn", () => {
+    const root = makeTempDir();
+    const map = path.join(root, "maps", "m.w3x");
+    fs.mkdirSync(map, { recursive: true });
+    fs.writeFileSync(path.join(map, "war3map.lua"), "gg_qst_Main = nil\nfunction InitGlobals()\nend\n");
+    const warnings: string[] = [];
+    generate(configIn(root), GENERATORS, (message) => warnings.push(message));
+    expect(warnings).toEqual(["gg_qst_Main: unknown editor prefix gg_qst_, declared as handle."]);
   });
 });

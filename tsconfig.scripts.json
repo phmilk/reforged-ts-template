@@ -15,5 +15,5 @@
     "verbatimModuleSyntax": true,
     "types": ["node"]
   },
-  "include": ["scripts", "tests/pipeline", "reforged.config.ts", "vitest.config.ts"]
+  "include": ["scripts", "tests/pipeline", "tests/harness", "reforged.config.ts", "vitest.config.ts"]
 }
