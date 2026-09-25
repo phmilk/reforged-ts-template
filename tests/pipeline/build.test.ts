@@ -12,6 +12,14 @@ const ENV = path.join("src", "generated", "env.ts");
 const archivedScript = (project: string): string =>
   Buffer.from(openArchive(new Uint8Array(fs.readFileSync(path.join(project, ARCHIVE)))).get("war3map.lua")!.bytes()).toString("utf8");
 
+/** Points the copy's tsconfig `tstl.luaBundle` at `file` (relative to the tsconfig). */
+function setLuaBundle(project: string, file: string): void {
+  const tsconfig = path.join(project, "tsconfig.json");
+  const text = fs.readFileSync(tsconfig, "utf8");
+  expect(text).toContain('"luaBundle": "dist/bundle.lua"');
+  fs.writeFileSync(tsconfig, text.replace('"luaBundle": "dist/bundle.lua"', `"luaBundle": ${JSON.stringify(file)}`));
+}
+
 /** The entry's module in the composed script, from its first line to its `return`. */
 function entryModule(script: string): string {
   const start = script.indexOf('["main"] = function(...)');
@@ -101,6 +109,49 @@ describe("node scripts/build.ts (pnpm build)", () => {
     expect(result.stderr).toContain("reforged-ts-template.w3m has no war3map.lua: the map was not saved with Lua as the script language");
     expect(fs.existsSync(path.join(project, ARCHIVE))).toBe(false);
     expect(fs.readdirSync(path.join(project, "dist"))).toEqual(["keep.txt"]);
+  });
+
+  it("writes the bundle where the tsconfig's luaBundle says, and composes that file", () => {
+    const project = copyProject();
+    setLuaBundle(project, "dist/lua/map.lua");
+
+    const result = runScript(project, "scripts/build.ts");
+
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    const bundle = fs.readFileSync(path.join(project, "dist", "lua", "map.lua"), "utf8");
+    expect(fs.existsSync(path.join(project, "dist", "bundle.lua"))).toBe(false);
+    expect(archivedScript(project).endsWith(bundle)).toBe(true);
+  });
+
+  it("refuses a luaBundle outside the output folder, naming both, before touching the output folder", () => {
+    const project = copyProject();
+    setLuaBundle(project, "build/bundle.lua");
+    fs.mkdirSync(path.join(project, "dist"));
+    fs.writeFileSync(path.join(project, "dist", "keep.txt"), "previous build");
+
+    const result = runScript(project, "scripts/build.ts");
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      'Build failed: tsconfig.json: `tstl.luaBundle` resolves to build/bundle.lua, which is not a file of its own in the output folder dist (`outputFolder` in reforged.config.ts). Set it to a file there, e.g. "dist/bundle.lua".',
+    );
+    expect(fs.readdirSync(path.join(project, "dist"))).toEqual(["keep.txt"]);
+    expect(fs.existsSync(path.join(project, "build"))).toBe(false);
+  });
+
+  it("refuses a luaBundle the configured output folder no longer covers, or one inside the staging folder", () => {
+    const project = copyProject();
+    const configFile = path.join(project, "reforged.config.ts");
+    fs.writeFileSync(configFile, fs.readFileSync(configFile, "utf8").replace('outputFolder: "dist"', 'outputFolder: "out"'));
+    let result = runScript(project, "scripts/build.ts");
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/resolves to dist\/bundle\.lua, .* output folder out .* e\.g\. "out\/bundle\.lua"/);
+
+    setLuaBundle(project, "out/staging/bundle.lua");
+    result = runScript(project, "scripts/build.ts");
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("resolves to out/staging/bundle.lua, which is not a file of its own");
   });
 
   it("fails with tstl's diagnostics and exit 1 on a type error", () => {
