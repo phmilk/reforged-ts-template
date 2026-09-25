@@ -1,0 +1,13 @@
+node_modules/
+
+# Output folder: the staged map folder, the Lua bundle and the packed archive.
+dist/
+
+# The Lua tests compiled for the harness (pnpm test).
+dist-test/
+
+*.tsbuildinfo
+*.log
+
+# Written by the pipeline (install, build, watch); regenerated, never committed.
+src/generated/

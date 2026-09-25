@@ -1,0 +1,19 @@
+{
+  // Type-checks the Node side: the pipeline scripts, their tests and the
+  // configuration. Node runs these files by type stripping, so only erasable
+  // syntax is allowed and relative imports carry the .ts extension.
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["ESNext"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "types": ["node"]
+  },
+  "include": ["scripts", "tests/pipeline", "tests/harness", "reforged.config.ts", "vitest.config.ts"]
+}
