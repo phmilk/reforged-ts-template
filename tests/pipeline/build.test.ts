@@ -89,15 +89,18 @@ describe("node scripts/build.ts (pnpm build)", () => {
     expect(fs.existsSync(path.join(project, "dist"))).toBe(false);
   });
 
-  it("fails with a clear message and exit 1 when the map folder has no war3map.lua", () => {
+  it("fails with a clear message and exit 1 when the map folder has no war3map.lua, before touching the output folder", () => {
     const project = copyProject();
     fs.rmSync(path.join(project, MAP, "war3map.lua"));
+    fs.mkdirSync(path.join(project, "dist"));
+    fs.writeFileSync(path.join(project, "dist", "keep.txt"), "previous build");
 
     const result = runScript(project, "scripts/build.ts");
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("reforged-ts-template.w3m has no war3map.lua: the map was not saved with Lua as the script language");
     expect(fs.existsSync(path.join(project, ARCHIVE))).toBe(false);
+    expect(fs.readdirSync(path.join(project, "dist"))).toEqual(["keep.txt"]);
   });
 
   it("fails with tstl's diagnostics and exit 1 on a type error", () => {
@@ -116,15 +119,41 @@ describe("node scripts/generate.ts (the prepare script)", () => {
   it("writes the generated files so the source type-checks with no other command", () => {
     const project = copyProject();
     fs.rmSync(path.join(project, "src", "generated"), { recursive: true, force: true });
+    // Source using an editor global: needs the generated declarations.
+    fs.writeFileSync(path.join(project, "src", "uses-globals.ts"), "export const t: trigger = gg_trg_Melee_Initialization;\n");
 
     const result = runScript(project, "scripts/generate.ts");
 
     expect(result.status).toBe(0);
-    expect(result.stdout).toContain(`Generated ${ENV} (mode dev)`);
+    expect(result.stderr).toBe("");
+    const generated = ["env.ts", "editor-globals.d.ts", "editor-globals.lua"].map((name) => path.join("src", "generated", name));
+    expect(result.stdout).toContain(`Generated ${generated.join(", ")} (mode dev)`);
+    for (const file of generated) expect(fs.existsSync(path.join(project, file))).toBe(true);
     expect(fs.readFileSync(path.join(project, ENV), "utf8")).toContain("export const devMode: boolean = true;");
     const tsc = runScript(project, path.join("node_modules", "typescript", "bin", "tsc"), ["-p", "tsconfig.json", "--noEmit"]);
     expect(tsc.stdout + tsc.stderr).toBe("");
     expect(tsc.status).toBe(0);
+  });
+
+  it("prints the editor-globals warnings to stderr", () => {
+    const project = copyProject();
+    const script = path.join(project, MAP, "war3map.lua");
+    fs.writeFileSync(script, "gg_qst_Main = nil\r\n" + fs.readFileSync(script, "utf8"));
+
+    const result = runScript(project, "scripts/generate.ts");
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("Warning: gg_qst_Main: unknown editor prefix gg_qst_, declared as handle.\n");
+  });
+
+  it("fails with exit 1 when the map folder has no editor script", () => {
+    const project = copyProject();
+    fs.rmSync(path.join(project, MAP, "war3map.lua"));
+
+    const result = runScript(project, "scripts/generate.ts");
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/^Generate failed: reforged-ts-template\.w3m has no war3map\.lua/);
   });
 
   it("honours --mode release", () => {
