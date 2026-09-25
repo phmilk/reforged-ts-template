@@ -76,6 +76,25 @@ describe("watchFolders", () => {
     await sleep(500);
     expect(calls).toBe(1);
   });
+
+  it("does not call when an ignored child folder is created or deleted, whatever the parent folder reports", async () => {
+    const folder = path.join(makeTempDir(), "src");
+    fs.mkdirSync(folder);
+    const generated = path.join(folder, "generated");
+    let calls = 0;
+    closers.push(watchFolders({ folders: [folder], ignore: [generated], debounceMs: 100, onChange: () => calls++ }));
+    await sleep(100);
+
+    // Twice: Windows reports a change on the parent for a created child, but may leave out the first.
+    for (let i = 0; i < 2; i++) {
+      fs.mkdirSync(generated);
+      fs.writeFileSync(path.join(generated, "env.ts"), "export {};\n");
+      await sleep(300);
+      fs.rmSync(generated, { recursive: true });
+      await sleep(300);
+    }
+    expect(calls).toBe(0);
+  });
 });
 
 describe("watchFolders on a folder deleted and created again", () => {
@@ -155,6 +174,8 @@ describe("node scripts/dev.ts (pnpm dev)", () => {
 
   it("builds on start, rebuilds on changes in the source and map folders, survives a compile error, and never retriggers itself", async () => {
     const project = copyProject();
+    // A fresh clone: the first build creates the generated folder, which must not retrigger it.
+    fs.rmSync(path.join(project, "src", "generated"), { recursive: true, force: true });
     dev = new DevProcess(project);
     await dev.waitFor(/^Watching src and maps[\\/]reforged-ts-template\.w3m for changes/m, 1);
     expect(dev.count(BUILT)).toBe(1);

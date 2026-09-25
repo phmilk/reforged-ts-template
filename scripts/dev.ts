@@ -56,7 +56,9 @@ export interface WatchOptions {
  * and goes silent. So each folder's parent is also watched, without
  * recursion, for that one name; when it is removed or created the change
  * triggers and the folder's watch is re-armed on whatever is there now (none
- * while the folder is missing).
+ * while the folder is missing). The parent's `change` naming the folder
+ * (Windows reports one when a child is created) is about its contents and
+ * is left to the folder's own watch, which applies the ignore list.
  */
 export function watchFolders(options: WatchOptions): { close(): void } {
   const trigger = debounce(options.onChange, options.debounceMs ?? DEBOUNCE_MS, options.timers);
@@ -80,9 +82,10 @@ export function watchFolders(options: WatchOptions): { close(): void } {
     const name = path.basename(folder);
     const parent = fs
       .watch(path.dirname(folder), (event, filename) => {
+        if (event !== "rename") return;
         if (filename !== null && filename !== name) return;
         if (ignored(folder)) return;
-        if (event === "rename") arm();
+        arm();
         trigger();
       })
       .on("error", (error) => console.error(`Watch error on ${path.dirname(folder)}:`, error));
