@@ -1,9 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { CONFIG_FILE, loadConfig, type Mode, type ResolvedConfig } from "./config.ts";
 import { generateEditorGlobalsFiles } from "./editor-globals.ts";
-import { AuthorError } from "./errors.ts";
+import { runAsEntry } from "./cli.ts";
 
 /** One file the pipeline writes into the generated folder. */
 export interface GeneratedFile {
@@ -63,15 +62,8 @@ export function generate(config: ResolvedConfig, generators: readonly Generator[
 }
 
 /** Command line: `node scripts/generate.ts [--mode dev|release]` (the `prepare` script), run from the repository root. */
-async function main(): Promise<void> {
-  try {
-    const config = await loadConfig(path.resolve(CONFIG_FILE), process.argv.slice(2));
-    const files = generate(config);
-    console.log(`Generated ${files.map((file) => path.relative(config.root, file)).join(", ")} (mode ${config.mode})`);
-  } catch (error) {
-    console.error(error instanceof AuthorError ? `Generate failed: ${error.message}` : error);
-    process.exitCode = 1;
-  }
-}
-
-if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) await main();
+await runAsEntry(import.meta.url, "Generate", async () => {
+  const config = await loadConfig(path.resolve(CONFIG_FILE), process.argv.slice(2));
+  const files = generate(config);
+  console.log(`Generated ${files.map((file) => path.relative(config.root, file)).join(", ")} (mode ${config.mode})`);
+});

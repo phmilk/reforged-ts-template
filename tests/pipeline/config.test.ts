@@ -1,10 +1,23 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { EXECUTABLE_ENV, loadConfig, loadLaunchConfig, parseCommandLine, resolveConfig, resolveGameLaunch, type ExecutableProbe } from "../../scripts/config.ts";
+import { EXECUTABLE_ENV, isInside, loadConfig, loadLaunchConfig, parseCommandLine, resolveConfig, resolveGameLaunch, type ExecutableProbe } from "../../scripts/config.ts";
 import { makeTempDir } from "./helpers.ts";
 
 const root = path.resolve("fake-project-root");
+
+describe("isInside", () => {
+  it("is true for the folder itself and anything under it, false beside or above it", () => {
+    const folder = path.join(root, "out");
+    expect(isInside(folder, folder)).toBe(true);
+    expect(isInside(path.join(folder, "a", "b.txt"), folder)).toBe(true);
+    expect(isInside(root, folder)).toBe(false);
+    expect(isInside(path.join(root, "outside"), folder)).toBe(false);
+    // A sibling whose name starts with two dots is still outside.
+    expect(isInside(path.join(root, "..out"), folder)).toBe(false);
+    expect(isInside(path.join(folder, "..hidden"), folder)).toBe(true);
+  });
+});
 
 describe("resolveConfig", () => {
   it("resolves paths against the root and names the archive after the map folder", () => {

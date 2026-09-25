@@ -1,9 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
-import { build } from "./build.ts";
-import { CONFIG_FILE, loadConfig, type ResolvedConfig } from "./config.ts";
-import { AuthorError } from "./errors.ts";
+import { build, builtMessage } from "./build.ts";
+import { printFailure, runAsEntry } from "./cli.ts";
+import { CONFIG_FILE, isInside, loadConfig, type ResolvedConfig } from "./config.ts";
 
 /** Quiet time after the last change before the build runs: an editor save writes many files. */
 export const DEBOUNCE_MS = 300;
@@ -47,11 +46,6 @@ export interface WatchOptions {
   timers?: Timers;
 }
 
-const isInside = (file: string, folder: string): boolean => {
-  const rel = path.relative(folder, file);
-  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
-};
-
 /**
  * Node's built-in recursive watch over `folders`, debounced. Changes under an
  * ignored folder never trigger; a change whose file name the platform does not
@@ -78,10 +72,9 @@ export function watchFolders(options: WatchOptions): { close(): void } {
 /** Runs the build command's `build` and prints its outcome; never throws, so the watch survives a failing build. */
 function buildAndReport(config: ResolvedConfig): void {
   try {
-    const result = build(config);
-    console.log(`Built ${path.relative(config.root, result.archive)} (${result.size} bytes, mode ${config.mode})`);
+    console.log(builtMessage(config, build(config)));
   } catch (error) {
-    console.error(error instanceof AuthorError ? `Build failed: ${error.message}` : error);
+    printFailure("Build", error);
   }
 }
 
@@ -109,17 +102,6 @@ export function startDev(config: ResolvedConfig, debounceMs = DEBOUNCE_MS): { cl
 }
 
 /** Command line: `node scripts/dev.ts [--mode dev|release]`, run from the repository root. Runs until interrupted. */
-async function main(): Promise<void> {
-  let config: ResolvedConfig;
-  try {
-    config = await loadConfig(path.resolve(CONFIG_FILE), process.argv.slice(2));
-  } catch (error) {
-    console.error(error instanceof AuthorError ? `Build failed: ${error.message}` : error);
-    process.exitCode = 1;
-    return;
-  }
-  startDev(config);
-}
-
-// Run only as the entry script (import.meta.main needs Node 24.2; the floor is 24.0).
-if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) await main();
+await runAsEntry(import.meta.url, "Build", async () => {
+  startDev(await loadConfig(path.resolve(CONFIG_FILE), process.argv.slice(2)));
+});

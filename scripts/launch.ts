@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
-import { build } from "./build.ts";
+import { build, builtMessage } from "./build.ts";
+import { runAsEntry } from "./cli.ts";
 import { CONFIG_FILE, loadLaunchConfig, type GameLaunch } from "./config.ts";
 import { AuthorError } from "./errors.ts";
 
@@ -60,19 +60,10 @@ export function startGame(command: LaunchCommand): Promise<void> {
  * Finds the game first (so a missing game fails before building), builds, then
  * opens the game on the staging folder, not the archive.
  */
-async function main(): Promise<void> {
-  try {
-    const config = await loadLaunchConfig(path.resolve(CONFIG_FILE), process.argv.slice(2));
-    const result = build(config);
-    console.log(`Built ${path.relative(config.root, result.archive)} (${result.size} bytes, mode ${config.mode})`);
-    const command = launchCommand(config.game, result.stagingFolder);
-    await startGame(command);
-    console.log(`Launched ${config.game.executable} on ${path.relative(config.root, result.stagingFolder)}`);
-  } catch (error) {
-    console.error(error instanceof AuthorError ? `test:map failed: ${error.message}` : error);
-    process.exitCode = 1;
-  }
-}
-
-// Run only as the entry script (import.meta.main needs Node 24.2; the floor is 24.0).
-if (process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url) await main();
+await runAsEntry(import.meta.url, "test:map", async () => {
+  const config = await loadLaunchConfig(path.resolve(CONFIG_FILE), process.argv.slice(2));
+  const result = build(config);
+  console.log(builtMessage(config, result));
+  await startGame(launchCommand(config.game, result.stagingFolder));
+  console.log(`Launched ${config.game.executable} on ${path.relative(config.root, result.stagingFolder)}`);
+});

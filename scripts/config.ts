@@ -65,12 +65,8 @@ export function resolveConfig(config: Config, root: string, overrides: CommandLi
   const outputFolder = path.resolve(root, config.outputFolder ?? "dist");
   const archiveName = config.archiveName ?? path.basename(mapFolder);
   const sourceFolder = path.join(root, "src");
-  const inside = (child: string, parent: string) => {
-    const rel = path.relative(parent, child);
-    return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
-  };
   // The output folder is deleted on every build: never let it cover the repository or the map folder.
-  if (inside(root, outputFolder) || inside(sourceFolder, outputFolder) || inside(mapFolder, outputFolder) || inside(outputFolder, mapFolder)) {
+  if (isInside(root, outputFolder) || isInside(sourceFolder, outputFolder) || isInside(mapFolder, outputFolder) || isInside(outputFolder, mapFolder)) {
     throw new AuthorError(`${CONFIG_FILE}: \`outputFolder\` must be a folder of its own, not the repository root, the source folder, or inside or around the map folder.`);
   }
   if (archiveName !== path.basename(archiveName) || archiveName === "") {
@@ -90,6 +86,12 @@ export function resolveConfig(config: Config, root: string, overrides: CommandLi
     generatedFolder: path.join(sourceFolder, "generated"),
     tsconfig: path.join(root, "tsconfig.json"),
   };
+}
+
+/** Whether `file` is `folder` itself or somewhere under it (both absolute). */
+export function isInside(file: string, folder: string): boolean {
+  const rel = path.relative(folder, file);
+  return rel === "" || (rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel));
 }
 
 const isMode = (value: unknown): value is Mode => MODES.includes(value as Mode);
