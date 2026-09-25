@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { loadConfig, parseCommandLine, resolveConfig } from "../../scripts/config.ts";
+import { EXECUTABLE_ENV, loadConfig, loadLaunchConfig, parseCommandLine, resolveConfig, resolveGameLaunch, type ExecutableProbe } from "../../scripts/config.ts";
 import { makeTempDir } from "./helpers.ts";
 
 const root = path.resolve("fake-project-root");
@@ -92,5 +92,85 @@ describe("parseCommandLine", () => {
     expect(() => parseCommandLine(["--mode"])).toThrow(/--mode/);
     expect(() => parseCommandLine(["--release"])).toThrow(/Unknown option '--release'.*Usage: --mode dev\|release/);
     expect(() => parseCommandLine(["release"])).toThrow(/Usage/);
+  });
+});
+
+/** A machine where exactly `existing` exist. */
+function fakeProbe(platform: NodeJS.Platform, existing: string[], env: Record<string, string> = {}): ExecutableProbe & { asked: string[] } {
+  const asked: string[] = [];
+  return {
+    platform,
+    env,
+    asked,
+    exists: (file) => {
+      asked.push(file);
+      return existing.includes(file);
+    },
+  };
+}
+
+const X86 = "C:\\Program Files (x86)\\Warcraft III\\_retail_\\x86_64\\Warcraft III.exe";
+const X64 = "C:\\Program Files\\Warcraft III\\_retail_\\x86_64\\Warcraft III.exe";
+const MAC = "/Applications/Warcraft III/_retail_/x86_64/Warcraft III.app/Contents/MacOS/Warcraft III";
+const windowsEnv = { "ProgramFiles(x86)": "C:\\Program Files (x86)", ProgramFiles: "C:\\Program Files" };
+
+describe("loadLaunchConfig (executable detection, injected probe)", () => {
+  it("lets the gameExecutable override win over the environment variable and the well-known locations", async () => {
+    const file = writeConfig({ mapFolder: "m.w3x", gameExecutable: "game/wc3.exe" });
+    const override = path.join(path.dirname(file), "game", "wc3.exe");
+    const probe = fakeProbe("win32", [override, X86, "/elsewhere/wc3"], { ...windowsEnv, [EXECUTABLE_ENV]: "/elsewhere/wc3" });
+    const config = await loadLaunchConfig(file, [], probe);
+    expect(config.game).toEqual({ executable: override, extraArgs: [] });
+    expect(probe.asked).toEqual([override]);
+  });
+
+  it("reports an override that does not exist, naming the field", async () => {
+    const file = writeConfig({ mapFolder: "m.w3x", gameExecutable: "missing.exe" });
+    await expect(loadLaunchConfig(file, [], fakeProbe("win32", [X86], windowsEnv))).rejects.toThrow(/`gameExecutable` is set to "missing.exe", which does not exist/);
+  });
+
+  it("takes the first existing well-known location, Program Files (x86) before Program Files", async () => {
+    const file = writeConfig({ mapFolder: "m.w3x" });
+    expect((await loadLaunchConfig(file, [], fakeProbe("win32", [X86, X64], windowsEnv))).game.executable).toBe(X86);
+    const probe = fakeProbe("win32", [X64], windowsEnv);
+    expect((await loadLaunchConfig(file, [], probe)).game.executable).toBe(X64);
+    expect(probe.asked).toEqual([X86, X64]);
+  });
+
+  it("probes the inner binary of the application bundle on macOS", async () => {
+    const file = writeConfig({ mapFolder: "m.w3x" });
+    expect((await loadLaunchConfig(file, [], fakeProbe("darwin", [MAC]))).game.executable).toBe(MAC);
+  });
+
+  it("honours the environment variable, before the well-known locations", async () => {
+    const file = writeConfig({ mapFolder: "m.w3x" });
+    expect((await loadLaunchConfig(file, [], fakeProbe("linux", ["/opt/wc3/wc3"], { [EXECUTABLE_ENV]: "/opt/wc3/wc3" }))).game.executable).toBe("/opt/wc3/wc3");
+    const env = { ...windowsEnv, [EXECUTABLE_ENV]: "D:\\Games\\WC3\\Warcraft III.exe" };
+    expect((await loadLaunchConfig(file, [], fakeProbe("win32", [X86, env[EXECUTABLE_ENV]], env))).game.executable).toBe(env[EXECUTABLE_ENV]);
+  });
+
+  it("names the config field when nothing is found", async () => {
+    const file = writeConfig({ mapFolder: "m.w3x" });
+    await expect(loadLaunchConfig(file, [], fakeProbe("linux", []))).rejects.toThrow(
+      /Warcraft III was not found\. Set `gameExecutable` in reforged\.config\.ts \(or the WC3_EXECUTABLE environment variable\)/,
+    );
+    await expect(loadLaunchConfig(file, [], fakeProbe("win32", [], windowsEnv))).rejects.toThrow(/`gameExecutable`.*Looked at: .*Program Files \(x86\)/);
+  });
+
+  it("keeps the extra arguments and the Wine settings, and does not check a Wine-side executable", async () => {
+    const file = writeConfig({ mapFolder: "m.w3x", gameExecutable: X86, extraLaunchArgs: ["-nowfpause"], winePath: "wine", winePrefix: "wine-prefix" });
+    const config = await loadLaunchConfig(file, ["--mode", "release"], fakeProbe("linux", []));
+    expect(config.mode).toBe("release");
+    expect(config.game).toEqual({ executable: X86, extraArgs: ["-nowfpause"], winePath: "wine", winePrefix: path.join(path.dirname(file), "wine-prefix") });
+  });
+
+  it("refuses malformed launch fields", () => {
+    expect(() => resolveGameLaunch({ mapFolder: "m", extraLaunchArgs: "-x" as never }, root, fakeProbe("linux", []))).toThrow(/`extraLaunchArgs` must be an array of strings/);
+    expect(() => resolveGameLaunch({ mapFolder: "m", winePath: "" }, root, fakeProbe("linux", []))).toThrow(/`winePath` must be a non-empty string/);
+  });
+
+  it("is not needed by loadConfig, which never probes (pnpm build runs without a game)", async () => {
+    const file = writeConfig({ mapFolder: "m.w3x", gameExecutable: "missing.exe" });
+    expect((await loadConfig(file)).mapFolder).toBe(path.join(path.dirname(file), "m.w3x"));
   });
 });

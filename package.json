@@ -14,7 +14,8 @@
     "build": "node scripts/build.ts",
     "test:pipeline": "vitest run --project pipeline",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.scripts.json",
-    "dev": "node scripts/dev.ts"
+    "dev": "node scripts/dev.ts",
+    "test:map": "node scripts/launch.ts"
   },
   "dependencies": {
     "reforged-ts": "^1.0.0",

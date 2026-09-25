@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
@@ -13,6 +14,19 @@ export interface Config {
   archiveName?: string;
   /** `dev` turns the library's runtime Guards on, `release` turns them off. Default `dev`; `--mode` overrides it. */
   mode?: Mode;
+  /**
+   * The game's executable, for `pnpm test:map`. Default: detected (the
+   * `WC3_EXECUTABLE` environment variable, then the Battle.net install
+   * locations). With `winePath` set, a path Wine understands (e.g. a
+   * `C:\...` path inside the prefix). `pnpm build` never needs it.
+   */
+  gameExecutable?: string;
+  /** Appended to the launch arguments of `pnpm test:map`. Default none. */
+  extraLaunchArgs?: string[];
+  /** Launches the game through Wine (`wine`, or a path to it). The map folder is then given as a `Z:` path. */
+  winePath?: string;
+  /** `WINEPREFIX` for the Wine launch. Default: Wine's own. */
+  winePrefix?: string;
 }
 
 /** Which build the pipeline produces. The only thing it changes is the generated env file's `devMode`. */
@@ -98,7 +112,130 @@ export function parseCommandLine(argv: readonly string[]): CommandLineOptions {
  */
 export async function loadConfig(configPath: string, argv: readonly string[] = []): Promise<ResolvedConfig> {
   const overrides = parseCommandLine(argv);
+  const { config, root } = await importConfigFile(configPath);
+  return resolveConfig(config, root, overrides);
+}
+
+async function importConfigFile(configPath: string): Promise<{ config: Config; root: string }> {
   const file = path.resolve(configPath);
   const module = (await import(pathToFileURL(file).href)) as { default: Config };
-  return resolveConfig(module.default, path.dirname(file), overrides);
+  return { config: module.default, root: path.dirname(file) };
+}
+
+/**
+ * Where the pipeline looks for the game, injected so tests never look at the
+ * machine's real locations.
+ */
+export interface ExecutableProbe {
+  platform: NodeJS.Platform;
+  env: Readonly<Record<string, string | undefined>>;
+  /** Whether `file` exists and is a file. */
+  exists(file: string): boolean;
+}
+
+/** The real machine. */
+export const systemProbe: ExecutableProbe = {
+  platform: process.platform,
+  env: process.env,
+  exists: (file) => {
+    try {
+      return fs.statSync(file).isFile();
+    } catch {
+      return false;
+    }
+  },
+};
+
+/** Names the game's executable when it is somewhere the well-known locations do not cover. */
+export const EXECUTABLE_ENV = "WC3_EXECUTABLE";
+
+/**
+ * The default install locations of the game, probed in order. NOT verified
+ * against a real 3.0 install: they follow the Battle.net layout since 1.32
+ * (`_retail_\x86_64` on Windows; on macOS the inner binary of the `.app`,
+ * since the bundle folder itself cannot be executed), as other templates and
+ * WurstScript use it.
+ */
+export function wellKnownExecutables(platform: NodeJS.Platform, env: ExecutableProbe["env"]): string[] {
+  if (platform === "win32") {
+    const programFolders = [env["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)", env["ProgramFiles"] ?? "C:\\Program Files"];
+    return [...new Set(programFolders)].map((folder) => path.win32.join(folder, "Warcraft III", "_retail_", "x86_64", "Warcraft III.exe"));
+  }
+  if (platform === "darwin") {
+    return ["/Applications/Warcraft III/_retail_/x86_64/Warcraft III.app/Contents/MacOS/Warcraft III"];
+  }
+  return [];
+}
+
+/** How `pnpm test:map` starts the game. */
+export interface GameLaunch {
+  /** The game's executable (absolute, or as given for Wine). */
+  executable: string;
+  /** From `extraLaunchArgs`. */
+  extraArgs: string[];
+  winePath?: string;
+  /** Absolute. */
+  winePrefix?: string;
+}
+
+/** A resolved configuration that also knows where the game is: what `pnpm test:map` loads. */
+export interface LaunchConfig extends ResolvedConfig {
+  game: GameLaunch;
+}
+
+/**
+ * Finds the game: `gameExecutable` if set, else the `WC3_EXECUTABLE`
+ * environment variable, else the first existing well-known location. Nothing
+ * found is a BuildError naming the config field.
+ */
+export function resolveGameLaunch(config: Config, root: string, probe: ExecutableProbe): GameLaunch {
+  const optionalString = (field: "gameExecutable" | "winePath" | "winePrefix") => {
+    const value = config[field];
+    if (value !== undefined && (typeof value !== "string" || value === "")) {
+      throw new BuildError(`${CONFIG_FILE}: \`${field}\` must be a non-empty string.`);
+    }
+    return value;
+  };
+  const extraArgs = config.extraLaunchArgs ?? [];
+  if (!Array.isArray(extraArgs) || !extraArgs.every((arg) => typeof arg === "string")) {
+    throw new BuildError(`${CONFIG_FILE}: \`extraLaunchArgs\` must be an array of strings.`);
+  }
+  const winePath = optionalString("winePath");
+  const winePrefix = optionalString("winePrefix");
+  const override = optionalString("gameExecutable");
+  const wine = {
+    ...(winePath !== undefined && { winePath }),
+    ...(winePrefix !== undefined && { winePrefix: path.resolve(root, winePrefix) }),
+  };
+
+  if (override !== undefined) {
+    // Through Wine the path is the Windows side's (`C:\...`): nothing to check here.
+    if (winePath !== undefined) return { executable: override, extraArgs: [...extraArgs], ...wine };
+    const executable = path.resolve(root, override);
+    if (!probe.exists(executable)) {
+      throw new BuildError(`${CONFIG_FILE}: \`gameExecutable\` is set to "${override}", which does not exist.`);
+    }
+    return { executable, extraArgs: [...extraArgs], ...wine };
+  }
+
+  const fromEnv = probe.env[EXECUTABLE_ENV];
+  const candidates = [...(fromEnv ? [fromEnv] : []), ...wellKnownExecutables(probe.platform, probe.env)];
+  const executable = candidates.find((file) => probe.exists(file));
+  if (executable === undefined) {
+    const looked = candidates.length > 0 ? ` Looked at: ${candidates.map((c) => `"${c}"`).join(", ")}.` : "";
+    throw new BuildError(
+      `Warcraft III was not found. Set \`gameExecutable\` in ${CONFIG_FILE} (or the ${EXECUTABLE_ENV} environment variable) to the game's executable.${looked}`,
+    );
+  }
+  return { executable, extraArgs: [...extraArgs], ...wine };
+}
+
+/**
+ * `loadConfig` plus the game's launch settings, for `pnpm test:map`. Kept apart
+ * so `pnpm build` never looks for the game (it runs where no game is installed).
+ */
+export async function loadLaunchConfig(configPath: string, argv: readonly string[] = [], probe: ExecutableProbe = systemProbe): Promise<LaunchConfig> {
+  const overrides = parseCommandLine(argv);
+  const { config, root } = await importConfigFile(configPath);
+  return { ...resolveConfig(config, root, overrides), game: resolveGameLaunch(config, root, probe) };
 }
