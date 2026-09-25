@@ -13,24 +13,30 @@ export const LIST_FILE = "packages.json";
 /** The library packages a Map project installs, each under `packages/<name>` in a reforged-ts checkout. */
 export const LOCAL_PACKAGES = ["reforged-types", "reforged-test", "reforged-ts"] as const;
 
+export type LocalPackage = (typeof LOCAL_PACKAGES)[number];
+
 /** Runs pnpm with `args` in `cwd`; throws when it fails. */
 export type Pnpm = (args: string[], cwd: string) => void;
 
-/**
- * Installing never writes the lockfile, so the committed one (if any) stays as
- * it is; a changed resolution never stops on the question pnpm asks before
- * purging node_modules, which has no terminal to answer it in a script.
- */
-const LOCAL_INSTALL = ["install", "--no-lockfile", "--config.confirmModulesPurge=false"];
+/** A changed resolution never stops on the question pnpm asks before purging node_modules: a script has no terminal to answer it. */
+const INSTALL = ["install", "--config.confirmModulesPurge=false"];
+/** Installing never writes the lockfile, so the committed one (if any) stays as it is. */
+const INSTALL_WITHOUT_LOCKFILE = [...INSTALL, "--no-lockfile"];
+
+/** Quotes `arg` for cmd.exe, which runs `pnpm.cmd`: paths with spaces or parentheses stay one argument. */
+const quoteForCmd = (arg: string) => (/^[\w./:=-]+$/.test(arg) ? arg : `"${arg.replaceAll('"', '""')}"`);
 
 /**
  * The pnpm that runs this script (`npm_execpath`, set by `pnpm <script>`; npm's is not used),
- * else the one on the PATH; its output goes to the terminal.
+ * else the one on the PATH (through the shell on Windows, where it is `pnpm.cmd`); its output
+ * goes to the terminal.
  */
-export const runPnpm: Pnpm = (args, cwd) => {
+const runPnpm: Pnpm = (args, cwd) => {
   const execPath = process.env.npm_execpath;
-  const [command, prefix] = execPath !== undefined && /pnpm\.[cm]?js$/.test(path.basename(execPath)) ? [process.execPath, [execPath]] : ["pnpm", []];
-  const result = spawnSync(command, [...prefix, ...args], { cwd, stdio: "inherit", shell: command === "pnpm" && process.platform === "win32" });
+  const direct = execPath !== undefined && /pnpm\.[cm]?js$/.test(path.basename(execPath));
+  const shell = !direct && process.platform === "win32";
+  const [command, commandArgs] = direct ? [process.execPath, [execPath, ...args]] : ["pnpm", shell ? args.map(quoteForCmd) : args];
+  const result = spawnSync(command, commandArgs, { cwd, stdio: "inherit", shell });
   if ((result.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT") throw new AuthorError("pnpm was not found on the PATH.");
   if (result.error !== undefined) throw result.error;
   if (result.status !== 0) throw new AuthorError(`\`pnpm ${args.join(" ")}\` failed in ${cwd} (see its output above).`);
@@ -40,7 +46,7 @@ export const runPnpm: Pnpm = (args, cwd) => {
  * The folder of each library package in `checkout`. A path that is not a
  * reforged-ts checkout is an AuthorError naming every package it lacks.
  */
-export function findPackages(checkout: string): Record<(typeof LOCAL_PACKAGES)[number], string> {
+function findPackages(checkout: string): Record<LocalPackage, string> {
   const folder = (name: string) => path.join(checkout, "packages", name);
   const hasPackage = (name: string) => {
     const manifest = path.join(folder(name), "package.json");
@@ -50,7 +56,7 @@ export function findPackages(checkout: string): Record<(typeof LOCAL_PACKAGES)[n
   if (missing.length > 0) {
     throw new AuthorError(`${checkout} is not a reforged-ts checkout: no package ${missing.join(", ")} under ${path.join(checkout, "packages")}.`);
   }
-  return Object.fromEntries(LOCAL_PACKAGES.map((name) => [name, folder(name)])) as Record<(typeof LOCAL_PACKAGES)[number], string>;
+  return Object.fromEntries(LOCAL_PACKAGES.map((name) => [name, folder(name)])) as Record<LocalPackage, string>;
 }
 
 /**
@@ -81,7 +87,7 @@ function packInto(packageFolder: string, destination: string, pnpm: Pnpm): strin
  * place of the registry versions through the pnpm hook. No committed file
  * changes. Returns the tarball file names by package.
  */
-export function useLocal(root: string, checkout: string, pnpm: Pnpm = runPnpm): Record<string, string> {
+export function useLocal(root: string, checkout: string, pnpm: Pnpm = runPnpm): Record<LocalPackage, string> {
   const packages = findPackages(checkout);
   if (!fs.existsSync(path.join(checkout, "node_modules"))) pnpm(["install"], checkout);
   pnpm([...LOCAL_PACKAGES.flatMap((name) => ["--filter", name]), "run", "build"], checkout);
@@ -89,10 +95,10 @@ export function useLocal(root: string, checkout: string, pnpm: Pnpm = runPnpm): 
   const folder = path.join(root, LOCAL_FOLDER);
   fs.rmSync(folder, { recursive: true, force: true });
   fs.mkdirSync(folder);
-  const tarballs = Object.fromEntries(LOCAL_PACKAGES.map((name) => [name, packInto(packages[name], folder, pnpm)]));
+  const tarballs = Object.fromEntries(LOCAL_PACKAGES.map((name) => [name, packInto(packages[name], folder, pnpm)])) as Record<LocalPackage, string>;
   fs.writeFileSync(path.join(folder, LIST_FILE), `${JSON.stringify(tarballs, null, 2)}\n`);
 
-  pnpm(LOCAL_INSTALL, root);
+  pnpm(INSTALL_WITHOUT_LOCKFILE, root);
   return tarballs;
 }
 
@@ -104,7 +110,7 @@ export function useLocal(root: string, checkout: string, pnpm: Pnpm = runPnpm): 
 export function resetLocal(root: string, pnpm: Pnpm = runPnpm): void {
   fs.rmSync(path.join(root, LOCAL_FOLDER), { recursive: true, force: true });
   const lockfile = fs.existsSync(path.join(root, "pnpm-lock.yaml"));
-  pnpm(lockfile ? ["install", "--frozen-lockfile", "--config.confirmModulesPurge=false"] : LOCAL_INSTALL, root);
+  pnpm(lockfile ? [...INSTALL, "--frozen-lockfile"] : INSTALL_WITHOUT_LOCKFILE, root);
 }
 
 const USAGE = "Usage: pnpm use:local <path to a reforged-ts checkout> | --reset";
@@ -119,7 +125,7 @@ await runAsEntry(import.meta.url, "use:local", async () => {
   const root = process.cwd();
   if (args.length === 1 && args[0] === "--reset") {
     resetLocal(root);
-    console.log("Using the registry versions of reforged-ts, reforged-types and reforged-test.");
+    console.log(`Using the registry versions of ${LOCAL_PACKAGES.join(", ")}.`);
     return;
   }
   if (args.length !== 1 || args[0].startsWith("-")) throw new AuthorError(USAGE);

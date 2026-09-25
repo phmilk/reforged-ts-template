@@ -1,10 +1,9 @@
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { LIST_FILE, LOCAL_FOLDER, LOCAL_PACKAGES, resetLocal, type Pnpm } from "../../scripts/use-local.ts";
-import { makeTempDir, ROOT, runScript } from "./helpers.ts";
+import { git, makeTempDir, ROOT, runScript } from "./helpers.ts";
 
 const PNPMFILE = ".pnpmfile.cjs";
 
@@ -35,7 +34,7 @@ describe("the pnpm hook", () => {
     expect(loadHook(makeTempDir())(manifest())).toEqual(manifest());
   });
 
-  it("points the listed packages at their tarballs, dependencies and devDependencies only", () => {
+  it("points the listed packages at their tarballs, its own and its dependencies', never peers", () => {
     const root = makeTempDir();
     fs.mkdirSync(path.join(root, LOCAL_FOLDER));
     fs.writeFileSync(path.join(root, LOCAL_FOLDER, LIST_FILE), JSON.stringify({ "reforged-ts": "ts.tgz", "reforged-test": "test.tgz" }));
@@ -46,14 +45,10 @@ describe("the pnpm hook", () => {
       devDependencies: { "reforged-test": tarball("test.tgz") },
       peerDependencies: { "reforged-types": "^1.0.0" },
     });
+    // A listed package's own dependencies on another listed one go to the tarball too, not to the registry.
+    expect(loadHook(root)({ name: "reforged-ts", dependencies: { "reforged-test": "^1.0.0" } }).dependencies).toEqual({ "reforged-test": tarball("test.tgz") });
   });
 });
-
-const git = (cwd: string, ...args: string[]) => {
-  const result = spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "core.autocrlf=false", ...args], { cwd, encoding: "utf8" });
-  expect(result.status, result.stderr).toBe(0);
-  return result.stdout;
-};
 
 /**
  * A committed Map project reduced to what `use:local` touches: a manifest on
@@ -89,7 +84,7 @@ function makeCheckout(): string {
   return dir;
 }
 
-const useLocal = (cwd: string, ...args: string[]) => runScript(cwd, "scripts/use-local.ts", args);
+const runUseLocal = (cwd: string, ...args: string[]) => runScript(cwd, "scripts/use-local.ts", args);
 
 describe("pnpm use:local", () => {
   it("fails on a path that is not a library checkout, naming the missing packages, without a stack trace", () => {
@@ -97,7 +92,7 @@ describe("pnpm use:local", () => {
     const checkout = makeCheckout();
     fs.rmSync(path.join(checkout, "packages", "reforged-test"), { recursive: true });
     fs.rmSync(path.join(checkout, "packages", "reforged-types"), { recursive: true });
-    const result = useLocal(project, checkout);
+    const result = runUseLocal(project, checkout);
     expect(result.status).toBe(1);
     expect(result.stderr).toMatch(/^use:local failed: .*reforged-types, reforged-test/);
     expect(result.stderr).not.toMatch(/\n\s+at /);
@@ -105,7 +100,7 @@ describe("pnpm use:local", () => {
   });
 
   it("fails without a path, with the usage", () => {
-    const result = useLocal(makeMapProject());
+    const result = runUseLocal(makeMapProject());
     expect(result.status).toBe(1);
     expect(result.stderr).toMatch(/^use:local failed: Usage: pnpm use:local <path to a reforged-ts checkout> \| --reset/);
   });
@@ -115,17 +110,17 @@ describe("pnpm use:local", () => {
     const checkout = makeCheckout();
     const installed = (name: string) => fs.readFileSync(path.join(project, "node_modules", name, "dist.txt"), "utf8");
 
-    const first = useLocal(project, path.relative(project, checkout));
+    const first = runUseLocal(project, path.relative(project, checkout));
     expect(first.stderr).not.toMatch(/failed/);
     expect(first.status).toBe(0);
     for (const name of LOCAL_PACKAGES) expect(installed(name)).toBe(`${name} v1\n`);
     expect(git(project, "status", "--porcelain", "--untracked-files=all")).toBe("");
 
     fs.writeFileSync(path.join(checkout, "packages", "reforged-ts", "src.txt"), "reforged-ts v2\n");
-    expect(useLocal(project, checkout).status).toBe(0);
+    expect(runUseLocal(project, checkout).status).toBe(0);
     expect(installed("reforged-ts")).toBe("reforged-ts v2\n");
     // One tarball per package: the previous run's are gone.
-    expect(fs.readdirSync(path.join(project, LOCAL_FOLDER)).sort()).toHaveLength(LOCAL_PACKAGES.length + 1);
+    expect(fs.readdirSync(path.join(project, LOCAL_FOLDER))).toHaveLength(LOCAL_PACKAGES.length + 1);
     expect(git(project, "status", "--porcelain", "--untracked-files=all")).toBe("");
   }, 120_000);
 });
@@ -145,7 +140,7 @@ describe("resetLocal", () => {
     const { calls, pnpm } = recorder();
     resetLocal(project, pnpm);
     expect(fs.existsSync(path.join(project, LOCAL_FOLDER))).toBe(false);
-    expect(calls).toEqual([["install", "--no-lockfile", "--config.confirmModulesPurge=false"]]);
+    expect(calls).toEqual([["install", "--config.confirmModulesPurge=false", "--no-lockfile"]]);
     expect(git(project, "status", "--porcelain", "--untracked-files=all")).toBe("");
   });
 
@@ -156,6 +151,6 @@ describe("resetLocal", () => {
     git(project, "commit", "-q", "-m", "lockfile");
     const { calls, pnpm } = recorder();
     resetLocal(project, pnpm);
-    expect(calls).toEqual([["install", "--frozen-lockfile", "--config.confirmModulesPurge=false"]]);
+    expect(calls).toEqual([["install", "--config.confirmModulesPurge=false", "--frozen-lockfile"]]);
   });
 });

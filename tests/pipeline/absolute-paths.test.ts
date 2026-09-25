@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { makeTempDir, ROOT } from "./helpers.ts";
+import { git, makeTempDir, ROOT } from "./helpers.ts";
 
 /**
  * Absolute paths as they would leak from one machine into the repository:
@@ -91,11 +91,6 @@ describe("findAbsolutePaths", () => {
 });
 
 describe("readCommittedFiles", () => {
-  const git = (cwd: string, ...args: string[]) => {
-    const result = spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "core.autocrlf=false", ...args], { cwd, encoding: "utf8" });
-    expect(result.status, result.stderr).toBe(0);
-  };
-
   it("reads the files as committed in HEAD, not as they are on disk", () => {
     const repo = makeTempDir();
     git(repo, "init", "-q");

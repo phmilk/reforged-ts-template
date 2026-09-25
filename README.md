@@ -12,7 +12,7 @@ Template for Warcraft III 3.0.0 map projects written in TypeScript with [reforge
 
 ## Developing against a local checkout of the library
 
-To try a change to reforged-ts in the game before any package is published, point the Template at a local checkout of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts):
+To try a change to reforged-ts in the game before any package is published, point the project at a local checkout of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts):
 
 ```sh
 pnpm use:local ../reforged-ts   # build, pack and install reforged-ts, reforged-types and reforged-test from the checkout
@@ -22,4 +22,4 @@ pnpm use:local --reset          # back to the registry versions
 
 `pnpm use:local <path>` runs the checkout's build for the three packages, packs them into `.local-packages/` (ignored by git) and installs them in place of the registry versions. It works on a fresh clone with no `node_modules`. Rerun it after changing the library to pick up the change.
 
-Nothing committed changes, in either direction: the committed pnpm hook `.pnpmfile.cjs` swaps the three packages for their tarballs only while `.local-packages/packages.json` exists, and the local install writes no lockfile. `git status` stays clean after `use:local` and after `--reset`.
+Nothing committed changes, in either direction: the committed pnpm hook `.pnpmfile.cjs` swaps the three packages for their tarballs only while `.local-packages/packages.json` exists, and the local install writes no lockfile. `git status` stays clean after `use:local` and after `--reset`. While the local packages are in use, install with `pnpm use:local` rather than a plain `pnpm install` or `pnpm add`: those write a lockfile pointing at the local tarballs, which must not be committed.
