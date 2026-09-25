@@ -12,8 +12,10 @@
   "scripts": {
     "prepare": "node scripts/generate.ts",
     "build": "node scripts/build.ts",
+    "test": "vitest run",
     "test:pipeline": "vitest run --project pipeline",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.scripts.json",
+    "test:lua": "vitest run --project lua",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tests/lua/tsconfig.json --noEmit && tsc -p tsconfig.scripts.json",
     "dev": "node scripts/dev.ts",
     "test:map": "node scripts/launch.ts"
   },

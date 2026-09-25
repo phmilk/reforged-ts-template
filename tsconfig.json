@@ -1,23 +1,14 @@
 {
   // The map's TypeScript, compiled by typescript-to-lua into one Lua bundle.
   // Relative paths only; the build reads this file and never writes it.
+  // Language settings: tsconfig.base.json (shared with the Lua tests).
+  "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "target": "ESNext",
-    "lib": ["ESNext"],
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "skipLibCheck": true,
     "noEmitOnError": true,
-    "rootDir": "src",
-    "types": ["@typescript-to-lua/language-extensions", "reforged-types/3.0.0"]
+    "rootDir": "src"
   },
   "include": ["src"],
   "tstl": {
-    "luaTarget": "5.3",
-    "noHeader": true,
-    "noImplicitSelf": true,
-    "sourceMapTraceback": false,
     "luaBundle": "dist/bundle.lua",
     "luaBundleEntry": "src/main.ts"
   }

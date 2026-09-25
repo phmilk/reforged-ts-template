@@ -26,13 +26,13 @@ export function hashTree(folder: string): Record<string, string> {
 }
 
 /**
- * A throwaway copy of the Template (manifest, tsconfig, config, source, maps,
- * scripts) with the real node_modules linked in, so a command runs end to end
+ * A throwaway copy of the Template (manifest, tsconfigs, config, vitest
+ * config, source, maps, scripts, tests) with the real node_modules linked in, so a command runs end to end
  * without touching the repository.
  */
 export function copyProject(): string {
   const dir = makeTempDir();
-  for (const name of ["package.json", "tsconfig.json", "reforged.config.ts", "src", "maps", "scripts"]) {
+  for (const name of ["package.json", "tsconfig.json", "tsconfig.base.json", "reforged.config.ts", "vitest.config.ts", "src", "maps", "scripts", "tests"]) {
     fs.cpSync(path.join(ROOT, name), path.join(dir, name), { recursive: true });
   }
   fs.symlinkSync(path.join(ROOT, "node_modules"), path.join(dir, "node_modules"), "junction");
