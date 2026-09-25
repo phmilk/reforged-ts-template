@@ -78,6 +78,43 @@ describe("watchFolders", () => {
   });
 });
 
+describe("watchFolders on a folder deleted and created again", () => {
+  it("keeps watching the new folder", async () => {
+    const parent = makeTempDir();
+    const folder = path.join(parent, "map.w3m");
+    fs.mkdirSync(folder);
+    let calls = 0;
+    const watcher = watchFolders({ folders: [folder], ignore: [], debounceMs: 100, onChange: () => calls++ });
+    try {
+      await sleep(100);
+      // The way an editor may save: remove the folder and write a new one in its place.
+      fs.rmSync(folder, { recursive: true });
+      fs.mkdirSync(folder);
+      fs.writeFileSync(path.join(folder, "war3map.lua"), "-- 1\n");
+      await sleep(500);
+      expect(calls).toBe(1);
+
+      // The new folder is watched, not the deleted one.
+      fs.writeFileSync(path.join(folder, "war3map.lua"), "-- 2\n");
+      await sleep(500);
+      expect(calls).toBe(2);
+
+      // Missing for a while, then back: a change on removal, one on return, and the new folder is watched.
+      fs.rmSync(folder, { recursive: true });
+      await sleep(500);
+      expect(calls).toBe(3);
+      fs.mkdirSync(folder);
+      await sleep(500);
+      expect(calls).toBe(4);
+      fs.writeFileSync(path.join(folder, "war3map.lua"), "-- 3\n");
+      await sleep(500);
+      expect(calls).toBe(5);
+    } finally {
+      watcher.close();
+    }
+  });
+});
+
 /** `node scripts/dev.ts` in a throwaway project, with its output collected as it arrives. */
 class DevProcess {
   output = "";
@@ -155,6 +192,27 @@ describe("node scripts/dev.ts (pnpm dev)", () => {
     await sleep(1000);
     expect(dev.count(BUILT)).toBe(4);
     expect(dev.count(FAILED)).toBe(1);
+  });
+
+  it("rebuilds after the map folder is deleted and created again, and keeps watching the new one", async () => {
+    const project = copyProject();
+    const mapFolder = path.join(project, "maps", "reforged-ts-template.w3m");
+    const saved = makeTempDir();
+    fs.cpSync(mapFolder, saved, { recursive: true });
+    dev = new DevProcess(project);
+    await dev.waitFor(/^Watching /m, 1);
+    expect(dev.count(BUILT)).toBe(1);
+
+    fs.rmSync(mapFolder, { recursive: true });
+    fs.cpSync(saved, mapFolder, { recursive: true });
+    fs.appendFileSync(path.join(mapFolder, "war3map.lua"), "\n-- saved as a new folder\n");
+    await dev.waitFor(BUILT, 2);
+    expect(fs.readFileSync(path.join(project, "dist", "staging", "reforged-ts-template.w3m", "war3map.lua"), "utf8")).toContain("-- saved as a new folder");
+
+    // A later save into the recreated folder is still seen.
+    fs.appendFileSync(path.join(mapFolder, "war3map.lua"), "\n-- saved again\n");
+    await dev.waitFor(BUILT, 3);
+    expect(dev.count(FAILED)).toBe(0);
   });
 
   it("takes --mode from the command line like pnpm build", async () => {

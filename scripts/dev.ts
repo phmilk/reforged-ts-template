@@ -50,21 +50,52 @@ export interface WatchOptions {
  * Node's built-in recursive watch over `folders`, debounced. Changes under an
  * ignored folder never trigger; a change whose file name the platform does not
  * report does.
+ *
+ * A watched folder may be deleted and created again (an editor saving a map
+ * folder that way): on Linux the recursive watch stays on the deleted folder
+ * and goes silent. So each folder's parent is also watched, without
+ * recursion, for that one name; when it is removed or created the change
+ * triggers and the folder's watch is re-armed on whatever is there now (none
+ * while the folder is missing).
  */
 export function watchFolders(options: WatchOptions): { close(): void } {
   const trigger = debounce(options.onChange, options.debounceMs ?? DEBOUNCE_MS, options.timers);
-  const watchers = options.folders.map((folder) =>
-    fs
-      .watch(folder, { recursive: true }, (_event, filename) => {
-        if (filename !== null && options.ignore.some((ignored) => isInside(path.resolve(folder, filename), ignored))) return;
+  const ignored = (file: string) => options.ignore.some((folder) => isInside(file, folder));
+  const closers = options.folders.map((folder) => {
+    let inner: fs.FSWatcher | undefined;
+    const arm = () => {
+      inner?.close();
+      inner = undefined;
+      if (!fs.statSync(folder, { throwIfNoEntry: false })?.isDirectory()) return;
+      inner = fs
+        .watch(folder, { recursive: true }, (_event, filename) => {
+          if (filename !== null && ignored(path.resolve(folder, filename))) return;
+          trigger();
+        })
+        .on("error", (error) => {
+          console.error(`Watch error on ${folder}:`, error);
+          arm();
+        });
+    };
+    const name = path.basename(folder);
+    const parent = fs
+      .watch(path.dirname(folder), (event, filename) => {
+        if (filename !== null && filename !== name) return;
+        if (ignored(folder)) return;
+        if (event === "rename") arm();
         trigger();
       })
-      .on("error", (error) => console.error(`Watch error on ${folder}:`, error)),
-  );
+      .on("error", (error) => console.error(`Watch error on ${path.dirname(folder)}:`, error));
+    arm();
+    return () => {
+      parent.close();
+      inner?.close();
+    };
+  });
   return {
     close() {
       trigger.cancel();
-      for (const watcher of watchers) watcher.close();
+      for (const close of closers) close();
     },
   };
 }
