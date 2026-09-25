@@ -92,7 +92,7 @@ function buildAndReport(config: ResolvedConfig): void {
  * retriggers itself.
  */
 export function startDev(config: ResolvedConfig, debounceMs = DEBOUNCE_MS): { close(): void } {
-  const sourceFolder = path.join(config.root, "src");
+  const { sourceFolder } = config;
   const watcher = watchFolders({
     folders: [sourceFolder, config.mapFolder],
     ignore: [config.generatedFolder, config.outputFolder],

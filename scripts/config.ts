@@ -46,6 +46,8 @@ export interface ResolvedConfig {
   archiveName: string;
   /** The effective mode: the `--mode` flag, else the file's `mode`, else `dev`. */
   mode: Mode;
+  /** `src`: the map's TypeScript (the tstl project's root folder). */
+  sourceFolder: string;
   /** `src/generated`: the files the pipeline writes for the source to import (ignored by version control). */
   generatedFolder: string;
   /** The tstl project compiled into the bundle. */
@@ -62,12 +64,13 @@ export function resolveConfig(config: Config, root: string, overrides: CommandLi
   const mapFolder = path.resolve(root, config.mapFolder);
   const outputFolder = path.resolve(root, config.outputFolder ?? "dist");
   const archiveName = config.archiveName ?? path.basename(mapFolder);
+  const sourceFolder = path.join(root, "src");
   const inside = (child: string, parent: string) => {
     const rel = path.relative(parent, child);
     return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
   };
   // The output folder is deleted on every build: never let it cover the repository or the map folder.
-  if (inside(root, outputFolder) || inside(path.join(root, "src"), outputFolder) || inside(mapFolder, outputFolder) || inside(outputFolder, mapFolder)) {
+  if (inside(root, outputFolder) || inside(sourceFolder, outputFolder) || inside(mapFolder, outputFolder) || inside(outputFolder, mapFolder)) {
     throw new AuthorError(`${CONFIG_FILE}: \`outputFolder\` must be a folder of its own, not the repository root, the source folder, or inside or around the map folder.`);
   }
   if (archiveName !== path.basename(archiveName) || archiveName === "") {
@@ -83,7 +86,8 @@ export function resolveConfig(config: Config, root: string, overrides: CommandLi
     outputFolder,
     archiveName,
     mode,
-    generatedFolder: path.join(root, "src", "generated"),
+    sourceFolder,
+    generatedFolder: path.join(sourceFolder, "generated"),
     tsconfig: path.join(root, "tsconfig.json"),
   };
 }

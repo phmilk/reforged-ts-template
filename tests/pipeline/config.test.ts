@@ -14,6 +14,7 @@ describe("resolveConfig", () => {
       outputFolder: path.join(root, "dist"),
       archiveName: "my-map.w3x",
       mode: "dev",
+      sourceFolder: path.join(root, "src"),
       generatedFolder: path.join(root, "src", "generated"),
       tsconfig: path.join(root, "tsconfig.json"),
     });
@@ -53,6 +54,7 @@ describe("loadConfig", () => {
       outputFolder: path.join(dir, "dist"),
       archiveName: "m.w3x",
       mode: "dev",
+      sourceFolder: path.join(dir, "src"),
       generatedFolder: path.join(dir, "src", "generated"),
       tsconfig: path.join(dir, "tsconfig.json"),
     });
