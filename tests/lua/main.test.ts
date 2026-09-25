@@ -40,23 +40,51 @@ globals.print = (...args: unknown[]) => {
 const registrations = recordCalls("TriggerRegisterPlayerUnitEvent");
 const timerStarts = recordCalls("TimerStart");
 
-// The game starts. The harness does not load the editor's script, so the test
-// defines Blizzard's MarkGameStarted and calls it as the game does. The
-// library wraps it when it is defined; the call runs the Init stages the
-// editor's script would have run, then the game start callbacks.
-globals.MarkGameStarted = () => {};
-(globals.MarkGameStarted as () => void)();
+// The line the starter prints when the game starts.
+const STARTED = "reforged-ts-template: game started";
+
+// Starts the game: defines Blizzard's MarkGameStarted and calls it, as the editor's script and the game would.
+function startGame(): void {
+  globals.MarkGameStarted = () => {};
+  MarkGameStarted();
+}
+
+// The library wraps MarkGameStarted when it is defined, so the call runs the
+// Init stages the editor's script would have run, then the game start
+// callbacks. A callback that fails prints one line from the library.
+startGame();
+const printedAtGameStart = [...printed];
+
+/**
+ * Fails, naming the game start callback of src/main.ts, when it did not run to
+ * its end: the Subscription and the Timer are made there.
+ */
+function expectGameStartCallbackRan(): void {
+  if (printedAtGameStart.length !== 1 || printedAtGameStart[0] !== STARTED) {
+    const output = printedAtGameStart.length === 0 ? "nothing" : printedAtGameStart.join(" | ");
+    throw `the game start callback of src/main.ts did not run to its end; printed at game start: ${output}`;
+  }
+}
 
 describe("the starter source", () => {
   it("prints its line when the game starts", () => {
-    expect(printed).toEqual(["reforged-ts-template: game started"]);
+    expect(printedAtGameStart).toEqual([STARTED]);
   });
 
   it("runs the Subscription's handler when a unit dies", () => {
-    // UnitEvents.death registers one Trigger for the death of any player's unit.
-    const deaths = registrations.filter(([, , event]) => event === EVENT_PLAYER_UNIT_DEATH);
-    expect(deaths.length > 0).toBe(true);
-    const trigger = deaths[0]?.[0] as trigger;
+    expectGameStartCallbackRan();
+    // UnitEvents.death registers one Trigger for the death of any player's
+    // unit, once per player slot; the library registers no death of its own.
+    const deathTriggers: trigger[] = [];
+    for (const [registered, , event] of registrations) {
+      if (event === EVENT_PLAYER_UNIT_DEATH && !deathTriggers.includes(registered as trigger)) {
+        deathTriggers.push(registered as trigger);
+      }
+    }
+    if (deathTriggers.length !== 1) {
+      throw `expected the starter's one Trigger on EVENT_PLAYER_UNIT_DEATH, got ${deathTriggers.length}`;
+    }
+    const trigger = deathTriggers[0];
     const owner = MapPlayer.fromIndex(0);
     if (owner === undefined) throw "no player in slot 0";
     const footman = Unit.create(owner, FourCC("hfoo"), 0, 0);
@@ -68,11 +96,14 @@ describe("the starter source", () => {
   });
 
   it("starts a Timer repeating every 60 seconds", () => {
+    expectGameStartCallbackRan();
     // The library starts timers of its own (game time, host detection) at the
     // same stages; the starter's is the one repeating every 60 seconds.
     const repeating = timerStarts.filter(([, timeout, periodic]) => timeout === 60 && periodic === true);
-    expect(repeating.length).toBe(1);
-    const timer = repeating[0]?.[0] as timer;
+    if (repeating.length !== 1) {
+      throw `expected the starter's one Timer repeating every 60 seconds, got ${repeating.length}`;
+    }
+    const timer = repeating[0][0] as timer;
     expect(stubCalls()).toContainCall(`TimerStart(${__stub_format(timer)}, 60, true, <function>)`);
     printed.length = 0;
 
