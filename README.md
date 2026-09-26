@@ -1,8 +1,8 @@
 # reforged-ts-template
 
-A Map project template: a Warcraft III 3.0.0 map whose code is TypeScript compiled to Lua with typescript-to-lua and [reforged-ts](https://github.com/phmilk/reforged-ts). You write the map's code in `src`, `pnpm build` appends it to the script the World Editor saved and packs the map, and `pnpm test:map` opens it in the game. The World Editor owns the map's data (terrain, object data, placed units); this repository owns the code. The build pipeline's design comes from cipherxof's [wc3-ts-template](https://github.com/cipherxof/wc3-ts-template) (MIT).
+A Map project template: a Warcraft III 3.0.0 map whose code is TypeScript compiled to Lua with typescript-to-lua and [reforged-ts](https://github.com/phmilk/reforged-ts). You write the map's code in `src`, `pnpm build` appends it to the script the World Editor saved and packs the map, and `pnpm test:map` opens it in the game. The World Editor owns the map's data (terrain, object data, placed units); this repository owns the code. The way the build works (the editor's map folder, the code appended to its script, the archive packed) comes from cipherxof's [wc3-ts-template](https://github.com/cipherxof/wc3-ts-template) (MIT).
 
-**Status: under construction.** The Template is being built in the open specs of its issue tracker, at https://github.com/phmilk/reforged-ts-template/issues, and the library packages are not published yet (see [the library packages](#the-library-packages)).
+**Status: under construction.** The Template is being built in the open specs of its issue tracker, at https://github.com/phmilk/reforged-ts-template/issues. The library packages are not published yet (see [the library packages](#the-library-packages)), and the documentation site is not live yet: its links, the `llms.txt` one included, are placeholders until it is.
 
 ## Requirements
 
@@ -17,7 +17,7 @@ On Linux the game runs through Wine: set `winePath` in `reforged.config.ts`.
 
 1. Create your repository from this one with GitHub's **Use this template**.
 2. Clone it and open a terminal in the clone.
-3. Install: `pnpm install`. It also writes the generated files under `src/generated`. Until the library's first publish, install with `pnpm use:local` instead (see [the library packages](#the-library-packages)).
+3. Install: `pnpm install`. It also writes the generated files under `src/generated`. Until the library's first publish, install with `pnpm use:local <checkout>` instead (see [the library packages](#the-library-packages)).
 4. Open the map folder, `maps/reforged-ts-template.w3m`, in the World Editor and save it. Leave Scenario > Map Options > Script Language on Lua: the build appends the map's code to the script the editor writes. To rename the map, save it under `maps` with the new name and set `mapFolder` in `reforged.config.ts`.
 5. Build: `pnpm build`. It prints the packed archive, `dist/reforged-ts-template.w3m`.
 6. Play: `pnpm test:map` builds, then opens the game on the built map folder, windowed. To pick the map from the game's own map list instead, copy the archive into the game's Maps folder.
@@ -33,10 +33,10 @@ On Linux the game runs through Wine: set `winePath` in `reforged.config.ts`.
 | `pnpm build --mode release` | Builds the map in release mode, the Guards off: the build you ship.                                       |
 | `pnpm dev`                  | Watches `src` and the map folder and rebuilds on every change.                                            |
 | `pnpm test:map`             | Builds, then launches the game on the built map folder.                                                   |
-| `pnpm test`                 | Runs the tests without the game: the pipeline's in Node, the map's on the Lua 5.3 harness.                |
+| `pnpm test`                 | Runs the tests without the game: the build scripts' in Node, the map's on the Lua 5.3 harness.            |
 | `pnpm check`                | Runs `lint`, `typecheck` and `test` in that order and stops at the first failure: the definition of done. |
 
-`pnpm lint` and `pnpm lint:fix` run ESLint alone ([Lint](#lint)), `pnpm typecheck` the TypeScript compiler alone, and `pnpm use:local` installs the library from a local checkout ([below](#developing-against-a-local-checkout-of-the-library)).
+`pnpm lint` and `pnpm lint:fix` run ESLint alone ([Lint](#lint)), `pnpm typecheck` the TypeScript compiler alone, and `pnpm use:local <checkout>` installs the library from a local checkout ([below](#developing-against-a-local-checkout-of-the-library)).
 
 ## Compatibility matrix
 
@@ -65,7 +65,7 @@ A green `pnpm check` is the definition of done, for an author and for an agent.
 
 ## Lint
 
-`pnpm lint` runs ESLint over the repository (the map's source, its Lua tests, the pipeline scripts and their tests) and fails on any problem, warnings included; `pnpm lint:fix` applies the fixes and formats. The flat config in `eslint.config.mjs` holds:
+`pnpm lint` runs ESLint over the repository (the map's source, its Lua tests, the build scripts and their tests) and fails on any problem, warnings included; `pnpm lint:fix` applies the fixes and formats. The flat config in `eslint.config.mjs` holds:
 
 - the library's base stack: `@eslint/js` recommended, typescript-eslint's strict and stylistic type-checked presets through the project service, and `eslint-plugin-import-x` with the TypeScript resolver;
 - every recommended rule of [`eslint-plugin-reforged`](https://github.com/phmilk/reforged-ts/tree/master/packages/eslint-plugin-reforged), the lint layer of the library's Guards, on the code that runs in the game (`src` and `tests/lua`); each problem links to its rule's page;
@@ -105,12 +105,12 @@ Nothing committed changes, in either direction: the committed pnpm hook `.pnpmfi
 This repository keeps the Template itself up to date with the library. A Map project generated from it can delete that machinery; nothing is ever synced into a generated project:
 
 - `.github/workflows/sync.yml`, the workflow that applies a library release to the Template. It runs only in `phmilk/reforged-ts-template`, so it is inert in your repository.
-- The sync script and its tests, which the workflow runs.
-- The Template's maintenance docs: `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md` and the sections of `AGENTS.md` that point at them.
+- The tooling tests that hold the Template's files to the sync's shape (`tests/pipeline/readme.test.ts` for this README), and the sync script with its tests, which the workflow runs.
+- The Template's maintenance docs: `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md` and the Template maintenance section of `AGENTS.md`, which lists them.
 
 ## Links
 
 - The documentation site: https://phmilk.github.io/reforged-ts/
 - The library: https://github.com/phmilk/reforged-ts
-- The upstream template the pipeline comes from: https://github.com/cipherxof/wc3-ts-template
+- The upstream template the build comes from: https://github.com/cipherxof/wc3-ts-template
 - License: MIT, in `LICENSE`.

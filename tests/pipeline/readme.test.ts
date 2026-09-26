@@ -1,38 +1,47 @@
+// The README's sync blocks as the Template ships them: the library's release
+// sync rewrites the text between each pair of markers and nothing else.
+// In a generated Map project the README is the author's own: delete this test
+// with sync.yml.
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { ROOT } from "./helpers.ts";
 
 /**
- * The README blocks the sync workflow replaces on a library release, each
- * between `<!-- reforged-ts:<name>:start -->` and `<!-- reforged-ts:<name>:end -->`
- * (the convention of the `terms` block in `CONTEXT.md`).
+ * The lines between `<!-- reforged-ts:<name>:start -->` and its end marker
+ * (the convention of the `terms` block in `CONTEXT.md`); fails unless each
+ * marker appears exactly once, on a line of its own, start before end.
  */
-const SYNC_BLOCKS = ["matrix", "docs"] as const;
-
-const count = (text: string, needle: string) => text.split(needle).length - 1;
+function markedLines(text: string, name: string): string {
+  const start = `<!-- reforged-ts:${name}:start -->`;
+  const end = `<!-- reforged-ts:${name}:end -->`;
+  expect(text.split(start), start).toHaveLength(2);
+  expect(text.split(end), end).toHaveLength(2);
+  const lines = text.split("\n");
+  const from = lines.indexOf(start);
+  const to = lines.indexOf(end);
+  expect(from, `${start} on a line of its own`).toBeGreaterThanOrEqual(0);
+  expect(to, `${end} on a line of its own, after ${start}`).toBeGreaterThan(
+    from,
+  );
+  return lines
+    .slice(from + 1, to)
+    .join("\n")
+    .trim();
+}
 
 describe("README.md", () => {
-  const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8");
+  const readme = fs
+    .readFileSync(path.join(ROOT, "README.md"), "utf8")
+    .replaceAll("\r\n", "\n");
 
-  it.each(SYNC_BLOCKS)(
-    "holds the %s block once, between its sync markers, each on a line of its own",
-    (name) => {
-      const start = `<!-- reforged-ts:${name}:start -->`;
-      const end = `<!-- reforged-ts:${name}:end -->`;
-      expect(count(readme, start)).toBe(1);
-      expect(count(readme, end)).toBe(1);
-      const lines = readme.split("\n");
-      const from = lines.indexOf(start);
-      const to = lines.indexOf(end);
-      expect(from).toBeGreaterThanOrEqual(0);
-      expect(to).toBeGreaterThan(from + 1);
-      expect(
-        lines
-          .slice(from + 1, to)
-          .join("\n")
-          .trim(),
-      ).not.toBe("");
-    },
-  );
+  it("holds the compatibility matrix between the matrix markers", () => {
+    expect(markedLines(readme, "matrix")).not.toBe("");
+  });
+
+  it("holds the llms.txt link between the docs markers", () => {
+    expect(markedLines(readme, "docs")).toMatch(
+      /\]\(https:\/\/\S+\/llms\.txt\)/,
+    );
+  });
 });
