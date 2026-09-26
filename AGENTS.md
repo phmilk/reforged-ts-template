@@ -65,6 +65,13 @@ The documentation of the installed reforged-ts version, as one plain-text file f
 
 The TSDoc of every Wrapper, System and Native lives in the installed declarations: `node_modules/reforged-ts/dist/**/*.d.ts` and `node_modules/reforged-types/3.0.0/*.d.ts`. Read them before calling an API from memory.
 
+## Agent skills
+
+Two skills walk an agent through the project's recurring tasks. An agent without skill support reads the file as a document and follows its steps.
+
+- `.claude/skills/map-feature/SKILL.md`: adding a feature, a mechanic or a new system, from idea to a tested module under `src`.
+- `.claude/skills/run-in-game/SKILL.md`: running the map in the game and reporting what it showed.
+
 ## Template maintenance
 
 This section, `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, the sync-shape tests (`tests/pipeline/seeds.test.ts`, `tests/pipeline/readme.test.ts` and their helper `tests/pipeline/sync-markers.ts`), and the sync workflow `.github/workflows/sync.yml` with its script and tests serve the development of the Template itself. Delete them in a generated Map project, and keep Your project below.
