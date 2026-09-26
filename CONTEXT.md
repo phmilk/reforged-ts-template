@@ -1,6 +1,6 @@
 # Map project
 
-This file is the Map project's domain glossary. The first section holds the terms of the reforged-ts library and is refreshed in the Template by the library's sync workflow on each release; once a Map project is generated from the Template, the file belongs to its author and is never updated automatically. Add the map's own terms in the last section.
+This file is the Map project's domain glossary. The first section holds the terms of the reforged-ts library and is refreshed in the Template by the Template's sync workflow on each library release; once a Map project is generated from the Template, the file belongs to its author and is never updated automatically. Add the map's own terms in the last section.
 
 <!-- reforged-ts:terms:start -->
 
