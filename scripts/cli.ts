@@ -7,7 +7,11 @@ import { AuthorError } from "./errors.ts";
  * (no stack trace), anything else (a bug) with its stack.
  */
 export function printFailure(command: string, error: unknown): void {
-  console.error(error instanceof AuthorError ? `${command} failed: ${error.message}` : error);
+  console.error(
+    error instanceof AuthorError
+      ? `${command} failed: ${error.message}`
+      : error,
+  );
 }
 
 /**
@@ -16,8 +20,16 @@ export function printFailure(command: string, error: unknown): void {
  * failure is printed with `printFailure` and sets exit code 1.
  * (`import.meta.main` would do the check, but needs Node 24.2; the floor is 24.0.)
  */
-export async function runAsEntry(moduleUrl: string, command: string, main: () => Promise<void>): Promise<void> {
-  if (!process.argv[1] || pathToFileURL(path.resolve(process.argv[1])).href !== moduleUrl) return;
+export async function runAsEntry(
+  moduleUrl: string,
+  command: string,
+  main: () => void | Promise<void>,
+): Promise<void> {
+  if (
+    !process.argv[1] ||
+    pathToFileURL(path.resolve(process.argv[1])).href !== moduleUrl
+  )
+    return;
   try {
     await main();
   } catch (error) {

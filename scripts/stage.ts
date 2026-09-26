@@ -12,7 +12,10 @@ export function cleanOutputFolder(outputFolder: string): void {
 }
 
 /** Where the staged copy of the map folder lives: `<output>/staging/<map folder name>`. */
-export function stagingFolderFor(outputFolder: string, mapFolder: string): string {
+export function stagingFolderFor(
+  outputFolder: string,
+  mapFolder: string,
+): string {
   return path.join(outputFolder, "staging", path.basename(mapFolder));
 }
 
@@ -22,7 +25,9 @@ export function stagingFolderFor(outputFolder: string, mapFolder: string): strin
  */
 export function readEditorScript(mapFolder: string): Uint8Array {
   if (!fs.statSync(mapFolder, { throwIfNoEntry: false })?.isDirectory()) {
-    throw new AuthorError(`Map folder not found: ${mapFolder}. Save the map as a folder from the World Editor (File > Save Map As, "Folder").`);
+    throw new AuthorError(
+      `Map folder not found: ${mapFolder}. Save the map as a folder from the World Editor (File > Save Map As, "Folder").`,
+    );
   }
   const file = path.join(mapFolder, EDITOR_SCRIPT);
   if (!fs.statSync(file, { throwIfNoEntry: false })?.isFile()) {
@@ -37,5 +42,9 @@ export function readEditorScript(mapFolder: string): Uint8Array {
 /** Copies the map folder into the staging folder. The map folder is only read. */
 export function stageMapFolder(mapFolder: string, stagingFolder: string): void {
   fs.mkdirSync(path.dirname(stagingFolder), { recursive: true });
-  fs.cpSync(mapFolder, stagingFolder, { recursive: true, errorOnExist: true, force: false });
+  fs.cpSync(mapFolder, stagingFolder, {
+    recursive: true,
+    errorOnExist: true,
+    force: false,
+  });
 }

@@ -18,15 +18,28 @@ const ABSOLUTE_PATH_PATTERNS = [
 ];
 
 /** The game's well-known install locations, which `scripts/config.ts` probes by design (and its tests assert). */
-const ALLOWED_PREFIXES = ["C:\\\\Program Files", "C:\\Program Files", "/Applications/Warcraft III/"];
+const ALLOWED_PREFIXES = [
+  "C:\\\\Program Files",
+  "C:\\Program Files",
+  "/Applications/Warcraft III/",
+];
 
 /** `file:line: text` for every line of `text` holding an absolute path. */
 function findAbsolutePaths(file: string, text: string): string[] {
   const leaks = (line: string) =>
     ABSOLUTE_PATH_PATTERNS.some((pattern) =>
-      [...line.matchAll(pattern)].some((match) => !ALLOWED_PREFIXES.some((prefix) => line.startsWith(prefix, match.index))),
+      [...line.matchAll(pattern)].some(
+        (match) =>
+          !ALLOWED_PREFIXES.some((prefix) =>
+            line.startsWith(prefix, match.index),
+          ),
+      ),
     );
-  return text.split("\n").flatMap((line, index) => (leaks(line) ? [`${file}:${index + 1}: ${line.trim()}`] : []));
+  return text
+    .split("\n")
+    .flatMap((line, index) =>
+      leaks(line) ? [`${file}:${String(index + 1)}: ${line.trim()}`] : [],
+    );
 }
 
 /**
@@ -34,8 +47,13 @@ function findAbsolutePaths(file: string, text: string): string[] {
  * and untracked files never count. `null` outside a git checkout or before
  * the first commit.
  */
-function readCommittedFiles(root: string): { file: string; text: string }[] | null {
-  const tree = spawnSync("git", ["ls-tree", "-r", "-z", "HEAD"], { cwd: root, encoding: "utf8" });
+function readCommittedFiles(
+  root: string,
+): { file: string; text: string }[] | null {
+  const tree = spawnSync("git", ["ls-tree", "-r", "-z", "HEAD"], {
+    cwd: root,
+    encoding: "utf8",
+  });
   if (tree.status !== 0) return null;
   // `<mode> <type> <object>\t<path>`; submodules (`commit`) have no content here.
   const blobs = tree.stdout
@@ -48,13 +66,17 @@ function readCommittedFiles(root: string): { file: string; text: string }[] | nu
     input: blobs.map(({ object }) => `${object}\n`).join(""),
     maxBuffer: 1024 ** 3,
   });
-  if (batch.status !== 0) throw new Error(`git cat-file failed: ${batch.stderr}`);
+  if (batch.status !== 0)
+    throw new Error(`git cat-file failed: ${batch.stderr.toString()}`);
   // Each object comes back as `<object> blob <size>\n<content>\n`.
   const stream = batch.stdout;
   let offset = 0;
   return blobs.flatMap(({ file }) => {
     const headerEnd = stream.indexOf(0x0a, offset);
-    const [, , size] = stream.toString("utf8", offset, headerEnd).split(" ").map(Number);
+    const [, , size] = stream
+      .toString("utf8", offset, headerEnd)
+      .split(" ")
+      .map(Number);
     const bytes = stream.subarray(headerEnd + 1, headerEnd + 1 + size);
     offset = headerEnd + 1 + size + 1;
     return bytes.includes(0) ? [] : [{ file, text: bytes.toString("utf8") }]; // binary files left out
@@ -62,7 +84,10 @@ function readCommittedFiles(root: string): { file: string; text: string }[] | nu
 }
 
 /** This file: its own examples below are what the detector must catch. */
-const SELF = path.relative(ROOT, fileURLToPath(import.meta.url)).split(path.sep).join("/");
+const SELF = path
+  .relative(ROOT, fileURLToPath(import.meta.url))
+  .split(path.sep)
+  .join("/");
 
 describe("findAbsolutePaths", () => {
   it("catches Windows, quoted Unix and home or system paths, and lets the probe locations and relative paths through", () => {
@@ -96,14 +121,23 @@ describe("readCommittedFiles", () => {
     git(repo, "init", "-q");
     fs.writeFileSync(path.join(repo, "package.json"), '{ "name": "x" }\n');
     fs.mkdirSync(path.join(repo, "sub"));
-    fs.writeFileSync(path.join(repo, "sub", "leak.ts"), 'const game = "D:/Games/wc3";\n');
+    fs.writeFileSync(
+      path.join(repo, "sub", "leak.ts"),
+      'const game = "D:/Games/wc3";\n',
+    );
     git(repo, "add", ".");
     git(repo, "commit", "-q", "-m", "init");
     // Local, uncommitted settings: an edit, a staged file and an untracked one.
-    fs.writeFileSync(path.join(repo, "package.json"), '{ "pnpm": { "overrides": { "x": "file:/home/me/x.tgz" } } }\n');
+    fs.writeFileSync(
+      path.join(repo, "package.json"),
+      '{ "pnpm": { "overrides": { "x": "file:/home/me/x.tgz" } } }\n',
+    );
     fs.writeFileSync(path.join(repo, "staged.ts"), 'const game = "E:/wc3";\n');
     git(repo, "add", "staged.ts");
-    fs.writeFileSync(path.join(repo, "untracked.ts"), 'const game = "F:/wc3";\n');
+    fs.writeFileSync(
+      path.join(repo, "untracked.ts"),
+      'const game = "F:/wc3";\n',
+    );
     fs.rmSync(path.join(repo, "sub", "leak.ts"));
 
     expect(readCommittedFiles(repo)).toEqual([
@@ -111,7 +145,11 @@ describe("readCommittedFiles", () => {
       { file: "sub/leak.ts", text: 'const game = "D:/Games/wc3";\n' },
     ]);
     // A committed absolute path still fails the check, and only that one.
-    expect(readCommittedFiles(repo)?.flatMap(({ file, text }) => findAbsolutePaths(file, text))).toEqual(['sub/leak.ts:1: const game = "D:/Games/wc3";']);
+    expect(
+      readCommittedFiles(repo)?.flatMap(({ file, text }) =>
+        findAbsolutePaths(file, text),
+      ),
+    ).toEqual(['sub/leak.ts:1: const game = "D:/Games/wc3";']);
   });
 
   it("reads nothing before the first commit", () => {
@@ -128,9 +166,13 @@ describe("committed files", () => {
     const committed = readCommittedFiles(ROOT);
     // Not a git checkout (an unpacked archive), or nothing committed yet: nothing to say about committed files.
     if (committed === null) return context.skip();
-    const files = committed.filter(({ file }) => !file.startsWith("maps/") && file !== SELF);
+    const files = committed.filter(
+      ({ file }) => !file.startsWith("maps/") && file !== SELF,
+    );
     expect(files.length).toBeGreaterThan(10);
-    const hits = files.flatMap(({ file, text }) => findAbsolutePaths(file, text));
+    const hits = files.flatMap(({ file, text }) =>
+      findAbsolutePaths(file, text),
+    );
     expect(hits).toEqual([]);
   });
 });

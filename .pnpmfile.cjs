@@ -9,14 +9,22 @@ const path = require("node:path");
 const folder = path.join(__dirname, ".local-packages");
 const list = path.join(folder, "packages.json");
 /** Package name to tarball file name, `{}` when the Template uses the registry. */
-const tarballs = fs.existsSync(list) ? JSON.parse(fs.readFileSync(list, "utf8")) : {};
+const tarballs = fs.existsSync(list)
+  ? JSON.parse(fs.readFileSync(list, "utf8"))
+  : {};
 
 function readPackage(manifest) {
-  for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
+  for (const field of [
+    "dependencies",
+    "devDependencies",
+    "optionalDependencies",
+  ]) {
     const dependencies = manifest[field];
     if (dependencies === undefined) continue;
     for (const [name, file] of Object.entries(tarballs)) {
-      if (name in dependencies) dependencies[name] = `file:${path.join(folder, file).split(path.sep).join("/")}`;
+      if (name in dependencies)
+        dependencies[name] =
+          `file:${path.join(folder, file).split(path.sep).join("/")}`;
     }
   }
   return manifest;

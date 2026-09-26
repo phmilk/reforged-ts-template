@@ -6,6 +6,7 @@ import { runLuaTests } from "reforged-test";
 import { inject } from "vitest";
 
 const compileErrors = inject("compileErrors");
-if (compileErrors !== "") throw new Error(`The Lua tests did not compile:\n${compileErrors}`);
+if (compileErrors !== "")
+  throw new Error(`The Lua tests did not compile:\n${compileErrors}`);
 
 runLuaTests({ outDir: inject("outDir"), stubs: inject("stubs") });

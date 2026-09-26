@@ -5,9 +5,14 @@ import { AuthorError } from "./errors.ts";
 
 // Deep import of the parser only: the package root pulls in the WebGL viewer.
 // Loaded through require because the module is CommonJS with a `default` export.
-type War3MapClass = typeof import("mdx-m3-viewer-th/dist/cjs/parsers/w3x/map.js").default;
+type War3MapClass =
+  typeof import("mdx-m3-viewer-th/dist/cjs/parsers/w3x/map.js").default;
 const require = createRequire(import.meta.url);
-const War3Map = (require("mdx-m3-viewer-th/dist/cjs/parsers/w3x/map.js") as { default: War3MapClass }).default;
+const War3Map = (
+  require("mdx-m3-viewer-th/dist/cjs/parsers/w3x/map.js") as {
+    default: War3MapClass;
+  }
+).default;
 export type War3Map = InstanceType<War3MapClass>;
 
 /** The editor's import list. */
@@ -27,7 +32,8 @@ export class OpaqueW3iMap extends War3Map {
   override save(): Uint8Array {
     if (!this.has(IMPORTS_FILE)) this.setImportsFile();
     const bytes = this.archive.save();
-    if (!bytes) throw new AuthorError("The MPQ writer failed to save the archive.");
+    if (!bytes)
+      throw new AuthorError("The MPQ writer failed to save the archive.");
     return bytes;
   }
 }
@@ -42,7 +48,8 @@ export function listMapFiles(folder: string): string[] {
   const names: string[] = [];
   const walk = (dir: string, prefix: string[]) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      if (entry.isDirectory()) walk(path.join(dir, entry.name), [...prefix, entry.name]);
+      if (entry.isDirectory())
+        walk(path.join(dir, entry.name), [...prefix, entry.name]);
       else if (entry.isFile()) names.push([...prefix, entry.name].join("\\"));
     }
   };
@@ -69,14 +76,19 @@ export function packMapFolder(folder: string): Uint8Array {
   const names = listMapFiles(folder);
   const map = new OpaqueW3iMap();
   if (!map.archive.resizeHashtable(names.length + 2)) {
-    throw new AuthorError(`The MPQ writer could not size its hash table for ${names.length} files.`);
+    throw new AuthorError(
+      `The MPQ writer could not size its hash table for ${String(names.length)} files.`,
+    );
   }
   for (const name of names) {
     const bytes = readPlain(path.join(folder, ...name.split("\\")));
     const buffer = bytes as unknown as ArrayBuffer;
-    const added = name === IMPORTS_FILE ? map.set(name, buffer) : map.import(name, buffer);
+    const added =
+      name === IMPORTS_FILE ? map.set(name, buffer) : map.import(name, buffer);
     if (!added) {
-      throw new AuthorError(`The MPQ writer could not add ${name} to the archive.`);
+      throw new AuthorError(
+        `The MPQ writer could not add ${name} to the archive.`,
+      );
     }
   }
   return map.save();
@@ -84,7 +96,10 @@ export function packMapFolder(folder: string): Uint8Array {
 
 /** Opens an archive for reading. Takes a plain `Uint8Array`; a Node `Buffer` view would misread the tables. */
 export function openArchive(bytes: Uint8Array): War3Map {
-  const plain = Object.getPrototypeOf(bytes) === Uint8Array.prototype ? bytes : Uint8Array.from(bytes);
+  const plain =
+    Object.getPrototypeOf(bytes) === Uint8Array.prototype
+      ? bytes
+      : Uint8Array.from(bytes);
   const map = new War3Map();
   map.load(plain, true);
   return map;

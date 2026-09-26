@@ -1,2 +1,6 @@
+# Every text file is stored and checked out with LF, whatever core.autocrlf
+# says: Prettier (run through ESLint) formats with LF.
+* text=auto eol=lf
+
 # The World Editor owns every file under maps/; git stores them byte for byte.
 maps/** -text -diff

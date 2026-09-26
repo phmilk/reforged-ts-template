@@ -1,0 +1,13 @@
+{
+  // Not a compile: a solution file for the TypeScript server of the editor and
+  // of the lint (typescript-eslint's project service). The server finds a
+  // file's program through the nearest tsconfig.json, here the map's; the
+  // Node side (the pipeline scripts, their tests, the configuration files) is
+  // in none of the tsconfig.json files, so the map's tsconfig.json references
+  // this file and the search continues through it to tsconfig.scripts.json.
+  // Only a composite project may be referenced, and tsconfig.scripts.json
+  // emits nothing, hence this empty composite one in between.
+  "files": [],
+  "compilerOptions": { "composite": true },
+  "references": [{ "path": "./tsconfig.scripts.json" }]
+}

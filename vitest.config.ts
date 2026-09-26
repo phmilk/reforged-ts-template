@@ -31,7 +31,8 @@ export default defineConfig({
     // graph: a change to one of them reruns the harness spec (watch mode).
     watchTriggerPatterns: [
       {
-        pattern: /[\\/](?:src|tests[\\/]lua|tests[\\/]stubs)[\\/].+\.(?:ts|lua)$/,
+        pattern:
+          /[\\/](?:src|tests[\\/]lua|tests[\\/]stubs)[\\/].+\.(?:ts|lua)$/,
         testsToRun: () => "tests/harness/lua.spec.ts",
       },
     ],
