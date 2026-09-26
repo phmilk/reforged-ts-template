@@ -148,10 +148,10 @@ export function startDev(
 ): { close(): void } {
   const { sourceFolder } = config;
   const shown = (folder: string) => path.relative(config.root, folder) || ".";
-  const watching = `Watching ${shown(sourceFolder)} and ${shown(config.mapFolder)} for changes (Ctrl+C to stop)`;
-  const buildThenWatch = () => {
+  const watchingLine = `Watching ${shown(sourceFolder)} and ${shown(config.mapFolder)} for changes (Ctrl+C to stop)`;
+  const buildAndAnnounce = () => {
     buildAndReport(config);
-    console.log(watching);
+    console.log(watchingLine);
   };
   const watcher = watchFolders({
     folders: [sourceFolder, config.mapFolder],
@@ -159,10 +159,10 @@ export function startDev(
     debounceMs,
     onChange: () => {
       console.log("Change detected, rebuilding...");
-      buildThenWatch();
+      buildAndAnnounce();
     },
   });
-  buildThenWatch();
+  buildAndAnnounce();
   return watcher;
 }
 

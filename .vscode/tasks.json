@@ -30,7 +30,7 @@
         "base": "$tsc",
         // The first build runs as the task starts; each rebuild opens with
         // "Change detected" and every build, failed or not, closes with the
-        // "Watching ..." line (tests/pipeline/vscode-tasks.test.ts).
+        // "Watching ..." line (tests/pipeline/dev.test.ts).
         "background": {
           "activeByDefault": true,
           "beginsPattern": "^Change detected, rebuilding",
