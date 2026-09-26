@@ -38,7 +38,7 @@ export function hashTree(folder: string): Record<string, string> {
  */
 export function copyProject(): string {
   const dir = makeTempDir();
-  for (const name of ["package.json", "tsconfig.json", "tsconfig.base.json", "reforged.config.ts", "vitest.config.ts", "src", "maps", "scripts", "tests"]) {
+  for (const name of ["package.json", "tsconfig.json", "tsconfig.base.json", "tsconfig.solution.json", "tsconfig.scripts.json", "reforged.config.ts", "vitest.config.ts", "src", "maps", "scripts", "tests"]) {
     fs.cpSync(path.join(ROOT, name), path.join(dir, name), { recursive: true });
   }
   fs.symlinkSync(path.join(ROOT, "node_modules"), path.join(dir, "node_modules"), "junction");

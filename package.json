@@ -18,18 +18,30 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tests/lua/tsconfig.json --noEmit && tsc -p tsconfig.scripts.json",
     "dev": "node scripts/dev.ts",
     "test:map": "node scripts/launch.ts",
-    "use:local": "node scripts/use-local.ts"
+    "use:local": "node scripts/use-local.ts",
+    "lint": "eslint --max-warnings 0 .",
+    "lint:fix": "eslint --fix ."
   },
   "dependencies": {
     "reforged-ts": "^1.0.0",
     "reforged-types": "^1.0.0"
   },
   "devDependencies": {
+    "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",
+    "@eslint/js": "^10.0.1",
     "@types/node": "^24.0.0",
     "@typescript-to-lua/language-extensions": "^1.19.0",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.5",
+    "eslint-plugin-import-x": "^4.17.1",
+    "eslint-plugin-prettier": "^5.5.6",
+    "eslint-plugin-reforged": "^1.0.0",
     "mdx-m3-viewer-th": "5.13.4",
+    "prettier": "^3.9.9",
     "reforged-test": "^1.0.0",
     "typescript": "6.0.2",
+    "typescript-eslint": "^8.70.1",
     "typescript-to-lua": "^1.37.1",
     "vitest": "^5.0.1"
   }
