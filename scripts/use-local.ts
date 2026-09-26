@@ -10,11 +10,16 @@ import { AuthorError } from "./errors.ts";
 export const LOCAL_FOLDER = ".local-packages";
 /** The list the pnpm hook reads: package name to tarball file name. */
 export const LIST_FILE = "packages.json";
-/** The library packages a Map project installs, each under `packages/<name>` in a reforged-ts checkout. */
+/**
+ * The library packages a Map project installs, each under `packages/<name>` in
+ * a reforged-ts checkout: the three the map's code and tests use, and the lint
+ * plugin `pnpm lint` loads.
+ */
 export const LOCAL_PACKAGES = [
   "reforged-types",
   "reforged-test",
   "reforged-ts",
+  "eslint-plugin-reforged",
 ] as const;
 
 export type LocalPackage = (typeof LOCAL_PACKAGES)[number];
@@ -114,7 +119,7 @@ function packInto(
 
 /**
  * Points the Map project at `root` to a reforged-ts `checkout`: installs the
- * checkout's dependencies if it has none, builds the three packages, packs
+ * checkout's dependencies if it has none, builds the four packages, packs
  * them into the ignored local folder with their list, then installs them in
  * place of the registry versions through the pnpm hook. No committed file
  * changes. Returns the tarball file names by package.
