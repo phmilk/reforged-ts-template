@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import ts from "typescript";
-import tstl from "typescript-to-lua";
+import * as ts from "typescript";
+import * as tstl from "typescript-to-lua";
 import { AuthorError } from "./errors.ts";
 
 const diagnosticsHost: ts.FormatDiagnosticsHost = {
@@ -59,7 +59,7 @@ export function compileBundle(
       .formatDiagnostics(result.diagnostics, diagnosticsHost)
       .trimEnd();
     throw new AuthorError(
-      `typescript-to-lua failed (${errors.length} error${errors.length === 1 ? "" : "s"}):\n${text}`,
+      `typescript-to-lua failed (${String(errors.length)} error${errors.length === 1 ? "" : "s"}):\n${text}`,
     );
   }
   if (!fs.existsSync(bundleFile)) {

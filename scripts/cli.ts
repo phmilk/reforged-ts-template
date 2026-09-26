@@ -23,7 +23,7 @@ export function printFailure(command: string, error: unknown): void {
 export async function runAsEntry(
   moduleUrl: string,
   command: string,
-  main: () => Promise<void>,
+  main: () => void | Promise<void>,
 ): Promise<void> {
   if (
     !process.argv[1] ||

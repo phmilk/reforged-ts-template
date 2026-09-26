@@ -30,7 +30,7 @@ export const LUA_STUB_FILE = "editor-globals.lua";
 const ROOT_HANDLE = "handle";
 
 /** The editor's `gg_<prefix>_` object kinds and their handle types. */
-export const GG_PREFIX_TYPES: Readonly<Record<string, string>> = {
+export const GG_PREFIX_TYPES: Readonly<Partial<Record<string, string>>> = {
   trg: "trigger",
   rct: "rect",
   cam: "camerasetup",
@@ -77,7 +77,7 @@ const CALL = /^([A-Za-z_][A-Za-z0-9_]*)[ \t]*\(.*\)$/;
 
 /** Pure: the editor script's text to the declarations, the Lua stub and the warnings. */
 export function generateEditorGlobals(editorScript: string): EditorGlobals {
-  const lines = editorScript.replace(/^﻿/, "").split(/\r?\n/);
+  const lines = editorScript.replace(/^\uFEFF/, "").split(/\r?\n/);
   const headerEnd = lines.findIndex((line) => FUNCTION_LINE.test(line));
   const header = headerEnd === -1 ? lines : lines.slice(0, headerEnd);
   const natives = initGlobalsNatives(lines);
@@ -87,7 +87,7 @@ export function generateEditorGlobals(editorScript: string): EditorGlobals {
   const seen = new Set<string>();
   for (const line of header) {
     const match = HEADER_ASSIGNMENT.exec(line);
-    if (!match || seen.has(match[1]!)) continue;
+    if (!match || seen.has(match[1])) continue;
     const [, name, value] = match as unknown as [string, string, string];
     seen.add(name);
     globals.push(
@@ -128,7 +128,7 @@ function editorObject(
   warnings: string[],
 ): EditorGlobal {
   if (STRING.test(value)) return { name, type: "string", stubValue: value };
-  const prefix = name.slice("gg_".length).split("_")[0]!;
+  const prefix = name.slice("gg_".length).split("_")[0];
   let type = GG_PREFIX_TYPES[prefix];
   if (type === undefined) {
     type = ROOT_HANDLE;
@@ -146,10 +146,10 @@ function variable(
   natives: InitGlobalsNatives,
   warnings: string[],
 ): EditorGlobal {
+  const nativeReturn = (native: string) =>
+    `NonNullable<ReturnType<typeof ${native}>>`;
   const nativeType = (native: string | undefined): string | undefined =>
-    native === undefined
-      ? undefined
-      : `NonNullable<ReturnType<typeof ${native}>>`;
+    native === undefined ? undefined : nativeReturn(native);
 
   const literal = literalType(value);
   if (literal) return { name, type: literal, stubValue: value };
@@ -161,7 +161,7 @@ function variable(
     };
 
   const jarray = JARRAY.exec(value);
-  const element = jarray ? literalType(jarray[1]!) : undefined;
+  const element = jarray ? literalType(jarray[1]) : undefined;
   if (jarray && element) {
     const type = nativeType(natives.indexed.get(name)) ?? element;
     return {
@@ -180,7 +180,7 @@ function variable(
 
   const call = CALL.exec(value);
   if (call && !jarray)
-    return { name, type: nativeType(call[1])!, stubValue: "nil" };
+    return { name, type: nativeReturn(call[1]), stubValue: "nil" };
 
   warnings.push(
     `${name}: initializer \`${value}\` not recognized, declared as unknown.`,

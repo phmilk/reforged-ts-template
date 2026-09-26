@@ -20,7 +20,9 @@ export interface Timers {
 
 const realTimers: Timers = {
   setTimeout: (callback, ms) => setTimeout(callback, ms),
-  clearTimeout: (handle) => clearTimeout(handle as NodeJS.Timeout),
+  clearTimeout: (handle) => {
+    clearTimeout(handle as NodeJS.Timeout);
+  },
 };
 
 /** Wraps `run` so a burst of calls runs it once, `ms` after the last call. */
@@ -50,7 +52,7 @@ export interface WatchOptions {
   /** Folders (absolute) whose changes are dropped, wherever they sit. */
   ignore: string[];
   /** Called once per burst of changes, after `debounceMs` of quiet. */
-  onChange(): void;
+  onChange: () => void;
   debounceMs?: number;
   timers?: Timers;
 }
@@ -104,9 +106,9 @@ export function watchFolders(options: WatchOptions): { close(): void } {
         arm();
         trigger();
       })
-      .on("error", (error) =>
-        console.error(`Watch error on ${path.dirname(folder)}:`, error),
-      );
+      .on("error", (error) => {
+        console.error(`Watch error on ${path.dirname(folder)}:`, error);
+      });
     arm();
     return () => {
       parent.close();

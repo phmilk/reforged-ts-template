@@ -38,7 +38,7 @@ function findAbsolutePaths(file: string, text: string): string[] {
   return text
     .split("\n")
     .flatMap((line, index) =>
-      leaks(line) ? [`${file}:${index + 1}: ${line.trim()}`] : [],
+      leaks(line) ? [`${file}:${String(index + 1)}: ${line.trim()}`] : [],
     );
 }
 
@@ -67,7 +67,7 @@ function readCommittedFiles(
     maxBuffer: 1024 ** 3,
   });
   if (batch.status !== 0)
-    throw new Error(`git cat-file failed: ${batch.stderr}`);
+    throw new Error(`git cat-file failed: ${batch.stderr.toString()}`);
   // Each object comes back as `<object> blob <size>\n<content>\n`.
   const stream = batch.stdout;
   let offset = 0;

@@ -1,6 +1,7 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, type ChildProcessByStdio } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import type { Readable } from "node:stream";
 import { setTimeout as sleep } from "node:timers/promises";
 import { afterEach, describe, expect, it } from "vitest";
 import { debounce, watchFolders, type Timers } from "../../scripts/dev.ts";
@@ -56,8 +57,12 @@ describe("debounce", () => {
 });
 
 describe("watchFolders", () => {
-  const closers: Array<{ close(): void }> = [];
-  afterEach(() => closers.splice(0).forEach((watcher) => watcher.close()));
+  const closers: { close(): void }[] = [];
+  afterEach(() => {
+    closers.splice(0).forEach((watcher) => {
+      watcher.close();
+    });
+  });
 
   it("turns a burst of file changes into one call and drops changes under ignored folders", async () => {
     const dir = makeTempDir();
@@ -76,8 +81,8 @@ describe("watchFolders", () => {
 
     for (let i = 0; i < 20; i++)
       fs.writeFileSync(
-        path.join(dir, "nested", "deep", `f${i % 3}.ts`),
-        `// ${i}\n`,
+        path.join(dir, "nested", "deep", `f${String(i % 3)}.ts`),
+        `// ${String(i)}\n`,
       );
     await sleep(500);
     expect(calls).toBe(1);
@@ -162,17 +167,17 @@ describe("watchFolders on a folder deleted and created again", () => {
 /** `node scripts/dev.ts` in a throwaway project, with its output collected as it arrives. */
 class DevProcess {
   output = "";
-  private readonly child: ChildProcess;
+  private readonly child: ChildProcessByStdio<null, Readable, Readable>;
   constructor(cwd: string, args: string[] = []) {
     this.child = spawn(process.execPath, ["scripts/dev.ts", ...args], {
       cwd,
       stdio: ["ignore", "pipe", "pipe"],
     });
-    this.child.stdout!.on(
+    this.child.stdout.on(
       "data",
       (chunk: Buffer) => (this.output += chunk.toString("utf8")),
     );
-    this.child.stderr!.on(
+    this.child.stderr.on(
       "data",
       (chunk: Buffer) => (this.output += chunk.toString("utf8")),
     );
@@ -192,10 +197,12 @@ class DevProcess {
     const deadline = Date.now() + timeoutMs;
     while (this.count(pattern) < times) {
       if (this.child.exitCode !== null)
-        throw new Error(`dev exited (${this.child.exitCode}):\n${this.output}`);
+        throw new Error(
+          `dev exited (${String(this.child.exitCode)}):\n${this.output}`,
+        );
       if (Date.now() > deadline)
         throw new Error(
-          `timed out waiting for ${times} x ${pattern}:\n${this.output}`,
+          `timed out waiting for ${String(times)} x ${String(pattern)}:\n${this.output}`,
         );
       await sleep(50);
     }
@@ -204,12 +211,14 @@ class DevProcess {
   exited(): Promise<number | null> {
     if (
       this.child.exitCode !== null &&
-      this.child.stdout!.readableEnded &&
-      this.child.stderr!.readableEnded
+      this.child.stdout.readableEnded &&
+      this.child.stderr.readableEnded
     )
       return Promise.resolve(this.child.exitCode);
     return new Promise((resolve) =>
-      this.child.on("close", (code) => resolve(code)),
+      this.child.on("close", (code) => {
+        resolve(code);
+      }),
     );
   }
   stop(): void {
@@ -254,7 +263,7 @@ describe("node scripts/dev.ts (pnpm dev)", () => {
     const entry = path.join(project, "src", "main.ts");
     const original = fs.readFileSync(entry, "utf8");
     for (let i = 0; i < 5; i++)
-      fs.writeFileSync(entry, `${original}// edit ${i}\n`);
+      fs.writeFileSync(entry, `${original}// edit ${String(i)}\n`);
     await dev.waitFor(BUILT, 2);
     await sleep(1000);
     expect(dev.count(BUILT)).toBe(2);

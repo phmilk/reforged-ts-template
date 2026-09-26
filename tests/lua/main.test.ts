@@ -45,7 +45,7 @@ const STARTED = "reforged-ts-template: game started";
 
 // Starts the game: defines Blizzard's MarkGameStarted and calls it, as the editor's script and the game would.
 function startGame(): void {
-  globals.MarkGameStarted = () => {};
+  globals.MarkGameStarted = () => undefined;
   MarkGameStarted();
 }
 
@@ -65,7 +65,9 @@ function expectGameStartCallbackRan(): void {
       printedAtGameStart.length === 0
         ? "nothing"
         : printedAtGameStart.join(" | ");
-    throw `the game start callback of src/main.ts did not run to its end; printed at game start: ${output}`;
+    throw new Error(
+      `the game start callback of src/main.ts did not run to its end; printed at game start: ${output}`,
+    );
   }
 }
 
@@ -88,11 +90,13 @@ describe("the starter source", () => {
       }
     }
     if (deathTriggers.length !== 1) {
-      throw `expected the starter's one Trigger on EVENT_PLAYER_UNIT_DEATH, got ${deathTriggers.length}`;
+      throw new Error(
+        `expected the starter's one Trigger on EVENT_PLAYER_UNIT_DEATH, got ${String(deathTriggers.length)}`,
+      );
     }
     const trigger = deathTriggers[0];
     const owner = MapPlayer.fromIndex(0);
-    if (owner === undefined) throw "no player in slot 0";
+    if (owner === undefined) throw new Error("no player in slot 0");
     const footman = Unit.create(owner, FourCC("hfoo"), 0, 0);
     printed.length = 0;
 
@@ -109,7 +113,9 @@ describe("the starter source", () => {
       ([, timeout, periodic]) => timeout === 60 && periodic === true,
     );
     if (repeating.length !== 1) {
-      throw `expected the starter's one Timer repeating every 60 seconds, got ${repeating.length}`;
+      throw new Error(
+        `expected the starter's one Timer repeating every 60 seconds, got ${String(repeating.length)}`,
+      );
     }
     const timer = repeating[0][0] as timer;
     expect(stubCalls()).toContainCall(

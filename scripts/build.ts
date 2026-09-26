@@ -98,7 +98,7 @@ export function builtMessage(
   config: ResolvedConfig,
   result: BuildResult,
 ): string {
-  return `Built ${path.relative(config.root, result.archive)} (${result.size} bytes, mode ${config.mode})`;
+  return `Built ${path.relative(config.root, result.archive)} (${String(result.size)} bytes, mode ${config.mode})`;
 }
 
 /** Command line: `node scripts/build.ts [--mode dev|release]`, run from the repository root. Exits non-zero on any failure. */

@@ -64,6 +64,7 @@ export function resolveConfig(
   root: string,
   overrides: CommandLineOptions = {},
 ): ResolvedConfig {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a config file without a default export gives undefined, whatever the type says
   if (typeof config?.mapFolder !== "string" || config.mapFolder === "") {
     throw new AuthorError(
       `${CONFIG_FILE}: \`mapFolder\` is required (the map folder saved by the World Editor, e.g. "maps/my-map.w3x").`,
@@ -207,7 +208,7 @@ export function wellKnownExecutables(
   if (platform === "win32") {
     const programFolders = [
       env["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)",
-      env["ProgramFiles"] ?? "C:\\Program Files",
+      env.ProgramFiles ?? "C:\\Program Files",
     ];
     return [...new Set(programFolders)].map((folder) =>
       path.win32.join(

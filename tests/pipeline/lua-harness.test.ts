@@ -128,10 +128,8 @@ describe("pnpm test: the Lua harness", () => {
 
     const run = runLuaProject(project);
 
-    const byName = Object.fromEntries(
-      run.tests.map((test) => [test.fullName, test]),
-    );
-    expect(Object.keys(byName).sort(), run.output).toEqual(
+    const byName = new Map(run.tests.map((test) => [test.fullName, test]));
+    expect([...byName.keys()].sort(), run.output).toEqual(
       [
         "tests/lua/main.test.ts the starter source prints its line when the game starts",
         "tests/lua/main.test.ts the starter source runs the Subscription's handler when a unit dies",
@@ -148,16 +146,17 @@ describe("pnpm test: the Lua harness", () => {
       expect(test.status, test.fullName).toBe("passed");
     }
     expect(
-      byName[
-        "tests/lua/spawn.test.ts spawn reads the editor variable from the generated stub"
-      ]?.status,
+      byName.get(
+        "tests/lua/spawn.test.ts spawn reads the editor variable from the generated stub",
+      )?.status,
     ).toBe("passed");
     expect(
-      byName["tests/lua/spawn.test.ts spawn uses the map-specific stub"]
+      byName.get("tests/lua/spawn.test.ts spawn uses the map-specific stub")
         ?.status,
     ).toBe("passed");
-    const unstubbed =
-      byName["tests/lua/spawn.test.ts spawn fails on a Native no stub defines"];
+    const unstubbed = byName.get(
+      "tests/lua/spawn.test.ts spawn fails on a Native no stub defines",
+    );
     expect(unstubbed?.status).toBe("failed");
     expect(unstubbed?.failureMessages.join("\n")).toContain(
       "Native GetRectCenterY is not stubbed",

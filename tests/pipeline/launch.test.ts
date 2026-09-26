@@ -87,8 +87,9 @@ describe("launchCommand", () => {
 
 /** Runs `node scripts/launch.ts` (= `pnpm test:map`) in `cwd` with the environment variable set or removed. */
 function testMap(cwd: string, executable?: string) {
-  const env = { ...process.env };
-  delete env[EXECUTABLE_ENV];
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => name !== EXECUTABLE_ENV),
+  );
   if (executable !== undefined) env[EXECUTABLE_ENV] = executable;
   return spawnSync(process.execPath, ["scripts/launch.ts"], {
     cwd,

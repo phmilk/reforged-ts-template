@@ -21,6 +21,6 @@ Init.onGameStart(() => {
   let minutes = 0;
   Timer.every(60, () => {
     minutes += 1;
-    print(`${minutes} min played`);
+    print(`${String(minutes)} min played`);
   });
 });

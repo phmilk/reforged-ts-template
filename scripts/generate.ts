@@ -27,8 +27,9 @@ export type Warn = (message: string) => void;
 export type Generator = (config: ResolvedConfig, warn: Warn) => GeneratedFile[];
 
 /** The default `warn`: `Warning: <message>` on stderr. */
-export const printWarning: Warn = (message) =>
+export const printWarning: Warn = (message) => {
   console.warn(`Warning: ${message}`);
+};
 
 /** Opening comment of every generated TypeScript file. */
 export const GENERATED_BANNER =
@@ -38,7 +39,7 @@ export const ENV_FILE = "env.ts";
 
 /** The env file's text: one boolean, `devMode`, which the entry passes to `Reforged.configure`. */
 export function envFileContents(mode: Mode): string {
-  return `${GENERATED_BANNER}\n/** On in \`dev\` builds (the library's runtime Guards run), off in \`release\` builds. Set by \`--mode\` or \`mode\` in ${CONFIG_FILE}. */\nexport const devMode: boolean = ${mode === "dev"};\n`;
+  return `${GENERATED_BANNER}\n/** On in \`dev\` builds (the library's runtime Guards run), off in \`release\` builds. Set by \`--mode\` or \`mode\` in ${CONFIG_FILE}. */\nexport const devMode: boolean = ${String(mode === "dev")};\n`;
 }
 
 export const generateEnv: Generator = (config) => [

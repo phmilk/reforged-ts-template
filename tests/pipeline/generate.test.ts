@@ -82,7 +82,7 @@ describe("GENERATORS", () => {
     const files = generate(
       resolveConfig({ mapFolder: FIXTURE_MAP }, root),
       GENERATORS,
-      () => {},
+      () => undefined,
     );
     expect(files.map((file) => path.relative(root, file))).toEqual(
       ["env.ts", "editor-globals.d.ts", "editor-globals.lua"].map((name) =>

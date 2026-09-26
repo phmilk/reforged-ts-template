@@ -49,9 +49,10 @@ const runPnpm: Pnpm = (args, cwd) => {
     stdio: "inherit",
     shell,
   });
-  if ((result.error as NodeJS.ErrnoException | undefined)?.code === "ENOENT")
+  const error: NodeJS.ErrnoException | undefined = result.error;
+  if (error?.code === "ENOENT")
     throw new AuthorError("pnpm was not found on the PATH.");
-  if (result.error !== undefined) throw result.error;
+  if (error !== undefined) throw error;
   if (result.status !== 0)
     throw new AuthorError(
       `\`pnpm ${args.join(" ")}\` failed in ${cwd} (see its output above).`,
@@ -97,9 +98,9 @@ function packInto(
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "reforged-pack-"));
   try {
     pnpm(["pack", "--pack-destination", scratch], packageFolder);
-    const [packed] = fs
+    const packed = fs
       .readdirSync(scratch)
-      .filter((file) => file.endsWith(".tgz"));
+      .find((file) => file.endsWith(".tgz"));
     if (packed === undefined)
       throw new Error(`pnpm pack wrote no tarball for ${packageFolder}.`);
     const bytes = fs.readFileSync(path.join(scratch, packed));
@@ -171,7 +172,7 @@ const USAGE =
  * run from the repository root. Needs only Node: it works on a fresh clone
  * with no node_modules.
  */
-await runAsEntry(import.meta.url, "use:local", async () => {
+await runAsEntry(import.meta.url, "use:local", () => {
   const args = process.argv.slice(2);
   const root = process.cwd();
   if (args.length === 1 && args[0] === "--reset") {

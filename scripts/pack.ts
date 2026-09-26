@@ -77,7 +77,7 @@ export function packMapFolder(folder: string): Uint8Array {
   const map = new OpaqueW3iMap();
   if (!map.archive.resizeHashtable(names.length + 2)) {
     throw new AuthorError(
-      `The MPQ writer could not size its hash table for ${names.length} files.`,
+      `The MPQ writer could not size its hash table for ${String(names.length)} files.`,
     );
   }
   for (const name of names) {

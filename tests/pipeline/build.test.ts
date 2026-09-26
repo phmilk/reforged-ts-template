@@ -14,12 +14,17 @@ const MAP = path.join("maps", "reforged-ts-template.w3m");
 const ARCHIVE = path.join("dist", "reforged-ts-template.w3m");
 const ENV = path.join("src", "generated", "env.ts");
 
+/** The map script inside `archive`; fails the test when it has none. */
+function scriptOf(archive: Uint8Array): Uint8Array {
+  const script = openArchive(archive).get("war3map.lua");
+  if (!script) throw new Error("The archive has no war3map.lua.");
+  return new Uint8Array(script.bytes());
+}
+
 /** The map script inside the built archive, as text. */
 const archivedScript = (project: string): string =>
   Buffer.from(
-    openArchive(new Uint8Array(fs.readFileSync(path.join(project, ARCHIVE))))
-      .get("war3map.lua")!
-      .bytes(),
+    scriptOf(new Uint8Array(fs.readFileSync(path.join(project, ARCHIVE)))),
   ).toString("utf8");
 
 /** Points the copy's tsconfig `tstl.luaBundle` at `file` (relative to the tsconfig). */
@@ -59,7 +64,7 @@ describe("node scripts/build.ts (pnpm build)", () => {
       fs.readFileSync(path.join(project, ARCHIVE)),
     );
     expect(result.stdout).toContain(
-      `Built ${ARCHIVE} (${archive.byteLength} bytes, mode dev)`,
+      `Built ${ARCHIVE} (${String(archive.byteLength)} bytes, mode dev)`,
     );
 
     // The archive's script is the editor's script, one newline, then the bundle.
@@ -67,8 +72,7 @@ describe("node scripts/build.ts (pnpm build)", () => {
       path.join(project, MAP, "war3map.lua"),
     );
     const bundle = fs.readFileSync(path.join(project, "dist", "bundle.lua"));
-    const script = openArchive(archive).get("war3map.lua")!.bytes();
-    expect(new Uint8Array(script)).toEqual(
+    expect(scriptOf(archive)).toEqual(
       new Uint8Array([...editorScript, 0x0a, ...bundle]),
     );
     expect(bundle.toString("utf8")).toContain(ENTRY_MODULE);

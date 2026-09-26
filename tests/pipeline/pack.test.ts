@@ -45,10 +45,9 @@ describe("packMapFolder on the committed blank map folder", () => {
 
   it("stores war3map.w3i (version 39) unchanged", () => {
     const w3i = fileBytes(map, "war3map.w3i");
-    expect(w3i && sha256(w3i)).toBe(FIXTURE_W3I_SHA256);
-    expect(new DataView(w3i!.buffer, w3i!.byteOffset).getInt32(0, true)).toBe(
-      39,
-    );
+    if (w3i === undefined) throw new Error("The archive has no war3map.w3i.");
+    expect(sha256(w3i)).toBe(FIXTURE_W3I_SHA256);
+    expect(new DataView(w3i.buffer, w3i.byteOffset).getInt32(0, true)).toBe(39);
   });
 
   it("has a listfile, the imports file and no attributes file", () => {
@@ -109,7 +108,10 @@ describe("packMapFolder on nested folders", () => {
   it("packs every file when the file count is a power of two", () => {
     const dir = makeTempDir();
     for (let i = 0; i < 16; i++)
-      fs.writeFileSync(path.join(dir, `f${i}.txt`), `file ${i}`);
+      fs.writeFileSync(
+        path.join(dir, `f${String(i)}.txt`),
+        `file ${String(i)}`,
+      );
     const map = openArchive(packMapFolder(dir));
     expect(map.getFileNames().length).toBe(18);
     expect(map.has("(listfile)")).toBe(true);
@@ -119,7 +121,7 @@ describe("packMapFolder on nested folders", () => {
 
 /** A `war3map.imp` as the editor writes it: version 1, then (flag, NUL-terminated path) per import. */
 function editorImportsFile(
-  entries: Array<[flag: number, path: string]>,
+  entries: [flag: number, path: string][],
 ): Uint8Array {
   const parts: number[] = [1, 0, 0, 0, entries.length, 0, 0, 0];
   for (const [flag, name] of entries)

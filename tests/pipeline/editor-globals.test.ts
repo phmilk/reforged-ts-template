@@ -240,7 +240,7 @@ describe("the generated Lua stub in the reforged-test harness (Lua 5.3)", () => 
       ].join("\n"),
     );
 
-    const [file] = runLuaTestFiles({ outDir, stubs: [stub] });
+    const file = runLuaTestFiles({ outDir, stubs: [stub] }).at(0);
 
     expect(file?.error).toBeUndefined();
     expect(file?.tests).toEqual([
