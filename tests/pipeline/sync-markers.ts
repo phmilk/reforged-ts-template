@@ -5,6 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { expect } from "vitest";
+import { endMarker, startMarker } from "../../scripts/sync.ts";
 import { ROOT } from "./helpers.ts";
 
 /** A file of the repository, with LF line endings. */
@@ -18,8 +19,8 @@ export const readRepoFile = (file: string): string =>
  * shape Prettier keeps, so a sync that writes it leaves `pnpm lint` green.
  */
 export function markedBlock(text: string, name: string): string {
-  const start = `<!-- reforged-ts:${name}:start -->`;
-  const end = `<!-- reforged-ts:${name}:end -->`;
+  const start = startMarker(name);
+  const end = endMarker(name);
   expect(text.split(start), start).toHaveLength(2);
   expect(text.split(end), end).toHaveLength(2);
   const lines = text.split("\n");

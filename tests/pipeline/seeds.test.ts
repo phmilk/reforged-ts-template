@@ -7,6 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { LIBRARY_TERMS } from "../../scripts/sync.ts";
 import { ROOT } from "./helpers.ts";
 import { markedBlock, readRepoFile } from "./sync-markers.ts";
 
@@ -110,23 +111,12 @@ describe("the Agent skills", () => {
 describe("CONTEXT.md", () => {
   const context = readRepoFile("CONTEXT.md");
 
-  it("holds the eleven library terms between the terms markers, then Your map's terms", () => {
+  it("holds the library terms between the terms markers, then Your map's terms", () => {
     const block = markedBlock(context, "terms");
+    // The sync writes them in the library file's order, which may change.
     expect(
-      [...block.matchAll(/^\*\*(.+?)\*\*:$/gm)].map(([, term]) => term),
-    ).toEqual([
-      "Native",
-      "Handle",
-      "Wrapper",
-      "System",
-      "Init stage",
-      "Event descriptor",
-      "Subscription",
-      "Map project",
-      "Template",
-      "Toolchain",
-      "Patch",
-    ]);
+      [...block.matchAll(/^\*\*(.+?)\*\*:$/gm)].map(([, term]) => term).sort(),
+    ).toEqual([...LIBRARY_TERMS].sort());
     const afterBlock = context.slice(
       context.indexOf("<!-- reforged-ts:terms:end -->"),
     );
