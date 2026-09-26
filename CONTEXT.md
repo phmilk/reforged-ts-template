@@ -49,6 +49,7 @@ _Avoid_: build system, pipeline, stack
 **Patch**:
 A released version of the game, identified by version and build number (3.0.0.24268). Typings and library releases are tied to a Patch.
 _Avoid_: version, update, release (a library release is not a game patch)
+
 <!-- reforged-ts:terms:end -->
 
 ## Your map's terms
