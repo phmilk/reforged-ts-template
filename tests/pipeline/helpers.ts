@@ -37,9 +37,10 @@ export function hashTree(folder: string): Record<string, string> {
 }
 
 /**
- * A throwaway copy of the Template (manifest, tsconfigs, config, vitest
- * config, source, maps, scripts, tests) with the real node_modules linked in, so a command runs end to end
- * without touching the repository.
+ * A throwaway copy of the Template (manifest, tsconfigs, config, vitest,
+ * ESLint and Prettier configs, source, maps, scripts, tests) with the real
+ * node_modules linked in, so a command runs end to end without touching the
+ * repository.
  */
 export function copyProject(): string {
   const dir = makeTempDir();
@@ -51,6 +52,8 @@ export function copyProject(): string {
     "tsconfig.scripts.json",
     "reforged.config.ts",
     "vitest.config.ts",
+    "eslint.config.mjs",
+    ".prettierrc",
     "src",
     "maps",
     "scripts",
