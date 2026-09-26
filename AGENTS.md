@@ -67,10 +67,10 @@ The TSDoc of every Wrapper, System and Native lives in the installed declaration
 
 ## Agent skills
 
-Two skills walk an agent through the project's recurring tasks. An agent without skill support reads the file as a document and follows its steps.
+Each skill is a step list for a recurring task. An agent without skill support reads the file as a document when a request matches its triggers.
 
-- `.claude/skills/map-feature/SKILL.md`: adding a feature, a mechanic or a new system, from idea to a tested module under `src`.
-- `.claude/skills/run-in-game/SKILL.md`: running the map in the game and reporting what it showed.
+- `.claude/skills/map-feature/SKILL.md`: "add a feature", "implement <mechanic>", "new system". From idea to a tested module under `src`.
+- `.claude/skills/run-in-game/SKILL.md`: "run the map", "test in game", "launch". Builds, starts the game and reports what it showed.
 
 ## Template maintenance
 

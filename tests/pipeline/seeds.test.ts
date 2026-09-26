@@ -4,7 +4,10 @@
 // text between a start and an end marker. In a generated Map project these
 // files are the author's own: this test is Template maintenance, deleted with
 // the rest of it (see AGENTS.md).
+import fs from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { ROOT } from "./helpers.ts";
 import { markedBlock, readRepoFile } from "./sync-markers.ts";
 
 /** The `## ` headings of a Markdown file, in order, code blocks left out. */
@@ -69,11 +72,20 @@ describe("AGENTS.md", () => {
   });
 });
 
-/** The Agent skills the Template ships, under Claude Code's skills folder. */
-const SKILLS = ["map-feature", "run-in-game"];
+/** Every Agent skill under Claude Code's skills folder, one folder each. */
+const SKILLS = fs
+  .readdirSync(path.join(ROOT, ".claude", "skills"), { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name);
 
 describe("the Agent skills", () => {
   const agents = readRepoFile("AGENTS.md");
+
+  it("include the two the Template ships", () => {
+    expect(SKILLS).toEqual(
+      expect.arrayContaining(["map-feature", "run-in-game"]),
+    );
+  });
 
   it.each(SKILLS)(
     "%s has frontmatter with its name and a description, then numbered steps",
