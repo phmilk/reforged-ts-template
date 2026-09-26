@@ -7,16 +7,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { runAsEntry } from "./cli.ts";
 import { AuthorError } from "./errors.ts";
+import { LOCAL_PACKAGES, type LocalPackage } from "./use-local.ts";
 
-/** The library packages the Template depends on, bumped to each release. */
-export const SYNCED_PACKAGES = [
-  "reforged-ts",
-  "reforged-types",
-  "reforged-test",
-  "eslint-plugin-reforged",
-] as const;
+/** The library packages the Template depends on, bumped to each release: the ones `use:local` installs. */
+export const SYNCED_PACKAGES = LOCAL_PACKAGES;
 
-export type SyncedPackage = (typeof SYNCED_PACKAGES)[number];
+export type SyncedPackage = LocalPackage;
+
+/** The released version of each package, without a range operator. */
+export type ReleasedVersions = Record<SyncedPackage, string>;
 
 /**
  * The map-author terms of the library's glossary the Template's CONTEXT.md
@@ -53,8 +52,7 @@ export type SyncFiles = Record<SyncedFile, string>;
 export interface ReleasePayload {
   /** The release's git tag in the library repository. */
   tag: string;
-  /** The released version of each package, without a range operator. */
-  versions: Record<SyncedPackage, string>;
+  versions: ReleasedVersions;
   /** The raw URL of the library's CONTEXT.md at the tag. */
   contextUrl: string;
   /** The raw URL of the generated compatibility-matrix Markdown block. */
@@ -91,6 +89,9 @@ const SEMVER = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
 /** An llms.txt link target in Markdown: `](<url>/llms.txt)`. */
 const LLMS_LINK = /\]\(https?:\/\/[^\s)]+\/llms\.txt\)/g;
 
+/** `text` with LF line endings. */
+const toLf = (text: string) => text.replaceAll("\r\n", "\n");
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -101,14 +102,14 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 export function parsePayload(value: unknown): ReleasePayload {
   if (!isRecord(value))
     throw new AuthorError("the payload is not a JSON object.");
-  const text = (field: string): string => {
+  const requiredString = (field: string): string => {
     const found = value[field];
     if (typeof found !== "string" || found.trim() === "")
       throw new AuthorError(`the payload has no \`${field}\`.`);
     return found;
   };
-  const url = (field: string): string => {
-    const found = text(field);
+  const httpsUrl = (field: string): string => {
+    const found = requiredString(field);
     if (!/^https:\/\/[^\s)]+$/.test(found))
       throw new AuthorError(
         `the payload's \`${field}\` is not an https URL: ${found}`,
@@ -127,17 +128,17 @@ export function parsePayload(value: unknown): ReleasePayload {
         );
       return [name, version];
     }),
-  ) as Record<SyncedPackage, string>;
-  const llmsUrl = url("llmsUrl");
+  ) as ReleasedVersions;
+  const llmsUrl = httpsUrl("llmsUrl");
   if (!llmsUrl.endsWith("/llms.txt"))
     throw new AuthorError(
       `the payload's \`llmsUrl\` does not end in /llms.txt: ${llmsUrl}`,
     );
   return {
-    tag: text("tag"),
+    tag: requiredString("tag"),
     versions: parsed,
-    contextUrl: url("contextUrl"),
-    matrixUrl: url("matrixUrl"),
+    contextUrl: httpsUrl("contextUrl"),
+    matrixUrl: httpsUrl("matrixUrl"),
     llmsUrl,
   };
 }
@@ -147,8 +148,12 @@ class Skipped extends Error {
   override name = "Skipped";
 }
 
-const startMarker = (name: string) => `<!-- reforged-ts:${name}:start -->`;
-const endMarker = (name: string) => `<!-- reforged-ts:${name}:end -->`;
+/** The line that opens the sync block `name`: `<!-- reforged-ts:<name>:start -->`. */
+export const startMarker = (name: string): string =>
+  `<!-- reforged-ts:${name}:start -->`;
+/** The line that closes the sync block `name`. */
+export const endMarker = (name: string): string =>
+  `<!-- reforged-ts:${name}:end -->`;
 
 /**
  * `text` (LF) with the block between the `name` markers replaced by
@@ -203,37 +208,48 @@ function libraryTerms(context: string): string[] {
     throw new AuthorError(
       `the library's CONTEXT.md defines no ${missing.map((term) => `**${term}**`).join(", ")}, which the Template's CONTEXT.md carries (LIBRARY_TERMS in scripts/sync.ts).`,
     );
-  return [...entries].filter(([term]) => wanted.has(term)).map(([, e]) => e);
+  return [...entries]
+    .filter(([term]) => wanted.has(term))
+    .map(([, entry]) => entry);
 }
 
-/** package.json with each package's range set to `^<version>`, wherever it is a dependency. */
-function bumpDependencies(
-  text: string,
-  versions: Record<SyncedPackage, string>,
-): string {
+/** The sections of package.json whose ranges the sync bumps. */
+const DEPENDENCY_SECTIONS = [
+  "dependencies",
+  "devDependencies",
+  "optionalDependencies",
+  "peerDependencies",
+];
+
+/**
+ * package.json with each package's range set to `^<version>` in the
+ * top-level dependency sections, and nowhere else (not in overrides, for
+ * instance). The text is edited in place, so the file keeps its formatting.
+ */
+function bumpDependencies(text: string, versions: ReleasedVersions): string {
   const manifest = JSON.parse(text) as Record<string, unknown>;
-  const sections = [
-    "dependencies",
-    "devDependencies",
-    "optionalDependencies",
-    "peerDependencies",
-  ].map((key) => manifest[key]);
   const missing = SYNCED_PACKAGES.filter(
     (name) =>
-      !sections.some(
-        (section) => isRecord(section) && typeof section[name] === "string",
-      ),
+      !DEPENDENCY_SECTIONS.some((key) => {
+        const section = manifest[key];
+        return isRecord(section) && typeof section[name] === "string";
+      }),
   );
   if (missing.length > 0)
     throw new Skipped(`no dependency on ${missing.join(", ")}.`);
-  let bumped = text;
-  for (const name of SYNCED_PACKAGES) {
-    bumped = bumped.replace(
-      new RegExp(`("${name}"\\s*:\\s*)"[^"]*"`, "g"),
-      (_, key: string) => `${key}"^${versions[name]}"`,
-    );
-  }
-  return bumped;
+  const section = new RegExp(
+    `^(\\s*"(?:${DEPENDENCY_SECTIONS.join("|")})"\\s*:\\s*\\{)([^{}]*)\\}`,
+    "gm",
+  );
+  return text.replace(section, (_, head: string, body: string) => {
+    let bumped = body;
+    for (const name of SYNCED_PACKAGES)
+      bumped = bumped.replace(
+        new RegExp(`("${name}"\\s*:\\s*)"[^"]*"`),
+        (__, key: string) => `${key}"^${versions[name]}"`,
+      );
+    return `${head}${bumped}}`;
+  });
 }
 
 /** Replaces every llms.txt link of the `docs` block; a block without one is skipped. */
@@ -262,29 +278,41 @@ export function applyRelease(
   payload: ReleasePayload,
   sources: FetchedSources,
 ): SyncResult {
-  const terms = libraryTerms(sources.context.replaceAll("\r\n", "\n"));
-  const matrix = sources.matrix.replaceAll("\r\n", "\n").trim();
+  const terms = libraryTerms(toLf(sources.context));
+  const matrix = toLf(sources.matrix).trim();
   if (matrix === "")
     throw new AuthorError(`the matrix block at ${payload.matrixUrl} is empty.`);
 
-  const edits: Record<SyncedFile, (text: string) => string> = {
-    "package.json": (text) => bumpDependencies(text, payload.versions),
-    "CONTEXT.md": (text) =>
-      replaceBlock(text, "terms", () => [TERMS_HEADING, ...terms].join("\n\n")),
-    "AGENTS.md": (text) => replaceLlmsLink(text, payload.llmsUrl),
-    "README.md": (text) =>
-      replaceLlmsLink(
-        replaceBlock(text, "matrix", () => matrix),
-        payload.llmsUrl,
-      ),
-  };
-  const what: Record<SyncedFile, string> = {
-    "package.json": SYNCED_PACKAGES.map(
-      (name) => `\`${name}\` ^${payload.versions[name]}`,
-    ).join(", "),
-    "CONTEXT.md": `the library terms, from ${payload.contextUrl}`,
-    "AGENTS.md": `the llms.txt link, ${payload.llmsUrl}`,
-    "README.md": `the compatibility matrix, from ${payload.matrixUrl}; the llms.txt link, ${payload.llmsUrl}`,
+  /** Per file: its edit, and the change it makes, for the summary. */
+  const sync: Record<
+    SyncedFile,
+    { edit: (text: string) => string; change: string }
+  > = {
+    "package.json": {
+      edit: (text) => bumpDependencies(text, payload.versions),
+      change: SYNCED_PACKAGES.map(
+        (name) => `\`${name}\` ^${payload.versions[name]}`,
+      ).join(", "),
+    },
+    "CONTEXT.md": {
+      edit: (text) =>
+        replaceBlock(text, "terms", () =>
+          [TERMS_HEADING, ...terms].join("\n\n"),
+        ),
+      change: `the library terms, from ${payload.contextUrl}`,
+    },
+    "AGENTS.md": {
+      edit: (text) => replaceLlmsLink(text, payload.llmsUrl),
+      change: `the llms.txt link, ${payload.llmsUrl}`,
+    },
+    "README.md": {
+      edit: (text) =>
+        replaceLlmsLink(
+          replaceBlock(text, "matrix", () => matrix),
+          payload.llmsUrl,
+        ),
+      change: `the compatibility matrix, from ${payload.matrixUrl}; the llms.txt link, ${payload.llmsUrl}`,
+    },
   };
 
   const result = { ...files };
@@ -295,7 +323,7 @@ export function applyRelease(
     const original = files[file];
     const crlf = original.includes("\r\n");
     try {
-      const updated = edits[file](original.replaceAll("\r\n", "\n"));
+      const updated = sync[file].edit(toLf(original));
       result[file] = crlf ? updated.replaceAll("\n", "\r\n") : updated;
     } catch (error) {
       if (!(error instanceof Skipped)) throw error;
@@ -312,7 +340,7 @@ export function applyRelease(
     `Applies the reforged-ts release \`${payload.tag}\` to the Template.`,
     ...section(
       "Changed:",
-      changed.map((file) => `- \`${file}\`: ${what[file]}`),
+      changed.map((file) => `- \`${file}\`: ${sync[file].change}`),
     ),
     ...section("Already up to date:", unchanged),
     ...section("Not synced, to fix by hand:", skipped),
@@ -321,9 +349,14 @@ export function applyRelease(
   return { files: result, changed, summary };
 }
 
-/** The payload's URL, fetched with the global fetch; a non-2xx status throws. */
+/** The payload's URL, fetched with the global fetch; a network error or a non-2xx status is an AuthorError. */
 const fetchOverHttp: FetchText = async (url) => {
-  const response = await fetch(url);
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch (error) {
+    throw new AuthorError(`GET ${url} failed: ${(error as Error).message}`);
+  }
   if (!response.ok)
     throw new AuthorError(
       `GET ${url} answered ${String(response.status)} ${response.statusText}.`,
@@ -379,15 +412,15 @@ await runAsEntry(import.meta.url, "sync", async () => {
     (summaryAt !== -1 && (summaryFile === undefined || summaryFile === ""))
   )
     throw new AuthorError(USAGE);
-  let raw: unknown;
+  let payload: unknown;
   try {
-    raw = JSON.parse(fs.readFileSync(rest[0], "utf8"));
+    payload = JSON.parse(fs.readFileSync(rest[0], "utf8"));
   } catch (error) {
     throw new AuthorError(
       `cannot read the payload ${rest[0]}: ${(error as Error).message}`,
     );
   }
-  const result = await syncRepository(process.cwd(), parsePayload(raw));
+  const result = await syncRepository(process.cwd(), parsePayload(payload));
   if (summaryFile !== undefined) fs.writeFileSync(summaryFile, result.summary);
   console.log(result.summary);
 });

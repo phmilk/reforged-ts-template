@@ -9,6 +9,7 @@ import {
   applyRelease,
   LIBRARY_TERMS,
   parsePayload,
+  startMarker,
   SYNCED_FILES,
   syncRepository,
   type FetchText,
@@ -103,7 +104,7 @@ function changedLines(before: string, after: string): string[] {
 /** `text` with the blocks between its markers (`docs`, `matrix`, `terms`) cut out. */
 function outsideBlocks(text: string): string {
   return ["docs", "matrix", "terms"]
-    .filter((name) => text.includes(`<!-- reforged-ts:${name}:start -->`))
+    .filter((name) => text.includes(startMarker(name)))
     .reduce((rest, name) => rest.replace(markedBlock(rest, name), ""), text);
 }
 
@@ -199,15 +200,36 @@ describe("the sync's entry point", () => {
       "<!-- reforged-ts:docs:start -->\n",
       "",
     );
+    files["CONTEXT.md"] = files["CONTEXT.md"].replace(
+      "<!-- reforged-ts:terms:end -->",
+      "<!-- reforged-ts:terms:end --> and more",
+    );
     const result = apply(files);
     expect(result.files["README.md"]).toBe(files["README.md"]);
     expect(result.files["AGENTS.md"]).toBe(files["AGENTS.md"]);
-    expect(result.files["CONTEXT.md"]).not.toBe(files["CONTEXT.md"]);
+    expect(result.files["CONTEXT.md"]).toBe(files["CONTEXT.md"]);
+    expect(result.changed).toEqual(["package.json"]);
     expect(result.summary).toMatch(
       /`README\.md`.*`<!-- reforged-ts:matrix:end -->`/,
     );
     expect(result.summary).toMatch(
       /`AGENTS\.md`.*`<!-- reforged-ts:docs:start -->`/,
+    );
+    expect(result.summary).toMatch(
+      /`CONTEXT\.md`.*`<!-- reforged-ts:terms:end -->` is not on a line of its own/,
+    );
+  });
+
+  it("leaves the packages alone outside the dependency sections", () => {
+    const files = shipped();
+    const withOverrides = (text: string) =>
+      text.replace(
+        /\n}\n$/,
+        ',\n  "pnpm": {\n    "overrides": {\n      "reforged-ts": "1.0.0"\n    }\n  }\n}\n',
+      );
+    files["package.json"] = withOverrides(files["package.json"]);
+    expect(apply(files).files["package.json"]).toBe(
+      withOverrides(apply().files["package.json"]),
     );
   });
 
