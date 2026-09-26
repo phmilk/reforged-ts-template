@@ -27,6 +27,12 @@ TriggerSleepAction(1);
 
 The type-aware rules find each file's program through the nearest `tsconfig.json`. The Node side (`scripts`, `tests/pipeline`, `tests/harness` and the configuration files) is typed by `tsconfig.scripts.json`, which no `tsconfig.json` names; the map's `tsconfig.json` references it through `tsconfig.solution.json`, a solution file that compiles nothing, so ESLint and the editor both find it.
 
+## `pnpm check` and the editor
+
+`pnpm check` runs `pnpm lint`, `pnpm typecheck` and `pnpm test` in that order and stops at the first failure with a non-zero exit. A green `check` is the definition of done, for an author and for an agent.
+
+`.vscode/` holds the workspace settings, the recommended extensions (ESLint, Prettier, the Lua language server) and the tasks. `build` is the default build task (Ctrl+Shift+B) and `test` the default test task; `build: release`, `dev` (a background watch), `test:map` and `check` are under "Tasks: Run Task". Build errors and lint problems land in the Problems panel. The editor saves on focus change, then formats and applies ESLint's fixes; it diagnoses with the TypeScript under `node_modules` and keeps the map folder and `src/generated` read-only. `.editorconfig` gives other editors and agents the same whitespace: UTF-8, LF, two spaces, a final newline, no trailing whitespace outside Markdown.
+
 ## The library packages
 
 The Template depends on four packages of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts): `reforged-ts` and `reforged-types` (the map's code), `reforged-test` (the Lua test harness) and `eslint-plugin-reforged` (the lint rules). `package.json` declares the four the same way, with caret ranges on the first major. None of them is on npm yet, so until their first publish a plain `pnpm install` cannot resolve them: install with `pnpm use:local <checkout>` (below). When the library publishes its first versions under the `next` dist-tag, the ranges move to that channel and the lockfile is committed.

@@ -1,0 +1,65 @@
+{
+  // The package scripts, one keystroke away: Ctrl+Shift+B runs `build`, the
+  // "Run Test Task" command runs `test`, "Run Task" lists the rest. Declared
+  // here rather than auto-detected, which sets no default and no matcher.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "detail": "Build the map in dev mode (the mode of reforged.config.ts)",
+      "type": "shell",
+      "command": "pnpm build",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "build: release",
+      "detail": "Build the map in release mode: the runtime Guards are off",
+      "type": "shell",
+      "command": "pnpm build --mode release",
+      "group": "build",
+      "problemMatcher": "$tsc"
+    },
+    {
+      "label": "dev",
+      "detail": "Build, then rebuild on every change in the source and map folders",
+      "type": "shell",
+      "command": "pnpm dev",
+      "isBackground": true,
+      "problemMatcher": {
+        "base": "$tsc",
+        // The first build runs as the task starts; each rebuild opens with
+        // "Change detected" and every build, failed or not, closes with the
+        // "Watching ..." line (tests/pipeline/dev.test.ts).
+        "background": {
+          "activeByDefault": true,
+          "beginsPattern": "^Change detected, rebuilding",
+          "endsPattern": "^Watching .+ for changes"
+        }
+      }
+    },
+    {
+      "label": "test:map",
+      "detail": "Build and launch the game on the map",
+      "type": "shell",
+      "command": "pnpm test:map",
+      "problemMatcher": []
+    },
+    {
+      "label": "test",
+      "detail": "Run the tests on the harness, without the game",
+      "type": "shell",
+      "command": "pnpm test",
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "check",
+      "detail": "Lint, typecheck, test: the definition of done",
+      "type": "shell",
+      "command": "pnpm check",
+      "group": "test",
+      "problemMatcher": ["$tsc", "$eslint-stylish"]
+    }
+  ]
+}

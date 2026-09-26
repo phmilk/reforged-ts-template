@@ -137,26 +137,32 @@ function buildAndReport(config: ResolvedConfig): void {
  * rebuild after every burst of changes. The generated folder and the output
  * folder are the build's own writes and are ignored, so a build never
  * retriggers itself.
+ *
+ * Every rebuild opens with the "Change detected" line and every build, failed
+ * or not, closes with the "Watching" line: the VS Code `dev` task's background
+ * patterns (`.vscode/tasks.json`) wait for these two lines.
  */
 export function startDev(
   config: ResolvedConfig,
   debounceMs = DEBOUNCE_MS,
 ): { close(): void } {
   const { sourceFolder } = config;
+  const shown = (folder: string) => path.relative(config.root, folder) || ".";
+  const watchingLine = `Watching ${shown(sourceFolder)} and ${shown(config.mapFolder)} for changes (Ctrl+C to stop)`;
+  const buildAndAnnounce = () => {
+    buildAndReport(config);
+    console.log(watchingLine);
+  };
   const watcher = watchFolders({
     folders: [sourceFolder, config.mapFolder],
     ignore: [config.generatedFolder, config.outputFolder],
     debounceMs,
     onChange: () => {
       console.log("Change detected, rebuilding...");
-      buildAndReport(config);
+      buildAndAnnounce();
     },
   });
-  buildAndReport(config);
-  const shown = (folder: string) => path.relative(config.root, folder) || ".";
-  console.log(
-    `Watching ${shown(sourceFolder)} and ${shown(config.mapFolder)} for changes (Ctrl+C to stop)`,
-  );
+  buildAndAnnounce();
   return watcher;
 }
 

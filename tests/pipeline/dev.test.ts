@@ -1,11 +1,11 @@
-import { spawn, type ChildProcessByStdio } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import type { Readable } from "node:stream";
 import { setTimeout as sleep } from "node:timers/promises";
+import * as ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
 import { debounce, watchFolders, type Timers } from "../../scripts/dev.ts";
-import { copyProject, ENTRY_MODULE, makeTempDir } from "./helpers.ts";
+import { copyProject, ENTRY_MODULE, makeTempDir, ROOT } from "./helpers.ts";
 
 /** A manual clock: timers fire only when the test advances time. */
 function fakeTimers(): Timers & { advance(ms: number): void } {
@@ -164,23 +164,24 @@ describe("watchFolders on a folder deleted and created again", () => {
   });
 });
 
-/** `node scripts/dev.ts` in a throwaway project, with its output collected as it arrives. */
+/**
+ * `node scripts/dev.ts` in a throwaway project. Its stdout and stderr go to one
+ * file, so the output keeps the order the watcher printed its lines in, as in
+ * VS Code's terminal (two pipes would not).
+ */
 class DevProcess {
-  output = "";
-  private readonly child: ChildProcessByStdio<null, Readable, Readable>;
+  private readonly log = path.join(makeTempDir(), "dev.log");
+  private readonly child: ChildProcess;
   constructor(cwd: string, args: string[] = []) {
+    const fd = fs.openSync(this.log, "w");
     this.child = spawn(process.execPath, ["scripts/dev.ts", ...args], {
       cwd,
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ["ignore", fd, fd],
     });
-    this.child.stdout.on(
-      "data",
-      (chunk: Buffer) => (this.output += chunk.toString("utf8")),
-    );
-    this.child.stderr.on(
-      "data",
-      (chunk: Buffer) => (this.output += chunk.toString("utf8")),
-    );
+    fs.closeSync(fd);
+  }
+  get output(): string {
+    return fs.readFileSync(this.log, "utf8");
   }
   count(pattern: RegExp): number {
     return (
@@ -207,16 +208,12 @@ class DevProcess {
       await sleep(50);
     }
   }
-  /** Resolves with the exit code once the process has exited and its output is drained. */
+  /** Resolves with the exit code once the process has exited; its output is then complete. */
   exited(): Promise<number | null> {
-    if (
-      this.child.exitCode !== null &&
-      this.child.stdout.readableEnded &&
-      this.child.stderr.readableEnded
-    )
+    if (this.child.exitCode !== null)
       return Promise.resolve(this.child.exitCode);
     return new Promise((resolve) =>
-      this.child.on("close", (code) => {
+      this.child.on("exit", (code) => {
         resolve(code);
       }),
     );
@@ -348,5 +345,79 @@ describe("node scripts/dev.ts (pnpm dev)", () => {
     expect(await dev.exited()).toBe(1);
     expect(dev.output).toMatch(FAILED);
     expect(dev.output).not.toMatch(/Watching/);
+  });
+});
+
+/** A task of `.vscode/tasks.json`, the fields this test reads. */
+interface Task {
+  label: string;
+  isBackground?: boolean;
+  problemMatcher?: {
+    background?: { beginsPattern: string; endsPattern: string };
+  };
+}
+
+/** The `dev` task of `.vscode/tasks.json` (JSON with comments, as VS Code reads it). */
+function readDevTask(): Task {
+  const file = path.join(ROOT, ".vscode", "tasks.json");
+  const result = ts.parseConfigFileTextToJson(
+    file,
+    fs.readFileSync(file, "utf8"),
+  );
+  if (result.error)
+    throw new Error(
+      ts.flattenDiagnosticMessageText(result.error.messageText, "\n"),
+    );
+  const { tasks } = result.config as { tasks: Task[] };
+  const task = tasks.find((candidate) => candidate.label === "dev");
+  if (!task) throw new Error("tasks.json has no dev task");
+  return task;
+}
+
+describe("the VS Code dev task", () => {
+  let dev: DevProcess | undefined;
+  afterEach(() => dev?.stop());
+
+  it("brackets every rebuild of pnpm dev with its background patterns, a failing one included", async () => {
+    const task = readDevTask();
+    expect(task.isBackground).toBe(true);
+    const background = task.problemMatcher?.background;
+    if (!background) throw new Error("the dev task has no background patterns");
+    const begins = new RegExp(background.beginsPattern, "m");
+    const ends = new RegExp(background.endsPattern, "m");
+
+    const project = copyProject();
+    dev = new DevProcess(project);
+    // The first build runs as the task starts (activeByDefault): only its end is printed.
+    await dev.waitFor(ends, 1);
+    const broken = path.join(project, "src", "broken.ts");
+    fs.writeFileSync(broken, 'export const n: number = "not a number";\n');
+    await dev.waitFor(ends, 2);
+    fs.writeFileSync(broken, "export const n: number = 1;\n");
+    await dev.waitFor(ends, 3);
+
+    // Each rebuild's lines, the compile error's diagnostic included, sit between a begin and an end.
+    const kinds: [string, RegExp][] = [
+      ["begin", begins],
+      ["end", ends],
+      ["built", BUILT],
+      ["failed", FAILED],
+      ["diagnostic", /^src[\\/]broken\.ts\(1,14\): error TS2322/],
+    ];
+    const sequence = dev.output.split(/\r?\n/).flatMap((line) => {
+      const match = kinds.find(([, pattern]) => pattern.test(line));
+      return match ? [match[0]] : [];
+    });
+    expect(sequence).toEqual([
+      "built",
+      "end",
+      "begin",
+      "failed",
+      "diagnostic",
+      "end",
+      "begin",
+      "built",
+      "end",
+    ]);
   });
 });
