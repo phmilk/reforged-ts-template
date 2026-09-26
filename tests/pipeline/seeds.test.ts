@@ -7,7 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { LIBRARY_TERMS } from "../../scripts/sync.ts";
+import { endMarker, LIBRARY_TERMS } from "../../scripts/sync.ts";
 import { ROOT } from "./helpers.ts";
 import { markedBlock, readRepoFile } from "./sync-markers.ts";
 
@@ -117,9 +117,7 @@ describe("CONTEXT.md", () => {
     expect(
       [...block.matchAll(/^\*\*(.+?)\*\*:$/gm)].map(([, term]) => term).sort(),
     ).toEqual([...LIBRARY_TERMS].sort());
-    const afterBlock = context.slice(
-      context.indexOf("<!-- reforged-ts:terms:end -->"),
-    );
+    const afterBlock = context.slice(context.indexOf(endMarker("terms")));
     expect(headings(afterBlock)).toEqual(["Your map's terms"]);
   });
 });

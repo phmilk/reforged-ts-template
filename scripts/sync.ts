@@ -7,15 +7,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { runAsEntry } from "./cli.ts";
 import { AuthorError } from "./errors.ts";
-import { LOCAL_PACKAGES, type LocalPackage } from "./use-local.ts";
+import { LIBRARY_PACKAGES, type LibraryPackage } from "./use-local.ts";
 
-/** The library packages the Template depends on, bumped to each release: the ones `use:local` installs. */
-export const SYNCED_PACKAGES = LOCAL_PACKAGES;
-
-export type SyncedPackage = LocalPackage;
-
-/** The released version of each package, without a range operator. */
-export type ReleasedVersions = Record<SyncedPackage, string>;
+/** The released version of each library package, without a range operator. */
+export type ReleasedVersions = Record<LibraryPackage, string>;
 
 /**
  * The map-author terms of the library's glossary the Template's CONTEXT.md
@@ -120,11 +115,11 @@ export function parsePayload(value: unknown): ReleasePayload {
   if (!isRecord(versions))
     throw new AuthorError("the payload has no `versions` object.");
   const parsed = Object.fromEntries(
-    SYNCED_PACKAGES.map((name) => {
+    LIBRARY_PACKAGES.map((name) => {
       const version = versions[name];
       if (typeof version !== "string" || !SEMVER.test(version))
         throw new AuthorError(
-          `the payload's \`versions\` has no version of ${name}, as x.y.z: ${String(version)}`,
+          `the payload's \`versions\` has no version of ${name}, as a bare semver (x.y.z or x.y.z-pre): ${String(version)}`,
         );
       return [name, version];
     }),
@@ -156,16 +151,16 @@ export const endMarker = (name: string): string =>
   `<!-- reforged-ts:${name}:end -->`;
 
 /**
- * `text` (LF) with the block between the `name` markers replaced by
- * `replace(block)`, written in the shape Prettier keeps: a blank line, the
- * content, a blank line. Each marker must appear once, on a line of its own,
- * the start before the end; otherwise the file is skipped.
+ * Where the text of the sync block `name` lies in `text` (LF): from the end of
+ * its start marker to the beginning of its end marker. Each marker must appear
+ * once, on a line of its own, the start before the end; otherwise it throws
+ * `Skipped` with the reason. The shape tests (tests/pipeline/sync-markers.ts)
+ * use it too, so the Template's files are held to what the sync accepts.
  */
-function replaceBlock(
+export function locateBlock(
   text: string,
   name: string,
-  replace: (block: string) => string,
-): string {
+): { from: number; to: number } {
   const start = startMarker(name);
   const end = endMarker(name);
   const lines = text.split("\n");
@@ -185,6 +180,20 @@ function replaceBlock(
   const to = text.indexOf(end);
   if (to < from)
     throw new Skipped(`the marker \`${end}\` comes before \`${start}\`.`);
+  return { from, to };
+}
+
+/**
+ * `text` (LF) with the block between the `name` markers replaced by
+ * `replace(block)`, written in the shape Prettier keeps: a blank line, the
+ * content, a blank line. Broken markers skip the file (`locateBlock`).
+ */
+function replaceBlock(
+  text: string,
+  name: string,
+  replace: (block: string) => string,
+): string {
+  const { from, to } = locateBlock(text, name);
   const content = replace(text.slice(from, to)).trim();
   return `${text.slice(0, from)}\n\n${content}\n\n${text.slice(to)}`;
 }
@@ -213,13 +222,8 @@ function libraryTerms(context: string): string[] {
     .map(([, entry]) => entry);
 }
 
-/** The sections of package.json whose ranges the sync bumps. */
-const DEPENDENCY_SECTIONS = [
-  "dependencies",
-  "devDependencies",
-  "optionalDependencies",
-  "peerDependencies",
-];
+/** The sections of package.json whose ranges the sync bumps: where the Template declares the library packages. */
+const DEPENDENCY_SECTIONS = ["dependencies", "devDependencies"];
 
 /**
  * package.json with each package's range set to `^<version>` in the
@@ -228,7 +232,7 @@ const DEPENDENCY_SECTIONS = [
  */
 function bumpDependencies(text: string, versions: ReleasedVersions): string {
   const manifest = JSON.parse(text) as Record<string, unknown>;
-  const missing = SYNCED_PACKAGES.filter(
+  const missing = LIBRARY_PACKAGES.filter(
     (name) =>
       !DEPENDENCY_SECTIONS.some((key) => {
         const section = manifest[key];
@@ -237,13 +241,13 @@ function bumpDependencies(text: string, versions: ReleasedVersions): string {
   );
   if (missing.length > 0)
     throw new Skipped(`no dependency on ${missing.join(", ")}.`);
-  const section = new RegExp(
+  const sectionPattern = new RegExp(
     `^(\\s*"(?:${DEPENDENCY_SECTIONS.join("|")})"\\s*:\\s*\\{)([^{}]*)\\}`,
     "gm",
   );
-  return text.replace(section, (_, head: string, body: string) => {
+  return text.replace(sectionPattern, (_, head: string, body: string) => {
     let bumped = body;
-    for (const name of SYNCED_PACKAGES)
+    for (const name of LIBRARY_PACKAGES)
       bumped = bumped.replace(
         new RegExp(`("${name}"\\s*:\\s*)"[^"]*"`),
         (__, key: string) => `${key}"^${versions[name]}"`,
@@ -290,7 +294,7 @@ export function applyRelease(
   > = {
     "package.json": {
       edit: (text) => bumpDependencies(text, payload.versions),
-      change: SYNCED_PACKAGES.map(
+      change: LIBRARY_PACKAGES.map(
         (name) => `\`${name}\` ^${payload.versions[name]}`,
       ).join(", "),
     },
@@ -334,16 +338,16 @@ export function applyRelease(
     else changed.push(file);
   }
 
-  const section = (title: string, lines: string[]) =>
+  const summarySection = (title: string, lines: string[]) =>
     lines.length === 0 ? [] : ["", title, "", ...lines];
   const summary = [
     `Applies the reforged-ts release \`${payload.tag}\` to the Template.`,
-    ...section(
+    ...summarySection(
       "Changed:",
       changed.map((file) => `- \`${file}\`: ${sync[file].change}`),
     ),
-    ...section("Already up to date:", unchanged),
-    ...section("Not synced, to fix by hand:", skipped),
+    ...summarySection("Already up to date:", unchanged),
+    ...summarySection("Not synced, to fix by hand:", skipped),
     "",
   ].join("\n");
   return { files: result, changed, summary };

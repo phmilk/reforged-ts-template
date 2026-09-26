@@ -13,16 +13,17 @@ export const LIST_FILE = "packages.json";
 /**
  * The library packages a Map project installs, each under `packages/<name>` in
  * a reforged-ts checkout: the three the map's code and tests use, and the lint
- * plugin `pnpm lint` loads.
+ * plugin `pnpm lint` loads. `use:local` installs them from a checkout; the
+ * sync (scripts/sync.ts) bumps them to each release.
  */
-export const LOCAL_PACKAGES = [
+export const LIBRARY_PACKAGES = [
   "reforged-types",
   "reforged-test",
   "reforged-ts",
   "eslint-plugin-reforged",
 ] as const;
 
-export type LocalPackage = (typeof LOCAL_PACKAGES)[number];
+export type LibraryPackage = (typeof LIBRARY_PACKAGES)[number];
 
 /** Runs pnpm with `args` in `cwd`; throws when it fails. */
 export type Pnpm = (args: string[], cwd: string) => void;
@@ -68,7 +69,7 @@ const runPnpm: Pnpm = (args, cwd) => {
  * The folder of each library package in `checkout`. A path that is not a
  * reforged-ts checkout is an AuthorError naming every package it lacks.
  */
-function findPackages(checkout: string): Record<LocalPackage, string> {
+function findPackages(checkout: string): Record<LibraryPackage, string> {
   const folder = (name: string) => path.join(checkout, "packages", name);
   const hasPackage = (name: string) => {
     const manifest = path.join(folder(name), "package.json");
@@ -78,15 +79,15 @@ function findPackages(checkout: string): Record<LocalPackage, string> {
         .name === name
     );
   };
-  const missing = LOCAL_PACKAGES.filter((name) => !hasPackage(name));
+  const missing = LIBRARY_PACKAGES.filter((name) => !hasPackage(name));
   if (missing.length > 0) {
     throw new AuthorError(
       `${checkout} is not a reforged-ts checkout: no package ${missing.join(", ")} under ${path.join(checkout, "packages")}.`,
     );
   }
   return Object.fromEntries(
-    LOCAL_PACKAGES.map((name) => [name, folder(name)]),
-  ) as Record<LocalPackage, string>;
+    LIBRARY_PACKAGES.map((name) => [name, folder(name)]),
+  ) as Record<LibraryPackage, string>;
 }
 
 /**
@@ -128,12 +129,12 @@ export function useLocal(
   root: string,
   checkout: string,
   pnpm: Pnpm = runPnpm,
-): Record<LocalPackage, string> {
+): Record<LibraryPackage, string> {
   const packages = findPackages(checkout);
   if (!fs.existsSync(path.join(checkout, "node_modules")))
     pnpm(["install"], checkout);
   pnpm(
-    [...LOCAL_PACKAGES.flatMap((name) => ["--filter", name]), "run", "build"],
+    [...LIBRARY_PACKAGES.flatMap((name) => ["--filter", name]), "run", "build"],
     checkout,
   );
 
@@ -141,11 +142,11 @@ export function useLocal(
   fs.rmSync(folder, { recursive: true, force: true });
   fs.mkdirSync(folder);
   const tarballs = Object.fromEntries(
-    LOCAL_PACKAGES.map((name) => [
+    LIBRARY_PACKAGES.map((name) => [
       name,
       packInto(packages[name], folder, pnpm),
     ]),
-  ) as Record<LocalPackage, string>;
+  ) as Record<LibraryPackage, string>;
   fs.writeFileSync(
     path.join(folder, LIST_FILE),
     `${JSON.stringify(tarballs, null, 2)}\n`,
@@ -182,7 +183,9 @@ await runAsEntry(import.meta.url, "use:local", () => {
   const root = process.cwd();
   if (args.length === 1 && args[0] === "--reset") {
     resetLocal(root);
-    console.log(`Using the registry versions of ${LOCAL_PACKAGES.join(", ")}.`);
+    console.log(
+      `Using the registry versions of ${LIBRARY_PACKAGES.join(", ")}.`,
+    );
     return;
   }
   if (args.length !== 1 || args[0].startsWith("-"))
