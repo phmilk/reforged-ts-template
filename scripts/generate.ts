@@ -39,7 +39,7 @@ export const ENV_FILE = "env.ts";
 
 /** The env file's text: one boolean, `devMode`, which the entry passes to `Reforged.configure`. */
 export function envFileContents(mode: Mode): string {
-  return `${GENERATED_BANNER}\n/** On in \`dev\` builds (the library's runtime Guards run), off in \`release\` builds. Set by \`--mode\` or \`mode\` in ${CONFIG_FILE}. */\nexport const devMode: boolean = ${String(mode === "dev")};\n`;
+  return `${GENERATED_BANNER}\n/** On in \`dev\` builds (the library's runtime checks run), off in \`release\` builds. Set by \`--mode\` or \`mode\` in ${CONFIG_FILE}. */\nexport const devMode: boolean = ${String(mode === "dev")};\n`;
 }
 
 export const generateEnv: Generator = (config) => [

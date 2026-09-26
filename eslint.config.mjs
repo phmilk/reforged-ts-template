@@ -53,7 +53,7 @@ export default defineConfig(
       },
     },
   },
-  // The Guards' lint layer on the code that runs in the game: the map's
+  // The lint layer of the library's runtime checks, on the code that runs in the game: the map's
   // source and its Lua tests. The pipeline scripts run in Node, where the
   // Warcraft III pitfalls do not apply.
   {

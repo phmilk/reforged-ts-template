@@ -6,15 +6,15 @@
   "tasks": [
     {
       "label": "build",
-      "detail": "Build the map in dev mode (the mode of reforged.config.ts)",
+      "detail": "Build the map in dev mode, the runtime checks on",
       "type": "shell",
-      "command": "pnpm build",
+      "command": "pnpm build --mode dev",
       "group": { "kind": "build", "isDefault": true },
       "problemMatcher": "$tsc"
     },
     {
       "label": "build: release",
-      "detail": "Build the map in release mode: the runtime Guards are off",
+      "detail": "Build the map in release mode: the runtime checks are off",
       "type": "shell",
       "command": "pnpm build --mode release",
       "group": "build",

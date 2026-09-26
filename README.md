@@ -29,8 +29,8 @@ On Linux the game runs through Wine: set `winePath` in `reforged.config.ts`.
 
 | Command                     | What it does                                                                                              |
 | --------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `pnpm build`                | Builds the map in dev mode, the library's runtime Guards on, into `dist`.                                 |
-| `pnpm build --mode release` | Builds the map in release mode, the Guards off: the build you ship.                                       |
+| `pnpm build`                | Builds the map in dev mode, the library's runtime checks on, into `dist`.                                 |
+| `pnpm build --mode release` | Builds the map in release mode, the runtime checks off: the build you ship.                               |
 | `pnpm dev`                  | Watches `src` and the map folder and rebuilds on every change.                                            |
 | `pnpm test:map`             | Builds, then launches the game on the built map folder.                                                   |
 | `pnpm test`                 | Runs the tests without the game: the build scripts' in Node, the map's on the Lua 5.3 harness.            |
@@ -71,7 +71,7 @@ A green `pnpm check` is the definition of done, for an author and for an agent.
 `pnpm lint` runs ESLint over the repository (the map's source, its Lua tests, the build scripts and their tests) and fails on any problem, warnings included; `pnpm lint:fix` applies the fixes and formats. The flat config in `eslint.config.mjs` holds:
 
 - the library's base stack: `@eslint/js` recommended, typescript-eslint's strict and stylistic type-checked presets through the project service, and `eslint-plugin-import-x` with the TypeScript resolver;
-- every recommended rule of [`eslint-plugin-reforged`](https://github.com/phmilk/reforged-ts/tree/master/packages/eslint-plugin-reforged), the lint layer of the library's Guards, on the code that runs in the game (`src` and `tests/lua`); each problem links to its rule's page;
+- every recommended rule of [`eslint-plugin-reforged`](https://github.com/phmilk/reforged-ts/tree/master/packages/eslint-plugin-reforged), the lint layer of the library's runtime checks, on the code that runs in the game (`src` and `tests/lua`); each problem links to its rule's page;
 - Prettier as an ESLint rule, with the config in `.prettierrc` (Prettier 3's defaults), so the editor and `pnpm lint` format alike.
 
 A rule is silenced on one line only, with the reason after `--`; a disable comment without one is an error:

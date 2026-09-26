@@ -12,7 +12,7 @@ export interface Config {
   outputFolder?: string;
   /** File name of the packed archive. Default: the map folder's name. */
   archiveName?: string;
-  /** `dev` turns the library's runtime Guards on, `release` turns them off. Default `dev`; `--mode` overrides it. */
+  /** `dev` turns the library's runtime checks on, `release` turns them off. Default `dev`; `--mode` overrides it. */
   mode?: Mode;
   /**
    * The game's executable, for `pnpm test:map`. Default: detected (the
