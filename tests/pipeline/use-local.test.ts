@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   LIST_FILE,
   LOCAL_FOLDER,
-  LOCAL_PACKAGES,
+  LIBRARY_PACKAGES,
   resetLocal,
   type Pnpm,
 } from "../../scripts/use-local.ts";
@@ -118,7 +118,7 @@ function makeCheckout(): string {
     path.join(dir, "pnpm-workspace.yaml"),
     "packages:\n  - packages/*\n",
   );
-  for (const name of LOCAL_PACKAGES) {
+  for (const name of LIBRARY_PACKAGES) {
     const pkg = path.join(dir, "packages", name);
     fs.mkdirSync(pkg, { recursive: true });
     const build =
@@ -179,7 +179,7 @@ describe("pnpm use:local", () => {
     const first = runUseLocal(project, path.relative(project, checkout));
     expect(first.stderr).not.toMatch(/failed/);
     expect(first.status).toBe(0);
-    for (const name of LOCAL_PACKAGES)
+    for (const name of LIBRARY_PACKAGES)
       expect(installed(name)).toBe(`${name} v1\n`);
     expect(git(project, "status", "--porcelain", "--untracked-files=all")).toBe(
       "",
@@ -193,7 +193,7 @@ describe("pnpm use:local", () => {
     expect(installed("reforged-ts")).toBe("reforged-ts v2\n");
     // One tarball per package: the previous run's are gone.
     expect(fs.readdirSync(path.join(project, LOCAL_FOLDER))).toHaveLength(
-      LOCAL_PACKAGES.length + 1,
+      LIBRARY_PACKAGES.length + 1,
     );
     expect(git(project, "status", "--porcelain", "--untracked-files=all")).toBe(
       "",

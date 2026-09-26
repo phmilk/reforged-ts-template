@@ -20,7 +20,8 @@
     "test:map": "node scripts/launch.ts",
     "use:local": "node scripts/use-local.ts",
     "lint": "eslint --max-warnings 0 .",
-    "lint:fix": "eslint --fix ."
+    "lint:fix": "eslint --fix .",
+    "check": "pnpm run lint && pnpm run typecheck && pnpm run test"
   },
   "dependencies": {
     "reforged-ts": "^1.0.0",

@@ -1,22 +1,78 @@
 # reforged-ts-template
 
-Template for Warcraft III 3.0.0 map projects written in TypeScript with [reforged-ts](https://github.com/phmilk/reforged-ts), compiled to Lua with typescript-to-lua.
+A Map project template: a Warcraft III 3.0.0 map whose code is TypeScript compiled to Lua with typescript-to-lua and [reforged-ts](https://github.com/phmilk/reforged-ts). You write the map's code in `src`, `pnpm build` appends it to the script the World Editor saved and packs the map, and `pnpm test:map` opens it in the game. The World Editor owns the map's data (terrain, object data, placed units); this repository owns the code. The way the build works (the editor's map folder, the code appended to its script, the archive packed) comes from cipherxof's [wc3-ts-template](https://github.com/cipherxof/wc3-ts-template) (MIT).
 
-**Status: under construction.** The build pipeline, the scripts and the editor baseline are being built; their specs live in this repository's issue tracker, at https://github.com/phmilk/reforged-ts-template/issues. The design is recorded in the library's ADR 0006: the Template owns code, the World Editor owns data.
+**Status: under construction.** The Template is being built in the open specs of its issue tracker, at https://github.com/phmilk/reforged-ts-template/issues. The library packages are not published yet (see [the library packages](#the-library-packages)), and the documentation site is not live yet: its links, the `llms.txt` one included, are placeholders until it is.
 
-## Machine-specific settings
+## Requirements
 
-`reforged.config.ts` is committed, so it holds only what every machine shares. `pnpm test:map` finds the game on its own in the Battle.net install locations; when the game lives elsewhere, set the `WC3_EXECUTABLE` environment variable to its executable (and `WINEPREFIX` for a Wine prefix) instead of writing the path into `gameExecutable`.
+- **Warcraft III 3.0.0** with a Battle.net login saved on the machine: `pnpm test:map` starts the game with the flag that reuses it.
+- **The World Editor**, which ships with the game. The map is saved as a folder, with Lua as its script language.
+- **Node 24** (`.node-version`).
+- **pnpm 10** (`packageManager` in `package.json`; `corepack enable` provides it).
 
-`pnpm test` fails when a committed file holds an absolute path (`tests/pipeline/absolute-paths.test.ts`), in the Template and in every Map project generated from it: such a path works on one machine only. The check reads the files as committed in `HEAD`, so a path you set locally and do not commit, such as `gameExecutable` or `file:` overrides for locally packed tarballs in `package.json`, never fails it; commit the change and it does.
+On Linux the game runs through Wine: set `winePath` in `reforged.config.ts`.
+
+## First run
+
+1. Create your repository from this one with GitHub's **Use this template**.
+2. Clone it and open a terminal in the clone.
+3. Install: `pnpm install`. It also writes the generated files under `src/generated`. Until the library's first publish, install with `pnpm use:local <checkout>` instead (see [the library packages](#the-library-packages)).
+4. Open the map folder, `maps/reforged-ts-template.w3m`, in the World Editor and save it. Leave Scenario > Map Options > Script Language on Lua: the build appends the map's code to the script the editor writes. To rename the map, save it under `maps` with the new name and set `mapFolder` in `reforged.config.ts`.
+5. Build: `pnpm build`. It prints the packed archive, `dist/reforged-ts-template.w3m`.
+6. Play: `pnpm test:map` builds, then opens the game on the built map folder, windowed. To pick the map from the game's own map list instead, copy the archive into the game's Maps folder.
+7. Iterate: `pnpm dev` rebuilds on every change under `src` or the map folder, until Ctrl+C.
+
+`pnpm test:map` finds the game in the Battle.net install locations. When the game lives elsewhere, set the `WC3_EXECUTABLE` environment variable to its executable (and `WINEPREFIX` for a Wine prefix) rather than writing the path into `gameExecutable`: `reforged.config.ts` is committed, so it holds only what every machine shares. `pnpm test` fails when a committed file holds an absolute path (`tests/pipeline/absolute-paths.test.ts`), because such a path works on one machine only. The check reads the files as committed in `HEAD`, so a local setting you do not commit never fails it.
+
+## Commands
+
+| Command                     | What it does                                                                                              |
+| --------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `pnpm build`                | Builds the map in dev mode, the library's runtime checks on, into `dist`.                                 |
+| `pnpm build --mode release` | Builds the map in release mode, the runtime checks off: the build you ship.                               |
+| `pnpm dev`                  | Watches `src` and the map folder and rebuilds on every change.                                            |
+| `pnpm test:map`             | Builds, then launches the game on the built map folder.                                                   |
+| `pnpm test`                 | Runs the tests without the game: the build scripts' in Node, the map's on the Lua 5.3 harness.            |
+| `pnpm check`                | Runs `lint`, `typecheck` and `test` in that order and stops at the first failure: the definition of done. |
+
+`pnpm lint` and `pnpm lint:fix` run ESLint alone ([Lint](#lint)), `pnpm typecheck` the TypeScript compiler alone, and `pnpm use:local <checkout>` installs the library from a local checkout ([below](#developing-against-a-local-checkout-of-the-library)).
+
+## Compatibility matrix
+
+Which versions of the four library packages, which game Patch and which Toolchain go together. The block is generated at each library release and pasted here by the sync workflow: do not edit it by hand.
+
+<!-- reforged-ts:matrix:start -->
+
+<!-- Generated by `pnpm release:matrix` from release/compatibility/matrix.json; do not edit. -->
+
+No stable release yet. During the build phase the packages are published as `1.0.0-alpha.N` under the `next` dist-tag.
+
+<!-- reforged-ts:matrix:end -->
+
+## For AI agents
+
+<!-- reforged-ts:docs:start -->
+
+**For AI agents:** the documentation of the pinned library version, as one plain-text file for a language model, is [llms.txt](https://phmilk.github.io/reforged-ts/llms.txt).
+
+<!-- reforged-ts:docs:end -->
+
+## Agents and editor
+
+`AGENTS.md` tells any coding agent how this project is worked on: the commands, the layout, the runtime constraints of the game's Lua, lint and testing; `CLAUDE.md` imports it for Claude Code. `CONTEXT.md` is the project's glossary: the library's terms first, then a section for your map's own. The Agent skills under `.claude/skills` walk an agent through adding a feature (`map-feature`) and running the map in the game (`run-in-game`); `AGENTS.md` lists them, so an agent without skills reads them as documents.
+
+A green `pnpm check` is the definition of done, for an author and for an agent.
+
+`.vscode/` holds the workspace settings, the recommended extensions (ESLint, Prettier, the Lua language server) and the tasks. `build` is the default build task (Ctrl+Shift+B) and `test` the default test task; `build: release`, `dev` (a background watch), `test:map` and `check` are under "Tasks: Run Task". Build errors and lint problems land in the Problems panel. The editor saves on focus change, then formats and applies ESLint's fixes; it diagnoses with the TypeScript under `node_modules` and keeps the map folder and `src/generated` read-only. `.editorconfig` gives other editors and agents the same whitespace: UTF-8, LF, two spaces, a final newline, no trailing whitespace outside Markdown.
 
 ## Lint
 
-`pnpm lint` runs ESLint over the repository (the map's source, its Lua tests, the pipeline scripts and their tests) and fails on any problem, warnings included; `pnpm lint:fix` applies the fixes and formats. The flat config in `eslint.config.mjs` holds:
+`pnpm lint` runs ESLint over the repository (the map's source, its Lua tests, the build scripts and their tests) and fails on any problem, warnings included; `pnpm lint:fix` applies the fixes and formats. The flat config in `eslint.config.mjs` holds:
 
 - the library's base stack: `@eslint/js` recommended, typescript-eslint's strict and stylistic type-checked presets through the project service, and `eslint-plugin-import-x` with the TypeScript resolver;
-- every recommended rule of [`eslint-plugin-reforged`](https://github.com/phmilk/reforged-ts/tree/master/packages/eslint-plugin-reforged), the lint layer of the library's Guards, on the code that runs in the game (`src` and `tests/lua`); each problem links to its rule's page;
-- Prettier as an ESLint rule, with the config in `.prettierrc` (Prettier 3's defaults, trailing commas `all`, as in the library), so the editor and `pnpm lint` format alike.
+- every recommended rule of [`eslint-plugin-reforged`](https://github.com/phmilk/reforged-ts/tree/master/packages/eslint-plugin-reforged), the lint layer of the library's runtime checks, on the code that runs in the game (`src` and `tests/lua`); each problem links to its rule's page;
+- Prettier as an ESLint rule, with the config in `.prettierrc` (Prettier 3's defaults), so the editor and `pnpm lint` format alike.
 
 A rule is silenced on one line only, with the reason after `--`; a disable comment without one is an error:
 
@@ -29,9 +85,11 @@ The type-aware rules find each file's program through the nearest `tsconfig.json
 
 ## The library packages
 
-The Template depends on four packages of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts): `reforged-ts` and `reforged-types` (the map's code), `reforged-test` (the Lua test harness) and `eslint-plugin-reforged` (the lint rules). `package.json` declares the four the same way, with caret ranges on the first major. None of them is on npm yet, so until their first publish a plain `pnpm install` cannot resolve them: install with `pnpm use:local <checkout>` (below). When the library publishes its first versions under the `next` dist-tag, the ranges move to that channel and the lockfile is committed.
+The Template depends on four packages of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts): `reforged-ts` and `reforged-types` (the map's code), `reforged-test` (the Lua test harness) and `eslint-plugin-reforged` (the lint rules). `package.json` declares the four the same way, with caret ranges on the first major.
 
-## Developing against a local checkout of the library
+During the build phase the library publishes its packages as `1.0.0-alpha.N` under npm's `next` dist-tag, and none is published yet: until the first publish, a plain `pnpm install` cannot resolve them. Clone the library next to your project and install with `pnpm use:local ../reforged-ts` (below). Once the packages are on npm, the ranges move to the `next` channel and the lockfile is committed.
+
+### Developing against a local checkout of the library
 
 To try a change to reforged-ts in the game before any package is published, point the project at a local checkout of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts):
 
@@ -44,3 +102,19 @@ pnpm use:local --reset          # back to the registry versions
 `pnpm use:local <path>` runs the checkout's build for the four packages (`eslint-plugin-reforged` included, so `pnpm lint` runs the checkout's rules), packs them into `.local-packages/` (ignored by git) and installs them in place of the registry versions. It works on a fresh clone with no `node_modules`. Rerun it after changing the library to pick up the change.
 
 Nothing committed changes, in either direction: the committed pnpm hook `.pnpmfile.cjs` swaps the four packages for their tarballs only while `.local-packages/packages.json` exists, and the local install writes no lockfile. `git status` stays clean after `use:local` and after `--reset`. While the local packages are in use, install with `pnpm use:local` rather than a plain `pnpm install` or `pnpm add`: those write a lockfile pointing at the local tarballs, which must not be committed.
+
+## Deletable in a generated project
+
+This repository keeps the Template itself up to date with the library. A Map project generated from it can delete that machinery; nothing is ever synced into a generated project:
+
+- `.github/workflows/sync.yml`, the workflow that applies a library release to the Template (still to come). It runs only in `phmilk/reforged-ts-template`, so it is inert in your repository.
+- The sync script the workflow runs, `scripts/sync.ts`, and its test `tests/pipeline/sync.test.ts`.
+- The tests that hold the Template's files to the sync's shape: `tests/pipeline/seeds.test.ts` (`AGENTS.md` and `CONTEXT.md`), `tests/pipeline/readme.test.ts` (this README) and their helper `tests/pipeline/sync-markers.ts`.
+- The Template's maintenance docs: `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md` and the Template maintenance section of `AGENTS.md`, which lists all of the above.
+
+## Links
+
+- The documentation site: https://phmilk.github.io/reforged-ts/
+- The library: https://github.com/phmilk/reforged-ts
+- The upstream template the build comes from: https://github.com/cipherxof/wc3-ts-template
+- License: MIT, in `LICENSE`.

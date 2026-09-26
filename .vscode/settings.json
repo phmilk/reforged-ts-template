@@ -1,0 +1,43 @@
+{
+  // Save when the editor loses focus: format on save and the ESLint fixes run
+  // for this mode (they do not for "afterDelay").
+  "files.autoSave": "onFocusChange",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": { "source.fixAll.eslint": "explicit" },
+
+  // ESLint formats TypeScript and JavaScript (Prettier runs as an ESLint
+  // rule); the Prettier extension formats the other files. Both read .prettierrc.
+  "eslint.format.enable": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[typescript]": { "editor.defaultFormatter": "dbaeumer.vscode-eslint" },
+  "[javascript]": { "editor.defaultFormatter": "dbaeumer.vscode-eslint" },
+
+  // The same whitespace as .editorconfig, for a VS Code without its extension.
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "files.eol": "\n",
+  "files.encoding": "utf8",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+  "[markdown]": { "files.trimTrailingWhitespace": false },
+
+  // Diagnose with the TypeScript the Toolchain pins, not VS Code's own.
+  "js/ts.tsdk.path": "./node_modules/typescript/lib",
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true,
+
+  // Read-only: what install, build and watch generate (the env file, the
+  // editor-globals typings) and the map folder, which the World Editor owns.
+  "files.readonlyInclude": {
+    "src/generated/**": true,
+    "maps/**": true
+  },
+
+  // The Lua language server (sumneko.lua) reads Lua 5.3, the game's Lua. The
+  // map folder's war3map.lua is the World Editor's: no diagnostics on it, nor
+  // on the other ignored files (the git-ignored build output included).
+  // Prettier cannot format Lua: saving a Lua file leaves it as written.
+  "Lua.runtime.version": "Lua 5.3",
+  "Lua.workspace.ignoreDir": [".vscode", "maps"],
+  "Lua.diagnostics.ignoredFiles": "Disable",
+  "[lua]": { "editor.formatOnSave": false }
+}
