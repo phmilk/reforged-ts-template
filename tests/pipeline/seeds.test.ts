@@ -3,13 +3,8 @@
 // sync targets. The sync rewrites only the text between a start and an end
 // marker. In a generated Map project both files are the author's own: this
 // test is Template maintenance, deleted with the rest of it (see AGENTS.md).
-import fs from "node:fs";
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { ROOT } from "./helpers.ts";
-
-const readRepoFile = (file: string): string =>
-  fs.readFileSync(path.join(ROOT, file), "utf8").replaceAll("\r\n", "\n");
+import { markedBlock, readRepoFile } from "./sync-markers.ts";
 
 /** The `## ` headings of a Markdown file, in order, code blocks left out. */
 function headings(text: string): string[] {
@@ -18,25 +13,6 @@ function headings(text: string): string[] {
     if (line.startsWith("```")) fenced = !fenced;
     return !fenced && line.startsWith("## ") ? [line.slice(3).trim()] : [];
   });
-}
-
-/**
- * The text between `<!-- reforged-ts:<name>:start -->` and its end marker.
- * Fails unless each marker appears exactly once, start before end, and the
- * text is a blank line, the content and a blank line: the shape Prettier
- * keeps, so a sync that writes it leaves `pnpm lint` green.
- */
-function markedBlock(text: string, name: string): string {
-  const start = `<!-- reforged-ts:${name}:start -->`;
-  const end = `<!-- reforged-ts:${name}:end -->`;
-  expect(text.split(start), start).toHaveLength(2);
-  expect(text.split(end), end).toHaveLength(2);
-  const from = text.indexOf(start) + start.length;
-  const to = text.indexOf(end);
-  expect(to, `${end} after ${start}`).toBeGreaterThan(from);
-  const block = text.slice(from, to);
-  expect(block).toMatch(/^\n\n\S[\s\S]*\S\n\n$/);
-  return block;
 }
 
 /**
