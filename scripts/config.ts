@@ -59,23 +59,40 @@ export interface ResolvedConfig {
 export const CONFIG_FILE = "reforged.config.ts";
 
 /** Applies the defaults and resolves every path against `root`. */
-export function resolveConfig(config: Config, root: string, overrides: CommandLineOptions = {}): ResolvedConfig {
+export function resolveConfig(
+  config: Config,
+  root: string,
+  overrides: CommandLineOptions = {},
+): ResolvedConfig {
   if (typeof config?.mapFolder !== "string" || config.mapFolder === "") {
-    throw new AuthorError(`${CONFIG_FILE}: \`mapFolder\` is required (the map folder saved by the World Editor, e.g. "maps/my-map.w3x").`);
+    throw new AuthorError(
+      `${CONFIG_FILE}: \`mapFolder\` is required (the map folder saved by the World Editor, e.g. "maps/my-map.w3x").`,
+    );
   }
   const mapFolder = path.resolve(root, config.mapFolder);
   const outputFolder = path.resolve(root, config.outputFolder ?? "dist");
   const archiveName = config.archiveName ?? path.basename(mapFolder);
   const sourceFolder = path.join(root, "src");
   // The output folder is deleted on every build: never let it cover the repository or the map folder.
-  if (isInside(root, outputFolder) || isInside(sourceFolder, outputFolder) || isInside(mapFolder, outputFolder) || isInside(outputFolder, mapFolder)) {
-    throw new AuthorError(`${CONFIG_FILE}: \`outputFolder\` must be a folder of its own, not the repository root, the source folder, or inside or around the map folder.`);
+  if (
+    isInside(root, outputFolder) ||
+    isInside(sourceFolder, outputFolder) ||
+    isInside(mapFolder, outputFolder) ||
+    isInside(outputFolder, mapFolder)
+  ) {
+    throw new AuthorError(
+      `${CONFIG_FILE}: \`outputFolder\` must be a folder of its own, not the repository root, the source folder, or inside or around the map folder.`,
+    );
   }
   if (archiveName !== path.basename(archiveName) || archiveName === "") {
-    throw new AuthorError(`${CONFIG_FILE}: \`archiveName\` must be a file name, not a path.`);
+    throw new AuthorError(
+      `${CONFIG_FILE}: \`archiveName\` must be a file name, not a path.`,
+    );
   }
   if (config.mode !== undefined && !isMode(config.mode)) {
-    throw new AuthorError(`${CONFIG_FILE}: \`mode\` must be ${MODES.map((m) => `"${m}"`).join(" or ")}, got ${JSON.stringify(config.mode)}.`);
+    throw new AuthorError(
+      `${CONFIG_FILE}: \`mode\` must be ${MODES.map((m) => `"${m}"`).join(" or ")}, got ${JSON.stringify(config.mode)}.`,
+    );
   }
   const mode = overrides.mode ?? config.mode ?? "dev";
   return {
@@ -93,7 +110,10 @@ export function resolveConfig(config: Config, root: string, overrides: CommandLi
 /** Whether `file` is `folder` itself or somewhere under it (both absolute). */
 export function isInside(file: string, folder: string): boolean {
   const rel = path.relative(folder, file);
-  return rel === "" || (rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel));
+  return (
+    rel === "" ||
+    (rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel))
+  );
 }
 
 const isMode = (value: unknown): value is Mode => MODES.includes(value as Mode);
@@ -102,13 +122,22 @@ const isMode = (value: unknown): value is Mode => MODES.includes(value as Mode);
 export function parseCommandLine(argv: readonly string[]): CommandLineOptions {
   let values: { mode?: string };
   try {
-    ({ values } = parseArgs({ args: [...argv], options: { mode: { type: "string" } }, strict: true, allowPositionals: false }));
+    ({ values } = parseArgs({
+      args: [...argv],
+      options: { mode: { type: "string" } },
+      strict: true,
+      allowPositionals: false,
+    }));
   } catch (error) {
-    throw new AuthorError(`${(error as Error).message}. Usage: --mode dev|release`);
+    throw new AuthorError(
+      `${(error as Error).message}. Usage: --mode dev|release`,
+    );
   }
   if (values.mode === undefined) return {};
   if (!isMode(values.mode)) {
-    throw new AuthorError(`--mode must be ${MODES.join(" or ")}, got ${JSON.stringify(values.mode)}.`);
+    throw new AuthorError(
+      `--mode must be ${MODES.join(" or ")}, got ${JSON.stringify(values.mode)}.`,
+    );
   }
   return { mode: values.mode };
 }
@@ -118,15 +147,22 @@ export function parseCommandLine(argv: readonly string[]): CommandLineOptions {
  * applies the command line (`argv` without the node and script paths; the
  * flags win over the file) and resolves every path against the file's folder.
  */
-export async function loadConfig(configPath: string, argv: readonly string[] = []): Promise<ResolvedConfig> {
+export async function loadConfig(
+  configPath: string,
+  argv: readonly string[] = [],
+): Promise<ResolvedConfig> {
   const overrides = parseCommandLine(argv);
   const { config, root } = await importConfigFile(configPath);
   return resolveConfig(config, root, overrides);
 }
 
-async function importConfigFile(configPath: string): Promise<{ config: Config; root: string }> {
+async function importConfigFile(
+  configPath: string,
+): Promise<{ config: Config; root: string }> {
   const file = path.resolve(configPath);
-  const module = (await import(pathToFileURL(file).href)) as { default: Config };
+  const module = (await import(pathToFileURL(file).href)) as {
+    default: Config;
+  };
   return { config: module.default, root: path.dirname(file) };
 }
 
@@ -164,13 +200,29 @@ export const EXECUTABLE_ENV = "WC3_EXECUTABLE";
  * since the bundle folder itself cannot be executed), as other templates and
  * WurstScript use it.
  */
-export function wellKnownExecutables(platform: NodeJS.Platform, env: ExecutableProbe["env"]): string[] {
+export function wellKnownExecutables(
+  platform: NodeJS.Platform,
+  env: ExecutableProbe["env"],
+): string[] {
   if (platform === "win32") {
-    const programFolders = [env["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)", env["ProgramFiles"] ?? "C:\\Program Files"];
-    return [...new Set(programFolders)].map((folder) => path.win32.join(folder, "Warcraft III", "_retail_", "x86_64", "Warcraft III.exe"));
+    const programFolders = [
+      env["ProgramFiles(x86)"] ?? "C:\\Program Files (x86)",
+      env["ProgramFiles"] ?? "C:\\Program Files",
+    ];
+    return [...new Set(programFolders)].map((folder) =>
+      path.win32.join(
+        folder,
+        "Warcraft III",
+        "_retail_",
+        "x86_64",
+        "Warcraft III.exe",
+      ),
+    );
   }
   if (platform === "darwin") {
-    return ["/Applications/Warcraft III/_retail_/x86_64/Warcraft III.app/Contents/MacOS/Warcraft III"];
+    return [
+      "/Applications/Warcraft III/_retail_/x86_64/Warcraft III.app/Contents/MacOS/Warcraft III",
+    ];
   }
   return [];
 }
@@ -196,41 +248,65 @@ export interface LaunchConfig extends ResolvedConfig {
  * environment variable, else the first existing well-known location. Nothing
  * found is an AuthorError naming the config field.
  */
-export function resolveGameLaunch(config: Config, root: string, probe: ExecutableProbe): GameLaunch {
-  const optionalString = (field: "gameExecutable" | "winePath" | "winePrefix") => {
+export function resolveGameLaunch(
+  config: Config,
+  root: string,
+  probe: ExecutableProbe,
+): GameLaunch {
+  const optionalString = (
+    field: "gameExecutable" | "winePath" | "winePrefix",
+  ) => {
     const value = config[field];
     if (value !== undefined && (typeof value !== "string" || value === "")) {
-      throw new AuthorError(`${CONFIG_FILE}: \`${field}\` must be a non-empty string.`);
+      throw new AuthorError(
+        `${CONFIG_FILE}: \`${field}\` must be a non-empty string.`,
+      );
     }
     return value;
   };
   const extraArgs = config.extraLaunchArgs ?? [];
-  if (!Array.isArray(extraArgs) || !extraArgs.every((arg) => typeof arg === "string")) {
-    throw new AuthorError(`${CONFIG_FILE}: \`extraLaunchArgs\` must be an array of strings.`);
+  if (
+    !Array.isArray(extraArgs) ||
+    !extraArgs.every((arg) => typeof arg === "string")
+  ) {
+    throw new AuthorError(
+      `${CONFIG_FILE}: \`extraLaunchArgs\` must be an array of strings.`,
+    );
   }
   const winePath = optionalString("winePath");
   const winePrefix = optionalString("winePrefix");
   const override = optionalString("gameExecutable");
   const wine = {
     ...(winePath !== undefined && { winePath }),
-    ...(winePrefix !== undefined && { winePrefix: path.resolve(root, winePrefix) }),
+    ...(winePrefix !== undefined && {
+      winePrefix: path.resolve(root, winePrefix),
+    }),
   };
 
   if (override !== undefined) {
     // Through Wine the path is the Windows side's (`C:\...`): nothing to check here.
-    if (winePath !== undefined) return { executable: override, extraArgs: [...extraArgs], ...wine };
+    if (winePath !== undefined)
+      return { executable: override, extraArgs: [...extraArgs], ...wine };
     const executable = path.resolve(root, override);
     if (!probe.exists(executable)) {
-      throw new AuthorError(`${CONFIG_FILE}: \`gameExecutable\` is set to "${override}", which does not exist.`);
+      throw new AuthorError(
+        `${CONFIG_FILE}: \`gameExecutable\` is set to "${override}", which does not exist.`,
+      );
     }
     return { executable, extraArgs: [...extraArgs], ...wine };
   }
 
   const fromEnv = probe.env[EXECUTABLE_ENV];
-  const candidates = [...(fromEnv ? [fromEnv] : []), ...wellKnownExecutables(probe.platform, probe.env)];
+  const candidates = [
+    ...(fromEnv ? [fromEnv] : []),
+    ...wellKnownExecutables(probe.platform, probe.env),
+  ];
   const executable = candidates.find((file) => probe.exists(file));
   if (executable === undefined) {
-    const looked = candidates.length > 0 ? ` Looked at: ${candidates.map((c) => `"${c}"`).join(", ")}.` : "";
+    const looked =
+      candidates.length > 0
+        ? ` Looked at: ${candidates.map((c) => `"${c}"`).join(", ")}.`
+        : "";
     throw new AuthorError(
       `Warcraft III was not found. Set \`gameExecutable\` in ${CONFIG_FILE} (or the ${EXECUTABLE_ENV} environment variable) to the game's executable.${looked}`,
     );
@@ -242,8 +318,15 @@ export function resolveGameLaunch(config: Config, root: string, probe: Executabl
  * `loadConfig` plus the game's launch settings, for `pnpm test:map`. Kept apart
  * so `pnpm build` never looks for the game (it runs where no game is installed).
  */
-export async function loadLaunchConfig(configPath: string, argv: readonly string[] = [], probe: ExecutableProbe = systemProbe): Promise<LaunchConfig> {
+export async function loadLaunchConfig(
+  configPath: string,
+  argv: readonly string[] = [],
+  probe: ExecutableProbe = systemProbe,
+): Promise<LaunchConfig> {
   const overrides = parseCommandLine(argv);
   const { config, root } = await importConfigFile(configPath);
-  return { ...resolveConfig(config, root, overrides), game: resolveGameLaunch(config, root, probe) };
+  return {
+    ...resolveConfig(config, root, overrides),
+    game: resolveGameLaunch(config, root, probe),
+  };
 }

@@ -63,10 +63,12 @@ const BANNER = [
   "Do not edit: add or rename the globals in the World Editor.",
 ];
 
-const HEADER_ASSIGNMENT = /^((?:gg|udg)_[A-Za-z0-9_]+)[ \t]*=[ \t]*(.*?)[ \t]*$/;
+const HEADER_ASSIGNMENT =
+  /^((?:gg|udg)_[A-Za-z0-9_]+)[ \t]*=[ \t]*(.*?)[ \t]*$/;
 const FUNCTION_LINE = /^function\b/;
 const INIT_GLOBALS_LINE = /^function[ \t]+InitGlobals[ \t]*\(/;
-const NATIVE_ASSIGNMENT = /^[ \t]*(udg_[A-Za-z0-9_]+)[ \t]*(\[[^\]]*\])?[ \t]*=[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*\(/;
+const NATIVE_ASSIGNMENT =
+  /^[ \t]*(udg_[A-Za-z0-9_]+)[ \t]*(\[[^\]]*\])?[ \t]*=[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*\(/;
 const NUMBER = /^-?(?:0[xX][0-9a-fA-F]+|(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?)$/;
 const STRING = /^(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')$/;
 const BOOLEAN = /^(?:true|false)$/;
@@ -88,12 +90,19 @@ export function generateEditorGlobals(editorScript: string): EditorGlobals {
     if (!match || seen.has(match[1]!)) continue;
     const [, name, value] = match as unknown as [string, string, string];
     seen.add(name);
-    globals.push(name.startsWith("gg_") ? editorObject(name, value, warnings) : variable(name, value, natives, warnings));
+    globals.push(
+      name.startsWith("gg_")
+        ? editorObject(name, value, warnings)
+        : variable(name, value, natives, warnings),
+    );
   }
 
   return {
     globals,
-    declarations: render("//", globals.map((g) => `declare let ${g.name}: ${g.type};`)),
+    declarations: render(
+      "//",
+      globals.map((g) => `declare let ${g.name}: ${g.type};`),
+    ),
     luaStub: render("--", [
       "if __jarray == nil then",
       "  function __jarray(default)",
@@ -107,44 +116,75 @@ export function generateEditorGlobals(editorScript: string): EditorGlobals {
 }
 
 function render(comment: string, body: readonly string[]): string {
-  return [...BANNER.map((line) => `${comment} ${line}`), "", ...body, ""].join("\n");
+  return [...BANNER.map((line) => `${comment} ${line}`), "", ...body, ""].join(
+    "\n",
+  );
 }
 
 /** A `gg_<prefix>_<name>` object placed or created in the editor. */
-function editorObject(name: string, value: string, warnings: string[]): EditorGlobal {
+function editorObject(
+  name: string,
+  value: string,
+  warnings: string[],
+): EditorGlobal {
   if (STRING.test(value)) return { name, type: "string", stubValue: value };
   const prefix = name.slice("gg_".length).split("_")[0]!;
   let type = GG_PREFIX_TYPES[prefix];
   if (type === undefined) {
     type = ROOT_HANDLE;
-    warnings.push(`${name}: unknown editor prefix gg_${prefix}_, declared as ${ROOT_HANDLE}.`);
+    warnings.push(
+      `${name}: unknown editor prefix gg_${prefix}_, declared as ${ROOT_HANDLE}.`,
+    );
   }
   return { name, type, stubValue: "nil" };
 }
 
 /** A `udg_` variable of the Variable Editor, typed from its initializer. */
-function variable(name: string, value: string, natives: InitGlobalsNatives, warnings: string[]): EditorGlobal {
+function variable(
+  name: string,
+  value: string,
+  natives: InitGlobalsNatives,
+  warnings: string[],
+): EditorGlobal {
   const nativeType = (native: string | undefined): string | undefined =>
-    native === undefined ? undefined : `NonNullable<ReturnType<typeof ${native}>>`;
+    native === undefined
+      ? undefined
+      : `NonNullable<ReturnType<typeof ${native}>>`;
 
   const literal = literalType(value);
   if (literal) return { name, type: literal, stubValue: value };
-  if (value === "nil") return { name, type: nativeType(natives.plain.get(name)) ?? "unknown", stubValue: "nil" };
+  if (value === "nil")
+    return {
+      name,
+      type: nativeType(natives.plain.get(name)) ?? "unknown",
+      stubValue: "nil",
+    };
 
   const jarray = JARRAY.exec(value);
   const element = jarray ? literalType(jarray[1]!) : undefined;
   if (jarray && element) {
     const type = nativeType(natives.indexed.get(name)) ?? element;
-    return { name, type: `Record<number, ${type}>`, stubValue: `__jarray(${jarray[1]})` };
+    return {
+      name,
+      type: `Record<number, ${type}>`,
+      stubValue: `__jarray(${jarray[1]})`,
+    };
   }
   if (value === "{}") {
-    return { name, type: `Record<number, ${nativeType(natives.indexed.get(name)) ?? "unknown"}>`, stubValue: "{}" };
+    return {
+      name,
+      type: `Record<number, ${nativeType(natives.indexed.get(name)) ?? "unknown"}>`,
+      stubValue: "{}",
+    };
   }
 
   const call = CALL.exec(value);
-  if (call && !jarray) return { name, type: nativeType(call[1])!, stubValue: "nil" };
+  if (call && !jarray)
+    return { name, type: nativeType(call[1])!, stubValue: "nil" };
 
-  warnings.push(`${name}: initializer \`${value}\` not recognized, declared as unknown.`);
+  warnings.push(
+    `${name}: initializer \`${value}\` not recognized, declared as unknown.`,
+  );
   return { name, type: "unknown", stubValue: "nil" };
 }
 
@@ -176,7 +216,12 @@ function initGlobalsNatives(lines: readonly string[]): InitGlobalsNatives {
     if (FUNCTION_LINE.test(line)) break;
     const match = NATIVE_ASSIGNMENT.exec(line);
     if (match) {
-      const [, name, index, native] = match as unknown as [string, string, string | undefined, string];
+      const [, name, index, native] = match as unknown as [
+        string,
+        string,
+        string | undefined,
+        string,
+      ];
       const target = index === undefined ? natives.plain : natives.indexed;
       if (!target.has(name)) target.set(name, native);
     }
@@ -188,9 +233,20 @@ function initGlobalsNatives(lines: readonly string[]): InitGlobalsNatives {
 
 /** Blocks a line opens minus blocks it closes, strings and comments removed. */
 function blockDelta(line: string): number {
-  const code = line.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, '""').replace(/--.*$/, "");
-  const count = (word: string): number => code.match(new RegExp(`\\b${word}\\b`, "g"))?.length ?? 0;
-  return count("function") + count("do") + count("then") + count("repeat") - count("elseif") - count("end") - count("until");
+  const code = line
+    .replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, '""')
+    .replace(/--.*$/, "");
+  const count = (word: string): number =>
+    code.match(new RegExp(`\\b${word}\\b`, "g"))?.length ?? 0;
+  return (
+    count("function") +
+    count("do") +
+    count("then") +
+    count("repeat") -
+    count("elseif") -
+    count("end") -
+    count("until")
+  );
 }
 
 /**
@@ -199,7 +255,9 @@ function blockDelta(line: string): number {
  * `warn`, which prints them to stderr.
  */
 export const generateEditorGlobalsFiles: Generator = (config, warn) => {
-  const result = generateEditorGlobals(new TextDecoder("utf-8").decode(readEditorScript(config.mapFolder)));
+  const result = generateEditorGlobals(
+    new TextDecoder("utf-8").decode(readEditorScript(config.mapFolder)),
+  );
   for (const warning of result.warnings) warn(warning);
   return [
     { name: DECLARATIONS_FILE, contents: result.declarations },

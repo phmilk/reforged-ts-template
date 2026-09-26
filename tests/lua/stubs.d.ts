@@ -19,7 +19,10 @@ type StubContext = {
  * its conditions, then its actions if every condition returned true. Returns
  * whether the actions ran.
  */
-declare function __stub_fire_trigger(whichTrigger: trigger, context?: StubContext): boolean;
+declare function __stub_fire_trigger(
+  whichTrigger: trigger,
+  context?: StubContext,
+): boolean;
 
 /** Runs the handler `TimerStart` stored for this timer, once. */
 declare function __stub_fire_timer(whichTimer: timer): void;

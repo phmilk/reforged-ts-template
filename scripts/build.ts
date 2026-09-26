@@ -2,12 +2,23 @@ import fs from "node:fs";
 import path from "node:path";
 import { compileBundle, luaBundleFile } from "./compile.ts";
 import { composeMapScript } from "./compose.ts";
-import { CONFIG_FILE, isInside, loadConfig, type ResolvedConfig } from "./config.ts";
+import {
+  CONFIG_FILE,
+  isInside,
+  loadConfig,
+  type ResolvedConfig,
+} from "./config.ts";
 import { AuthorError } from "./errors.ts";
 import { runAsEntry } from "./cli.ts";
 import { packMapFolder } from "./pack.ts";
 import { generate } from "./generate.ts";
-import { EDITOR_SCRIPT, cleanOutputFolder, readEditorScript, stageMapFolder, stagingFolderFor } from "./stage.ts";
+import {
+  EDITOR_SCRIPT,
+  cleanOutputFolder,
+  readEditorScript,
+  stageMapFolder,
+  stagingFolderFor,
+} from "./stage.ts";
 
 export interface BuildResult {
   /** The staged copy of the map folder, holding the composed script. */
@@ -44,7 +55,10 @@ export function build(config: ResolvedConfig): BuildResult {
 
   const bundle = compileBundle(config.tsconfig, bundleFile);
 
-  fs.writeFileSync(path.join(stagingFolder, EDITOR_SCRIPT), composeMapScript(editorScript, bundle));
+  fs.writeFileSync(
+    path.join(stagingFolder, EDITOR_SCRIPT),
+    composeMapScript(editorScript, bundle),
+  );
 
   const archiveBytes = packMapFolder(stagingFolder);
   const archive = path.join(config.outputFolder, config.archiveName);
@@ -59,10 +73,18 @@ export function build(config: ResolvedConfig): BuildResult {
  */
 function bundleFileIn(config: ResolvedConfig): string {
   const bundleFile = luaBundleFile(config.tsconfig);
-  const stagingRoot = path.dirname(stagingFolderFor(config.outputFolder, config.mapFolder));
+  const stagingRoot = path.dirname(
+    stagingFolderFor(config.outputFolder, config.mapFolder),
+  );
   const archive = path.join(config.outputFolder, config.archiveName);
-  if (!isInside(bundleFile, config.outputFolder) || bundleFile === config.outputFolder || isInside(bundleFile, stagingRoot) || bundleFile === archive) {
-    const shown = (file: string) => path.relative(config.root, file).split(path.sep).join("/");
+  if (
+    !isInside(bundleFile, config.outputFolder) ||
+    bundleFile === config.outputFolder ||
+    isInside(bundleFile, stagingRoot) ||
+    bundleFile === archive
+  ) {
+    const shown = (file: string) =>
+      path.relative(config.root, file).split(path.sep).join("/");
     throw new AuthorError(
       `${path.basename(config.tsconfig)}: \`tstl.luaBundle\` resolves to ${shown(bundleFile)}, which is not a file of its own in the output folder ${shown(config.outputFolder)} (\`outputFolder\` in ${CONFIG_FILE}). ` +
         `Set it to a file there, e.g. "${path.relative(path.dirname(config.tsconfig), path.join(config.outputFolder, "bundle.lua")).split(path.sep).join("/")}".`,
@@ -72,12 +94,18 @@ function bundleFileIn(config: ResolvedConfig): string {
 }
 
 /** The line every command prints after a build: `Built <archive, relative to the root> (<n> bytes, mode <mode>)`. */
-export function builtMessage(config: ResolvedConfig, result: BuildResult): string {
+export function builtMessage(
+  config: ResolvedConfig,
+  result: BuildResult,
+): string {
   return `Built ${path.relative(config.root, result.archive)} (${result.size} bytes, mode ${config.mode})`;
 }
 
 /** Command line: `node scripts/build.ts [--mode dev|release]`, run from the repository root. Exits non-zero on any failure. */
 await runAsEntry(import.meta.url, "Build", async () => {
-  const config = await loadConfig(path.resolve(CONFIG_FILE), process.argv.slice(2));
+  const config = await loadConfig(
+    path.resolve(CONFIG_FILE),
+    process.argv.slice(2),
+  );
   console.log(builtMessage(config, build(config)));
 });

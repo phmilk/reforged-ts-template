@@ -15,7 +15,8 @@ export const FIXTURE_MAP = path.join(ROOT, "maps", "reforged-ts-template.w3m");
  */
 export const ENTRY_MODULE = '["main"] = function(...)';
 
-export const sha256 = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
+export const sha256 = (bytes: Uint8Array): string =>
+  createHash("sha256").update(bytes).digest("hex");
 
 export function makeTempDir(prefix = "reforged-template-"): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -24,9 +25,13 @@ export function makeTempDir(prefix = "reforged-template-"): string {
 /** sha256 of every file under `folder`, keyed by relative path with forward slashes. */
 export function hashTree(folder: string): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const rel of fs.readdirSync(folder, { recursive: true, encoding: "utf8" })) {
+  for (const rel of fs.readdirSync(folder, {
+    recursive: true,
+    encoding: "utf8",
+  })) {
     const file = path.join(folder, rel);
-    if (fs.statSync(file).isFile()) out[rel.split(path.sep).join("/")] = sha256(fs.readFileSync(file));
+    if (fs.statSync(file).isFile())
+      out[rel.split(path.sep).join("/")] = sha256(fs.readFileSync(file));
   }
   return out;
 }
@@ -38,10 +43,26 @@ export function hashTree(folder: string): Record<string, string> {
  */
 export function copyProject(): string {
   const dir = makeTempDir();
-  for (const name of ["package.json", "tsconfig.json", "tsconfig.base.json", "tsconfig.solution.json", "tsconfig.scripts.json", "reforged.config.ts", "vitest.config.ts", "src", "maps", "scripts", "tests"]) {
+  for (const name of [
+    "package.json",
+    "tsconfig.json",
+    "tsconfig.base.json",
+    "tsconfig.solution.json",
+    "tsconfig.scripts.json",
+    "reforged.config.ts",
+    "vitest.config.ts",
+    "src",
+    "maps",
+    "scripts",
+    "tests",
+  ]) {
     fs.cpSync(path.join(ROOT, name), path.join(dir, name), { recursive: true });
   }
-  fs.symlinkSync(path.join(ROOT, "node_modules"), path.join(dir, "node_modules"), "junction");
+  fs.symlinkSync(
+    path.join(ROOT, "node_modules"),
+    path.join(dir, "node_modules"),
+    "junction",
+  );
   return dir;
 }
 
@@ -52,14 +73,38 @@ export interface CommandResult {
 }
 
 /** Runs a pipeline script with Node from `cwd`, the way the package scripts do. */
-export function runScript(cwd: string, script: string, args: string[] = []): CommandResult {
-  const result = spawnSync(process.execPath, [script, ...args], { cwd, encoding: "utf8" });
-  return { status: result.status, stdout: result.stdout, stderr: result.stderr };
+export function runScript(
+  cwd: string,
+  script: string,
+  args: string[] = [],
+): CommandResult {
+  const result = spawnSync(process.execPath, [script, ...args], {
+    cwd,
+    encoding: "utf8",
+  });
+  return {
+    status: result.status,
+    stdout: result.stdout,
+    stderr: result.stderr,
+  };
 }
 
 /** Runs git in `cwd` with a throwaway identity and no line-ending conversion; throws on failure. Returns its stdout. */
 export function git(cwd: string, ...args: string[]): string {
-  const result = spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "-c", "core.autocrlf=false", ...args], { cwd, encoding: "utf8" });
-  if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
+  const result = spawnSync(
+    "git",
+    [
+      "-c",
+      "user.name=t",
+      "-c",
+      "user.email=t@t",
+      "-c",
+      "core.autocrlf=false",
+      ...args,
+    ],
+    { cwd, encoding: "utf8" },
+  );
+  if (result.status !== 0)
+    throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
   return result.stdout;
 }

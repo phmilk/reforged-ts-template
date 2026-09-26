@@ -61,7 +61,10 @@ const printedAtGameStart = [...printed];
  */
 function expectGameStartCallbackRan(): void {
   if (printedAtGameStart.length !== 1 || printedAtGameStart[0] !== STARTED) {
-    const output = printedAtGameStart.length === 0 ? "nothing" : printedAtGameStart.join(" | ");
+    const output =
+      printedAtGameStart.length === 0
+        ? "nothing"
+        : printedAtGameStart.join(" | ");
     throw `the game start callback of src/main.ts did not run to its end; printed at game start: ${output}`;
   }
 }
@@ -77,7 +80,10 @@ describe("the starter source", () => {
     // unit, once per player slot; the library registers no death of its own.
     const deathTriggers: trigger[] = [];
     for (const [registered, , event] of registrations) {
-      if (event === EVENT_PLAYER_UNIT_DEATH && !deathTriggers.includes(registered as trigger)) {
+      if (
+        event === EVENT_PLAYER_UNIT_DEATH &&
+        !deathTriggers.includes(registered as trigger)
+      ) {
         deathTriggers.push(registered as trigger);
       }
     }
@@ -99,12 +105,16 @@ describe("the starter source", () => {
     expectGameStartCallbackRan();
     // The library starts timers of its own (game time, host detection) at the
     // same stages; the starter's is the one repeating every 60 seconds.
-    const repeating = timerStarts.filter(([, timeout, periodic]) => timeout === 60 && periodic === true);
+    const repeating = timerStarts.filter(
+      ([, timeout, periodic]) => timeout === 60 && periodic === true,
+    );
     if (repeating.length !== 1) {
       throw `expected the starter's one Timer repeating every 60 seconds, got ${repeating.length}`;
     }
     const timer = repeating[0][0] as timer;
-    expect(stubCalls()).toContainCall(`TimerStart(${__stub_format(timer)}, 60, true, <function>)`);
+    expect(stubCalls()).toContainCall(
+      `TimerStart(${__stub_format(timer)}, 60, true, <function>)`,
+    );
     printed.length = 0;
 
     __stub_fire_timer(timer);

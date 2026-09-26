@@ -2,7 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { build, builtMessage } from "./build.ts";
 import { printFailure, runAsEntry } from "./cli.ts";
-import { CONFIG_FILE, isInside, loadConfig, type ResolvedConfig } from "./config.ts";
+import {
+  CONFIG_FILE,
+  isInside,
+  loadConfig,
+  type ResolvedConfig,
+} from "./config.ts";
 
 /** Quiet time after the last change before the build runs: an editor save writes many files. */
 export const DEBOUNCE_MS = 300;
@@ -19,7 +24,11 @@ const realTimers: Timers = {
 };
 
 /** Wraps `run` so a burst of calls runs it once, `ms` after the last call. */
-export function debounce(run: () => void, ms: number, timers: Timers = realTimers): { (): void; cancel(): void } {
+export function debounce(
+  run: () => void,
+  ms: number,
+  timers: Timers = realTimers,
+): { (): void; cancel(): void } {
   let pending: unknown;
   const trigger = () => {
     if (pending !== undefined) timers.clearTimeout(pending);
@@ -61,17 +70,24 @@ export interface WatchOptions {
  * is left to the folder's own watch, which applies the ignore list.
  */
 export function watchFolders(options: WatchOptions): { close(): void } {
-  const trigger = debounce(options.onChange, options.debounceMs ?? DEBOUNCE_MS, options.timers);
-  const ignored = (file: string) => options.ignore.some((folder) => isInside(file, folder));
+  const trigger = debounce(
+    options.onChange,
+    options.debounceMs ?? DEBOUNCE_MS,
+    options.timers,
+  );
+  const ignored = (file: string) =>
+    options.ignore.some((folder) => isInside(file, folder));
   const closers = options.folders.map((folder) => {
     let inner: fs.FSWatcher | undefined;
     const arm = () => {
       inner?.close();
       inner = undefined;
-      if (!fs.statSync(folder, { throwIfNoEntry: false })?.isDirectory()) return;
+      if (!fs.statSync(folder, { throwIfNoEntry: false })?.isDirectory())
+        return;
       inner = fs
         .watch(folder, { recursive: true }, (_event, filename) => {
-          if (filename !== null && ignored(path.resolve(folder, filename))) return;
+          if (filename !== null && ignored(path.resolve(folder, filename)))
+            return;
           trigger();
         })
         .on("error", (error) => {
@@ -88,7 +104,9 @@ export function watchFolders(options: WatchOptions): { close(): void } {
         arm();
         trigger();
       })
-      .on("error", (error) => console.error(`Watch error on ${path.dirname(folder)}:`, error));
+      .on("error", (error) =>
+        console.error(`Watch error on ${path.dirname(folder)}:`, error),
+      );
     arm();
     return () => {
       parent.close();
@@ -118,7 +136,10 @@ function buildAndReport(config: ResolvedConfig): void {
  * folder are the build's own writes and are ignored, so a build never
  * retriggers itself.
  */
-export function startDev(config: ResolvedConfig, debounceMs = DEBOUNCE_MS): { close(): void } {
+export function startDev(
+  config: ResolvedConfig,
+  debounceMs = DEBOUNCE_MS,
+): { close(): void } {
   const { sourceFolder } = config;
   const watcher = watchFolders({
     folders: [sourceFolder, config.mapFolder],
@@ -131,7 +152,9 @@ export function startDev(config: ResolvedConfig, debounceMs = DEBOUNCE_MS): { cl
   });
   buildAndReport(config);
   const shown = (folder: string) => path.relative(config.root, folder) || ".";
-  console.log(`Watching ${shown(sourceFolder)} and ${shown(config.mapFolder)} for changes (Ctrl+C to stop)`);
+  console.log(
+    `Watching ${shown(sourceFolder)} and ${shown(config.mapFolder)} for changes (Ctrl+C to stop)`,
+  );
   return watcher;
 }
 

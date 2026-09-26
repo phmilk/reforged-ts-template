@@ -44,7 +44,10 @@ async function prepare(): Promise<Prepared> {
     generate(config);
     generatedStub = path.join(config.generatedFolder, LUA_STUB_FILE);
   } catch (error) {
-    return { stubs: [], compileErrors: `Generating the editor globals failed: ${error instanceof Error ? error.message : String(error)}` };
+    return {
+      stubs: [],
+      compileErrors: `Generating the editor globals failed: ${error instanceof Error ? error.message : String(error)}`,
+    };
   }
   // The editor globals first, so a map-specific stub can give a gg_ global a handle.
   const stubs = [generatedStub, ...luaFilesIn(mapStubs)];
@@ -70,6 +73,7 @@ export default async function setup(project: TestProject): Promise<void> {
   project.provide("outDir", outDir);
   provide(project, await prepare());
   project.onTestsRerun(async (specifications) => {
-    if (specifications.some((spec) => spec.project.name === project.name)) provide(project, await prepare());
+    if (specifications.some((spec) => spec.project.name === project.name))
+      provide(project, await prepare());
   });
 }

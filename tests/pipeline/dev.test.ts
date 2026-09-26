@@ -21,7 +21,9 @@ function fakeTimers(): Timers & { advance(ms: number): void } {
     },
     advance(ms) {
       now += ms;
-      for (const [id, timer] of [...pending].sort((a, b) => a[1].at - b[1].at)) {
+      for (const [id, timer] of [...pending].sort(
+        (a, b) => a[1].at - b[1].at,
+      )) {
         if (timer.at <= now) {
           pending.delete(id);
           timer.callback();
@@ -62,10 +64,21 @@ describe("watchFolders", () => {
     fs.mkdirSync(path.join(dir, "nested", "deep"), { recursive: true });
     fs.mkdirSync(path.join(dir, "generated"));
     let calls = 0;
-    closers.push(watchFolders({ folders: [dir], ignore: [path.join(dir, "generated")], debounceMs: 100, onChange: () => calls++ }));
+    closers.push(
+      watchFolders({
+        folders: [dir],
+        ignore: [path.join(dir, "generated")],
+        debounceMs: 100,
+        onChange: () => calls++,
+      }),
+    );
     await sleep(100);
 
-    for (let i = 0; i < 20; i++) fs.writeFileSync(path.join(dir, "nested", "deep", `f${i % 3}.ts`), `// ${i}\n`);
+    for (let i = 0; i < 20; i++)
+      fs.writeFileSync(
+        path.join(dir, "nested", "deep", `f${i % 3}.ts`),
+        `// ${i}\n`,
+      );
     await sleep(500);
     expect(calls).toBe(1);
 
@@ -82,7 +95,14 @@ describe("watchFolders", () => {
     fs.mkdirSync(folder);
     const generated = path.join(folder, "generated");
     let calls = 0;
-    closers.push(watchFolders({ folders: [folder], ignore: [generated], debounceMs: 100, onChange: () => calls++ }));
+    closers.push(
+      watchFolders({
+        folders: [folder],
+        ignore: [generated],
+        debounceMs: 100,
+        onChange: () => calls++,
+      }),
+    );
     await sleep(100);
 
     // Twice: Windows reports a change on the parent for a created child, but may leave out the first.
@@ -103,7 +123,12 @@ describe("watchFolders on a folder deleted and created again", () => {
     const folder = path.join(parent, "map.w3m");
     fs.mkdirSync(folder);
     let calls = 0;
-    const watcher = watchFolders({ folders: [folder], ignore: [], debounceMs: 100, onChange: () => calls++ });
+    const watcher = watchFolders({
+      folders: [folder],
+      ignore: [],
+      debounceMs: 100,
+      onChange: () => calls++,
+    });
     try {
       await sleep(100);
       // The way an editor may save: remove the folder and write a new one in its place.
@@ -139,33 +164,61 @@ class DevProcess {
   output = "";
   private readonly child: ChildProcess;
   constructor(cwd: string, args: string[] = []) {
-    this.child = spawn(process.execPath, ["scripts/dev.ts", ...args], { cwd, stdio: ["ignore", "pipe", "pipe"] });
-    this.child.stdout!.on("data", (chunk: Buffer) => (this.output += chunk.toString("utf8")));
-    this.child.stderr!.on("data", (chunk: Buffer) => (this.output += chunk.toString("utf8")));
+    this.child = spawn(process.execPath, ["scripts/dev.ts", ...args], {
+      cwd,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    this.child.stdout!.on(
+      "data",
+      (chunk: Buffer) => (this.output += chunk.toString("utf8")),
+    );
+    this.child.stderr!.on(
+      "data",
+      (chunk: Buffer) => (this.output += chunk.toString("utf8")),
+    );
   }
   count(pattern: RegExp): number {
-    return this.output.match(new RegExp(pattern.source, pattern.flags + "g"))?.length ?? 0;
+    return (
+      this.output.match(new RegExp(pattern.source, pattern.flags + "g"))
+        ?.length ?? 0
+    );
   }
   /** Waits until `pattern` has appeared `times` times in the output. */
-  async waitFor(pattern: RegExp, times: number, timeoutMs = 30_000): Promise<void> {
+  async waitFor(
+    pattern: RegExp,
+    times: number,
+    timeoutMs = 30_000,
+  ): Promise<void> {
     const deadline = Date.now() + timeoutMs;
     while (this.count(pattern) < times) {
-      if (this.child.exitCode !== null) throw new Error(`dev exited (${this.child.exitCode}):\n${this.output}`);
-      if (Date.now() > deadline) throw new Error(`timed out waiting for ${times} x ${pattern}:\n${this.output}`);
+      if (this.child.exitCode !== null)
+        throw new Error(`dev exited (${this.child.exitCode}):\n${this.output}`);
+      if (Date.now() > deadline)
+        throw new Error(
+          `timed out waiting for ${times} x ${pattern}:\n${this.output}`,
+        );
       await sleep(50);
     }
   }
   /** Resolves with the exit code once the process has exited and its output is drained. */
   exited(): Promise<number | null> {
-    if (this.child.exitCode !== null && this.child.stdout!.readableEnded && this.child.stderr!.readableEnded) return Promise.resolve(this.child.exitCode);
-    return new Promise((resolve) => this.child.on("close", (code) => resolve(code)));
+    if (
+      this.child.exitCode !== null &&
+      this.child.stdout!.readableEnded &&
+      this.child.stderr!.readableEnded
+    )
+      return Promise.resolve(this.child.exitCode);
+    return new Promise((resolve) =>
+      this.child.on("close", (code) => resolve(code)),
+    );
   }
   stop(): void {
     this.child.kill();
   }
 }
 
-const BUILT = /^Built dist[\\/]reforged-ts-template\.w3m \(\d+ bytes, mode dev\)$/m;
+const BUILT =
+  /^Built dist[\\/]reforged-ts-template\.w3m \(\d+ bytes, mode dev\)$/m;
 const FAILED = /^Build failed: /m;
 
 describe("node scripts/dev.ts (pnpm dev)", () => {
@@ -175,14 +228,23 @@ describe("node scripts/dev.ts (pnpm dev)", () => {
   it("builds on start, rebuilds on changes in the source and map folders, survives a compile error, and never retriggers itself", async () => {
     const project = copyProject();
     // A fresh clone: the first build creates the generated folder, which must not retrigger it.
-    fs.rmSync(path.join(project, "src", "generated"), { recursive: true, force: true });
+    fs.rmSync(path.join(project, "src", "generated"), {
+      recursive: true,
+      force: true,
+    });
     dev = new DevProcess(project);
-    await dev.waitFor(/^Watching src and maps[\\/]reforged-ts-template\.w3m for changes/m, 1);
+    await dev.waitFor(
+      /^Watching src and maps[\\/]reforged-ts-template\.w3m for changes/m,
+      1,
+    );
     expect(dev.count(BUILT)).toBe(1);
 
     // The build's own writes (output folder) and generated files do not retrigger: no loop.
     fs.mkdirSync(path.join(project, "src", "generated"), { recursive: true });
-    fs.writeFileSync(path.join(project, "src", "generated", "env.ts"), "export const devMode: boolean = true;\n");
+    fs.writeFileSync(
+      path.join(project, "src", "generated", "env.ts"),
+      "export const devMode: boolean = true;\n",
+    );
     fs.writeFileSync(path.join(project, "dist", "scratch.txt"), "x");
     await sleep(1500);
     expect(dev.count(BUILT)).toBe(1);
@@ -191,14 +253,20 @@ describe("node scripts/dev.ts (pnpm dev)", () => {
     // A burst in the source folder: one rebuild.
     const entry = path.join(project, "src", "main.ts");
     const original = fs.readFileSync(entry, "utf8");
-    for (let i = 0; i < 5; i++) fs.writeFileSync(entry, `${original}// edit ${i}\n`);
+    for (let i = 0; i < 5; i++)
+      fs.writeFileSync(entry, `${original}// edit ${i}\n`);
     await dev.waitFor(BUILT, 2);
     await sleep(1000);
     expect(dev.count(BUILT)).toBe(2);
-    expect(fs.readFileSync(path.join(project, "dist", "bundle.lua"), "utf8")).toContain(ENTRY_MODULE);
+    expect(
+      fs.readFileSync(path.join(project, "dist", "bundle.lua"), "utf8"),
+    ).toContain(ENTRY_MODULE);
 
     // A change in the map folder (as an editor save would make): a rebuild.
-    fs.appendFileSync(path.join(project, "maps", "reforged-ts-template.w3m", "war3map.lua"), "\n-- saved again\n");
+    fs.appendFileSync(
+      path.join(project, "maps", "reforged-ts-template.w3m", "war3map.lua"),
+      "\n-- saved again\n",
+    );
     await dev.waitFor(BUILT, 3);
 
     // A compile error prints the diagnostics and the watch keeps running.
@@ -226,12 +294,29 @@ describe("node scripts/dev.ts (pnpm dev)", () => {
 
     fs.rmSync(mapFolder, { recursive: true });
     fs.cpSync(saved, mapFolder, { recursive: true });
-    fs.appendFileSync(path.join(mapFolder, "war3map.lua"), "\n-- saved as a new folder\n");
+    fs.appendFileSync(
+      path.join(mapFolder, "war3map.lua"),
+      "\n-- saved as a new folder\n",
+    );
     await dev.waitFor(BUILT, 2);
-    expect(fs.readFileSync(path.join(project, "dist", "staging", "reforged-ts-template.w3m", "war3map.lua"), "utf8")).toContain("-- saved as a new folder");
+    expect(
+      fs.readFileSync(
+        path.join(
+          project,
+          "dist",
+          "staging",
+          "reforged-ts-template.w3m",
+          "war3map.lua",
+        ),
+        "utf8",
+      ),
+    ).toContain("-- saved as a new folder");
 
     // A later save into the recreated folder is still seen.
-    fs.appendFileSync(path.join(mapFolder, "war3map.lua"), "\n-- saved again\n");
+    fs.appendFileSync(
+      path.join(mapFolder, "war3map.lua"),
+      "\n-- saved again\n",
+    );
     await dev.waitFor(BUILT, 3);
     expect(dev.count(FAILED)).toBe(0);
   });
@@ -239,8 +324,13 @@ describe("node scripts/dev.ts (pnpm dev)", () => {
   it("takes --mode from the command line like pnpm build", async () => {
     const project = copyProject();
     dev = new DevProcess(project, ["--mode", "release"]);
-    await dev.waitFor(/^Built dist[\\/]reforged-ts-template\.w3m \(\d+ bytes, mode release\)$/m, 1);
-    expect(fs.readFileSync(path.join(project, "src", "generated", "env.ts"), "utf8")).toContain("devMode: boolean = false");
+    await dev.waitFor(
+      /^Built dist[\\/]reforged-ts-template\.w3m \(\d+ bytes, mode release\)$/m,
+      1,
+    );
+    expect(
+      fs.readFileSync(path.join(project, "src", "generated", "env.ts"), "utf8"),
+    ).toContain("devMode: boolean = false");
   });
 
   it("exits 1 on an invalid --mode without watching", async () => {
