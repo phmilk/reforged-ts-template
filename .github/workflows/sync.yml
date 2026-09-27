@@ -1,0 +1,127 @@
+# The sync: when reforged-ts releases, its release workflow dispatches
+# `reforged-ts-release` here with the payload scripts/sync.ts consumes (the
+# released versions, the tag and three URLs). The job applies the release,
+# refreshes the lockfile, builds in release mode, runs `pnpm check` and opens
+# a pull request a maintainer merges. Any red step stops before the pull
+# request opens; there is no auto-merge.
+#
+# Template maintenance: a generated Map project deletes this file (see
+# AGENTS.md). The job runs only in phmilk/reforged-ts-template, so a copy
+# left in a generated project stays inert.
+#
+# Secrets (repository secrets of phmilk/reforged-ts-template, #26): the
+# GitHub App's `SYNC_APP_ID` and `SYNC_APP_PRIVATE_KEY`, or, until the App is
+# installed, a fine-grained personal access token `SYNC_TOKEN` scoped to this
+# repository with contents and pull requests read/write. The App's token wins
+# when both are set. The default token is never used for the pull request: CI
+# would not run on it.
+#
+# Dry run with a fake payload, from a branch:
+#   gh workflow run sync.yml --ref <branch> -f payload="$(cat payload.json)"
+name: sync
+
+on:
+  repository_dispatch:
+    types: [reforged-ts-release]
+  workflow_dispatch:
+    inputs:
+      payload:
+        description: The release payload as JSON, as reforged-ts's release dispatches it.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == 'phmilk/reforged-ts-template'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SYNC_APP_ID: ${{ secrets.SYNC_APP_ID }}
+      SYNC_APP_PRIVATE_KEY: ${{ secrets.SYNC_APP_PRIVATE_KEY }}
+      SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+    steps:
+      - name: Check a pull-request token is configured
+        run: |
+          if [ -n "$SYNC_APP_ID" ] && [ -n "$SYNC_APP_PRIVATE_KEY" ]; then
+            echo "The pull request opens with the GitHub App's token."
+          elif [ -n "$SYNC_TOKEN" ]; then
+            echo "The pull request opens with the SYNC_TOKEN secret."
+          else
+            echo "::error::Set the secrets SYNC_APP_ID and SYNC_APP_PRIVATE_KEY (GitHub App) or SYNC_TOKEN (fine-grained token)."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      # The pnpm version comes from package.json's packageManager.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+
+      # The payload never reaches the shell through an expression: it goes
+      # through an environment variable into a file the sync script checks.
+      - name: Write the payload
+        env:
+          PAYLOAD: ${{ github.event_name == 'repository_dispatch' && toJSON(github.event.client_payload) || inputs.payload }}
+        run: printf '%s' "$PAYLOAD" > "$RUNNER_TEMP/payload.json"
+
+      # scripts/sync.ts imports only Node built-ins: it runs before any install.
+      - name: Sync
+        run: |
+          node scripts/sync.ts "$RUNNER_TEMP/payload.json" --summary "$RUNNER_TEMP/summary.md"
+          cat "$RUNNER_TEMP/summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      # The sync has checked the payload by now; the tag still becomes a
+      # branch name, so anything outside [A-Za-z0-9._-] is replaced.
+      - name: Name the pull request
+        id: names
+        run: |
+          tag=$(jq -r '.tag' "$RUNNER_TEMP/payload.json" | tr -c 'A-Za-z0-9._-' '-' | sed 's/-*$//')
+          version=$(jq -r '.versions["reforged-ts"]' "$RUNNER_TEMP/payload.json" | tr -c 'A-Za-z0-9.+-' '-' | sed 's/-*$//')
+          echo "branch=sync/$tag" >> "$GITHUB_OUTPUT"
+          echo "title=chore(deps): reforged-ts $version" >> "$GITHUB_OUTPUT"
+
+      - name: Refresh the lockfile
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build in release mode
+        run: pnpm build --mode release
+
+      - name: Check
+        run: pnpm check
+
+      - name: Create the GitHub App token
+        id: app
+        if: env.SYNC_APP_ID != '' && env.SYNC_APP_PRIVATE_KEY != ''
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.SYNC_APP_ID }}
+          private-key: ${{ secrets.SYNC_APP_PRIVATE_KEY }}
+
+      # Only the synced files and the lockfile: build outputs stay out.
+      - name: Open the pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ steps.app.outputs.token || secrets.SYNC_TOKEN }}
+          branch: ${{ steps.names.outputs.branch }}
+          title: ${{ steps.names.outputs.title }}
+          commit-message: ${{ steps.names.outputs.title }}
+          body-path: ${{ runner.temp }}/summary.md
+          add-paths: |
+            package.json
+            pnpm-lock.yaml
+            CONTEXT.md
+            AGENTS.md
+            README.md
+          delete-branch: true
