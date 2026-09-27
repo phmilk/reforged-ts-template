@@ -74,11 +74,12 @@ Each skill is a step list for a recurring task. An agent without skill support r
 
 ## Template maintenance
 
-This section, `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, the sync-shape tests (`tests/pipeline/seeds.test.ts`, `tests/pipeline/readme.test.ts` and their helper `tests/pipeline/sync-markers.ts`), and the sync script `scripts/sync.ts` with its test `tests/pipeline/sync.test.ts` (run by the sync workflow `.github/workflows/sync.yml`, still to come) serve the development of the Template itself. Delete them in a generated Map project, and keep Your project below.
+This section, `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `docs/agents/release-gate.md`, the sync-shape tests (`tests/pipeline/seeds.test.ts`, `tests/pipeline/readme.test.ts` and their helper `tests/pipeline/sync-markers.ts`), and the sync script `scripts/sync.ts` with its test `tests/pipeline/sync.test.ts` (run by the sync workflow `.github/workflows/sync.yml`, still to come) serve the development of the Template itself. Delete them in a generated Map project, and keep Your project below.
 
 - **Issue tracker**: the Template's issues live in `phmilk/reforged-ts-template`'s GitHub Issues and are driven with the `gh` CLI; the library's live in `phmilk/reforged-ts`. Specs carry the `spec` label and their tickets are sub-issues with native "blocked by" dependencies. See `docs/agents/issue-tracker.md`.
 - **Triage labels**: the five canonical triage labels are used as-is: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. Two kind labels sit next to them: `spec` on an issue created with `to-spec`, `ticket` on one created with `to-tickets`. See `docs/agents/triage-labels.md`.
 - **Sync markers**: on each library release, the Template's sync sets the four library packages' ranges in `package.json` and rewrites the text between the `reforged-ts:<name>:start` and `reforged-ts:<name>:end` marker comments of `AGENTS.md`, `CONTEXT.md` and the README, and nothing else. Edit around the markers, never between them.
+- **Release gate**: the library's release builds, lints and tests the Template against its packed packages before publishing: it clones the `v<major>` ref, installs the tarballs through `pnpm.overrides` with `pnpm install --no-frozen-lockfile`, then runs `build --mode release`, `lint` and `test` by name. `main` tracks the current library major; a `v<previous major>` branch is cut when a new major starts. During the build phase the library ranges are on the `next` channel (`^1.0.0-alpha.0`). Tarball installs (`pnpm use:local` or the gate's overrides) are never committed. See `docs/agents/release-gate.md`.
 
 ## Your project
 
