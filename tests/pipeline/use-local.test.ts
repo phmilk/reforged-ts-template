@@ -102,8 +102,13 @@ function makeMapProject(): string {
     path.join(dir, "package.json"),
     `${JSON.stringify(pkg, null, 2)}\n`,
   );
-  for (const name of [".gitignore", "pnpm-workspace.yaml", PNPMFILE, "scripts"])
+  for (const name of [".gitignore", PNPMFILE, "scripts"])
     fs.cpSync(path.join(ROOT, name), path.join(dir, name), { recursive: true });
+  // As committed: the release's Template gate adds overrides to the checkout's copy.
+  fs.writeFileSync(
+    path.join(dir, "pnpm-workspace.yaml"),
+    git(ROOT, "show", "HEAD:pnpm-workspace.yaml"),
+  );
   git(dir, "init", "-q");
   git(dir, "add", ".");
   git(dir, "commit", "-q", "-m", "init");
@@ -209,31 +214,35 @@ describe("pnpm use:local", () => {
 
 describe("pnpmCommand", () => {
   const node = process.execPath;
+  // Relative paths: an absolute one in a committed file fails absolute-paths.test.ts.
+  const pnpmFolder = ["pnpm", "node_modules", "pnpm"];
 
   it("runs pnpm 12's native binary, which `pnpm <script>` names in npm_execpath, directly", () => {
-    const exe = "C:\\pnpm\\node_modules\\pnpm\\pnpm.exe";
+    const exe = [...pnpmFolder, "pnpm.exe"].join("\\");
     expect(pnpmCommand(exe, "win32")).toEqual({
       command: exe,
       args: [],
       shell: false,
     });
-    expect(pnpmCommand("/pnpm/node_modules/pnpm/pnpm", "linux")).toEqual({
-      command: "/pnpm/node_modules/pnpm/pnpm",
+    const binary = [...pnpmFolder, "pnpm"].join("/");
+    expect(pnpmCommand(binary, "linux")).toEqual({
+      command: binary,
       args: [],
       shell: false,
     });
   });
 
   it("runs a JavaScript pnpm through node", () => {
-    expect(pnpmCommand("/pnpm/bin/pnpm.cjs", "win32")).toEqual({
+    const script = [...pnpmFolder, "bin", "pnpm.cjs"].join("/");
+    expect(pnpmCommand(script, "win32")).toEqual({
       command: node,
-      args: ["/pnpm/bin/pnpm.cjs"],
+      args: [script],
       shell: false,
     });
   });
 
   it("falls back to the pnpm on the PATH, through the shell on Windows, when npm_execpath is not pnpm's", () => {
-    for (const execPath of [undefined, "/npm/bin/npm-cli.js"]) {
+    for (const execPath of [undefined, "npm/bin/npm-cli.js"]) {
       expect(pnpmCommand(execPath, "win32")).toEqual({
         command: "pnpm",
         args: [],
