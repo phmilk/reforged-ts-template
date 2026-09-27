@@ -28,8 +28,19 @@ export type LibraryPackage = (typeof LIBRARY_PACKAGES)[number];
 /** Runs pnpm with `args` in `cwd`; throws when it fails. */
 export type Pnpm = (args: string[], cwd: string) => void;
 
-/** A changed resolution never stops on the question pnpm asks before purging node_modules: a script has no terminal to answer it. */
-const INSTALL = ["install", "--config.confirmModulesPurge=false"];
+/**
+ * A changed resolution never stops on the question pnpm asks before purging
+ * node_modules: a script has no terminal to answer it. And the install always
+ * resolves: the manifests do not change when the tarballs do (the pnpm hook
+ * swaps them in memory), so pnpm's check that skips a repeated install would
+ * keep the previous ones. The settings are spelled in kebab case, the one
+ * spelling pnpm 12 reads on the command line.
+ */
+const INSTALL = [
+  "install",
+  "--config.confirm-modules-purge=false",
+  "--config.optimistic-repeat-install=false",
+];
 /** Installing never writes the lockfile, so the committed one (if any) stays as it is. */
 const INSTALL_WITHOUT_LOCKFILE = [...INSTALL, "--no-lockfile"];
 
@@ -37,24 +48,39 @@ const INSTALL_WITHOUT_LOCKFILE = [...INSTALL, "--no-lockfile"];
 const quoteForCmd = (arg: string) =>
   /^[\w./:=-]+$/.test(arg) ? arg : `"${arg.replaceAll('"', '""')}"`;
 
+/** How to start pnpm: `command`, then `args` before pnpm's own arguments. */
+export interface PnpmCommand {
+  command: string;
+  args: string[];
+  shell: boolean;
+}
+
 /**
- * The pnpm that runs this script (`npm_execpath`, set by `pnpm <script>`; npm's is not used),
- * else the one on the PATH (through the shell on Windows, where it is `pnpm.cmd`); its output
- * goes to the terminal.
+ * The pnpm that runs this script, which `pnpm <script>` names in `execPath`
+ * (`npm_execpath`; npm's is not used): pnpm 12's native binary directly, a
+ * JavaScript pnpm through node. Else the one on the PATH, through the shell
+ * on Windows, where it is a `.cmd` or `.exe`.
  */
+export function pnpmCommand(
+  execPath: string | undefined,
+  platform: NodeJS.Platform,
+): PnpmCommand {
+  const name = execPath?.split(/[\\/]/).at(-1) ?? "";
+  if (execPath !== undefined && /^pnpm\.[cm]?js$/.test(name))
+    return { command: process.execPath, args: [execPath], shell: false };
+  if (execPath !== undefined && /^pnpm(\.exe)?$/.test(name))
+    return { command: execPath, args: [], shell: false };
+  return { command: "pnpm", args: [], shell: platform === "win32" };
+}
+
+/** Runs the pnpm of `pnpmCommand`; its output goes to the terminal. */
 const runPnpm: Pnpm = (args, cwd) => {
-  const execPath = process.env.npm_execpath;
-  const direct =
-    execPath !== undefined && /pnpm\.[cm]?js$/.test(path.basename(execPath));
-  const shell = !direct && process.platform === "win32";
-  const [command, commandArgs] = direct
-    ? [process.execPath, [execPath, ...args]]
-    : ["pnpm", shell ? args.map(quoteForCmd) : args];
-  const result = spawnSync(command, commandArgs, {
-    cwd,
-    stdio: "inherit",
-    shell,
-  });
+  const pnpm = pnpmCommand(process.env.npm_execpath, process.platform);
+  const result = spawnSync(
+    pnpm.command,
+    [...pnpm.args, ...(pnpm.shell ? args.map(quoteForCmd) : args)],
+    { cwd, stdio: "inherit", shell: pnpm.shell },
+  );
   const error: NodeJS.ErrnoException | undefined = result.error;
   if (error?.code === "ENOENT")
     throw new AuthorError("pnpm was not found on the PATH.");

@@ -6,6 +6,7 @@ import {
   LIST_FILE,
   LOCAL_FOLDER,
   LIBRARY_PACKAGES,
+  pnpmCommand,
   resetLocal,
   type Pnpm,
 } from "../../scripts/use-local.ts";
@@ -78,14 +79,19 @@ describe("the pnpm hook", () => {
 /**
  * A committed Map project reduced to what `use:local` touches: a manifest on
  * the four library packages (and nothing else, so installing needs no
- * registry), the ignore file, the pnpm hook and the scripts.
+ * registry) with the Template's pnpm pin, the ignore file, the pnpm settings,
+ * the pnpm hook and the scripts.
  */
 function makeMapProject(): string {
   const dir = makeTempDir();
+  const { packageManager } = JSON.parse(
+    fs.readFileSync(path.join(ROOT, "package.json"), "utf8"),
+  ) as { packageManager: string };
   const pkg = {
     name: "map",
     private: true,
     type: "module",
+    packageManager,
     dependencies: { "reforged-ts": "^1.0.0", "reforged-types": "^1.0.0" },
     devDependencies: {
       "reforged-test": "^1.0.0",
@@ -96,7 +102,7 @@ function makeMapProject(): string {
     path.join(dir, "package.json"),
     `${JSON.stringify(pkg, null, 2)}\n`,
   );
-  for (const name of [".gitignore", PNPMFILE, "scripts"])
+  for (const name of [".gitignore", "pnpm-workspace.yaml", PNPMFILE, "scripts"])
     fs.cpSync(path.join(ROOT, name), path.join(dir, name), { recursive: true });
   git(dir, "init", "-q");
   git(dir, "add", ".");
@@ -201,6 +207,47 @@ describe("pnpm use:local", () => {
   }, 120_000);
 });
 
+describe("pnpmCommand", () => {
+  const node = process.execPath;
+
+  it("runs pnpm 12's native binary, which `pnpm <script>` names in npm_execpath, directly", () => {
+    const exe = "C:\\pnpm\\node_modules\\pnpm\\pnpm.exe";
+    expect(pnpmCommand(exe, "win32")).toEqual({
+      command: exe,
+      args: [],
+      shell: false,
+    });
+    expect(pnpmCommand("/pnpm/node_modules/pnpm/pnpm", "linux")).toEqual({
+      command: "/pnpm/node_modules/pnpm/pnpm",
+      args: [],
+      shell: false,
+    });
+  });
+
+  it("runs a JavaScript pnpm through node", () => {
+    expect(pnpmCommand("/pnpm/bin/pnpm.cjs", "win32")).toEqual({
+      command: node,
+      args: ["/pnpm/bin/pnpm.cjs"],
+      shell: false,
+    });
+  });
+
+  it("falls back to the pnpm on the PATH, through the shell on Windows, when npm_execpath is not pnpm's", () => {
+    for (const execPath of [undefined, "/npm/bin/npm-cli.js"]) {
+      expect(pnpmCommand(execPath, "win32")).toEqual({
+        command: "pnpm",
+        args: [],
+        shell: true,
+      });
+      expect(pnpmCommand(execPath, "linux")).toEqual({
+        command: "pnpm",
+        args: [],
+        shell: false,
+      });
+    }
+  });
+});
+
 describe("resetLocal", () => {
   /** Records the pnpm calls instead of running them: going back to the registry needs the network. */
   const recorder = () => {
@@ -217,7 +264,12 @@ describe("resetLocal", () => {
     resetLocal(project, pnpm);
     expect(fs.existsSync(path.join(project, LOCAL_FOLDER))).toBe(false);
     expect(calls).toEqual([
-      ["install", "--config.confirmModulesPurge=false", "--no-lockfile"],
+      [
+        "install",
+        "--config.confirm-modules-purge=false",
+        "--config.optimistic-repeat-install=false",
+        "--no-lockfile",
+      ],
     ]);
     expect(git(project, "status", "--porcelain", "--untracked-files=all")).toBe(
       "",
@@ -235,7 +287,12 @@ describe("resetLocal", () => {
     const { calls, pnpm } = recorder();
     resetLocal(project, pnpm);
     expect(calls).toEqual([
-      ["install", "--config.confirmModulesPurge=false", "--frozen-lockfile"],
+      [
+        "install",
+        "--config.confirm-modules-purge=false",
+        "--config.optimistic-repeat-install=false",
+        "--frozen-lockfile",
+      ],
     ]);
   });
 });
