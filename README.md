@@ -85,7 +85,7 @@ The type-aware rules find each file's program through the nearest `tsconfig.json
 
 ## The library packages
 
-The Template depends on four packages of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts): `reforged-ts` and `reforged-types` (the map's code), `reforged-test` (the Lua test harness) and `eslint-plugin-reforged` (the lint rules). `package.json` declares the four the same way, on the `next` channel: `^1.0.0-alpha.0`, which matches every `1.0.0-alpha.N` and every later 1.x.
+The Template depends on four packages of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts): `reforged-ts` and `reforged-types` (the map's code), `reforged-test` (the Lua test harness) and `eslint-plugin-reforged` (the lint rules). `package.json` declares the four the same way, as caret ranges on the latest released versions, which the Template's sync sets on each library release. They start at `^1.0.0-alpha.0`, on the `next` channel.
 
 During the build phase the library publishes its packages as `1.0.0-alpha.N` under npm's `next` dist-tag, and none is published yet: until the first publish, a plain `pnpm install` cannot resolve them. Clone the library next to your project and install with `pnpm use:local ../reforged-ts` (below). Once the packages are on npm, the lockfile is committed.
 
@@ -110,7 +110,7 @@ This repository keeps the Template itself up to date with the library. A Map pro
 - `.github/workflows/sync.yml`, the workflow that applies a library release to the Template (still to come). It runs only in `phmilk/reforged-ts-template`, so it is inert in your repository.
 - The sync script the workflow runs, `scripts/sync.ts`, and its test `tests/pipeline/sync.test.ts`.
 - The tests that hold the Template's files to the sync's shape: `tests/pipeline/seeds.test.ts` (`AGENTS.md` and `CONTEXT.md`), `tests/pipeline/readme.test.ts` (this README) and their helper `tests/pipeline/sync-markers.ts`.
-- The Template's maintenance docs: `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `docs/agents/release-gate.md` (what the library's release gate expects from the Template, and the branch per library major) and the Template maintenance section of `AGENTS.md`, which lists all of the above.
+- The Template's maintenance docs: `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `docs/agents/release-gate.md` and the Template maintenance section of `AGENTS.md`, which lists all of the above.
 
 ## Links
 

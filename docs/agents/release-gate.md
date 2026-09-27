@@ -2,11 +2,11 @@
 
 _Template maintenance: this file serves the development of the Template itself. Delete it in a generated Map project (see the Template maintenance section of `AGENTS.md`)._
 
-The Template is the library's Reference consumer: no release of `phmilk/reforged-ts` reaches npm unless the Template builds, lints and passes its tests against the packed packages. The gate lives in the library (`pnpm release:template-gate`, described in the library's `docs/release.md`, "The Template gate"); this file is what it expects from this repository, and how to reproduce it here.
+The Template is the Map project the library tests its releases against: no release of `phmilk/reforged-ts` reaches npm unless the Template builds, lints and passes its tests against the packed packages. The gate lives in the library (`pnpm release:template-gate`, described in the library's `docs/release.md`, "The Template gate"); this file is what it expects from this repository, and how to reproduce it here.
 
 ## What the gate does to a Template checkout
 
-1. **The clone.** It clones the Template at `v<major>` of the library version it releases. Every 1.x, alphas included, maps to `v1`. A tag and a branch both work. There is no fallback to `main`: a missing ref stops the release.
+1. **The clone.** It clones the Template at `v<major>` of the library version it releases. Every 1.x, alphas included, maps to `v1`. There is no fallback to `main`: a missing ref stops the release.
 2. **The install.** It writes one `pnpm.overrides` entry into the clone's `package.json` per package the release publishes, pointing at that package's tarball (`file:<tarball>`), then runs `pnpm install --no-frozen-lockfile`. It checks that the Template's direct dependencies resolved to the packed versions. A package the release does not publish comes from npm.
 3. **The commands.** It runs the scripts `build --mode release`, `lint` and `test`, by name and in that order, and stops at the first one that fails or is missing.
 
@@ -19,11 +19,13 @@ What that asks of the Template:
 
 The overrides, the lockfile they produce and the build output stay in the throwaway clone. None of it is ever committed here.
 
+During the alpha phase the install prints unmet-peer warnings: the library's packages declare their peer ranges as `^1.0.0`, which no `1.0.0-alpha.N` satisfies. The install still succeeds (exit 0) and the gate goes on. The fix, prerelease-aware peer ranges, belongs in the library.
+
 ## The ranges and the lockfile
 
-`package.json` declares the four library packages on the `next` channel: `^1.0.0-alpha.0`, which matches every `1.0.0-alpha.N` and every 1.x (a plain `^1.0.0` matches no prerelease). On each release the sync (`scripts/sync.ts`) sets them to `^<released version>`, which stays on the same major.
+`package.json` declares the four library packages as `^<latest released version>`: on each library release the sync (`scripts/sync.ts`) sets them to the versions it released. They start at `^1.0.0-alpha.0`, on the `next` channel. A caret range on a prerelease admits later prereleases of the same `major.minor.patch` only (`^1.0.0-alpha.0` matches `1.0.0-alpha.3`, not `1.1.0-alpha.0`), and any later release of that major.
 
-The lockfile is committed after the library's first `next` publish, from a plain `pnpm install` against the registry. Until then the packages return 404 on npm and no lockfile is committed.
+The lockfile is committed after the library's first `next` publish, from a plain `pnpm install` against the registry. Until then the packages return 404 on npm and no lockfile is committed. Once committed, the lockfile follows the ranges on its own: the sync workflow runs a non-frozen `pnpm install` after the sync and commits the refreshed lockfile in the same sync pull request.
 
 ## Installing tarballs without committing them
 
@@ -53,7 +55,10 @@ Never make that change in a working copy you commit from: a committed override p
 ## One line per library major
 
 - `main` tracks the current library major.
-- When a new library major starts, a branch named after the previous major (`v1` at library 2.0) is cut from `main` and kept for that line; `main` moves on to the new major.
-- The gate clones `v<major>`, so each major always has its ref.
+- Each library major has a branch named after it (`v1`, `v2`). The gate clones `v<major>`, so the branch must exist before the major's first gated release.
+- During the current major, `v<major>` is kept up to date with `main`: the maintainer fast-forwards it (`git push origin main:v1`) before each gated release.
+- When a new library major starts, `v<previous major>` stops following `main` and is kept for that line; `main` moves on to the new major, and a new `v<major>` branch follows it.
 
-**Maintainer step, before the library's first gated release:** the `v1` ref does not exist yet, and the gate stops at the clone without it. Create it on the Template commit that supports the release, as a tag (`git tag v1 <commit> && git push origin v1`) or a branch. A tag has to be moved each time `main` moves on during 1.x, and is replaced by the `v1` branch at library 2.0 (delete the tag first: a tag and a branch of the same name are ambiguous). While the Template is private the gate also needs the library's `TEMPLATE_READ_TOKEN` secret.
+**Maintainer step, before the library's first gated release:** the `v1` branch does not exist yet, and the gate stops at the clone without it. Create it from `main` (`git push origin main:refs/heads/v1`). Use a branch, not a tag: one ref model for every major, fast-forwarded rather than moved. While the Template is private the gate also needs the library's `TEMPLATE_READ_TOKEN` secret.
+
+If the library's gate fell back to `main` for the current major, the fast-forward step would go away. That is a change to the library's gate, not to this repository.
