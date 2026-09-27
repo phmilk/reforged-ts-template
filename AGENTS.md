@@ -20,6 +20,7 @@ A task is finished when `pnpm check` is green.
 - `src/`: the map's code; `src/main.ts` is the entry point. New code goes here.
 - The map folder (`mapFolder` in `reforged.config.ts`): owned by the World Editor, read-only here.
 - `reforged.config.ts`: the typed build configuration. It is committed, so it holds only what every machine shares.
+- `pnpm-workspace.yaml`: pnpm's settings. The project runs on pnpm 12 (`packageManager` in `package.json`; `npm install --global pnpm@12` installs it), which reads its settings nowhere else. A new dependency with an install script fails the install until `allowBuilds` lists it.
 - `src/generated/`: `env.ts` (the build mode) and the typings of the map's editor globals, rewritten by every install and build. Read-only: change the config or the map instead.
 - `tests/lua/`: the map's tests on the harness; `tests/stubs/`: the extra Native stubs they need.
 - `dist/` and `dist-test/`: build output (the map, the compiled Lua tests), ignored by git.
