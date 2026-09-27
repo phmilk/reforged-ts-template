@@ -16,6 +16,7 @@ import {
   type ReleasePayload,
   type SyncFiles,
 } from "../../scripts/sync.ts";
+import { LIBRARY_PACKAGES } from "../../scripts/use-local.ts";
 import { makeTempDir, runScript, ROOT } from "./helpers.ts";
 import { markedBlock, readRepoFile } from "./sync-markers.ts";
 
@@ -124,6 +125,14 @@ describe("the sync's entry point", () => {
     };
     expect(manifest.dependencies["reforged-ts"]).toBe("^1.2.0");
     expect(manifest.devDependencies["reforged-test"]).toBe("^1.0.3");
+  });
+
+  it("writes the next-channel ranges the manifest ships with for the first alpha", () => {
+    const first = payload();
+    for (const name of LIBRARY_PACKAGES) first.versions[name] = "1.0.0-alpha.0";
+    const before = shipped()["package.json"];
+    expect(before.match(/"\^1\.0\.0-alpha\.0"/g)).toHaveLength(4);
+    expect(apply(shipped(), first).files["package.json"]).toBe(before);
   });
 
   it("replaces only the library terms between the CONTEXT.md markers, in the library file's order", () => {
