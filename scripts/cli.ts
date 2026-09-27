@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { AuthorError } from "./errors.ts";
@@ -36,4 +37,21 @@ export async function runAsEntry(
     printFailure(command, error);
     process.exitCode = 1;
   }
+}
+
+/**
+ * Appends `outputs` as `name=value` lines to the file GitHub Actions names in
+ * `GITHUB_OUTPUT`, so the workflow step running the command reads them as its
+ * outputs. Does nothing outside Actions (the variable unset or empty). Each
+ * value must be a single line.
+ */
+export function writeGithubOutputs(outputs: Record<string, string>): void {
+  const file = process.env.GITHUB_OUTPUT;
+  if (file === undefined || file === "") return;
+  fs.appendFileSync(
+    file,
+    Object.entries(outputs)
+      .map(([name, value]) => `${name}=${value}\n`)
+      .join(""),
+  );
 }

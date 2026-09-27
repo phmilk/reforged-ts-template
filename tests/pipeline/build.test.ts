@@ -6,6 +6,7 @@ import {
   copyProject,
   ENTRY_MODULE,
   hashTree,
+  makeTempDir,
   runScript,
   sha256,
 } from "./helpers.ts";
@@ -81,6 +82,34 @@ describe("node scripts/build.ts (pnpm build)", () => {
     expect(hashTree(path.join(project, MAP))).toEqual(mapBefore);
     expect(sha256(fs.readFileSync(path.join(project, "tsconfig.json")))).toBe(
       tsconfigBefore,
+    );
+  });
+
+  it("in GitHub Actions, sets the step output `archive` to the configured archive's path", () => {
+    const project = copyProject();
+    const configFile = path.join(project, "reforged.config.ts");
+    fs.writeFileSync(
+      configFile,
+      fs
+        .readFileSync(configFile, "utf8")
+        .replace(
+          'outputFolder: "dist",',
+          'outputFolder: "out",\n  archiveName: "packed.w3x",',
+        ),
+    );
+    setLuaBundle(project, "out/bundle.lua");
+    const outputs = path.join(makeTempDir(), "github-output");
+    fs.writeFileSync(outputs, "earlier=step\n");
+
+    const result = runScript(project, "scripts/build.ts", [], {
+      GITHUB_OUTPUT: outputs,
+    });
+
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    expect(fs.existsSync(path.join(project, "out", "packed.w3x"))).toBe(true);
+    expect(fs.readFileSync(outputs, "utf8")).toBe(
+      "earlier=step\narchive=out/packed.w3x\n",
     );
   });
 

@@ -75,15 +75,21 @@ export interface CommandResult {
   stderr: string;
 }
 
-/** Runs a pipeline script with Node from `cwd`, the way the package scripts do. */
+/**
+ * Runs a pipeline script with Node from `cwd`, the way the package scripts do.
+ * `env` is added to the environment. `GITHUB_OUTPUT` is unset unless `env`
+ * sets it, so a test run inside GitHub Actions never writes its step's outputs.
+ */
 export function runScript(
   cwd: string,
   script: string,
   args: string[] = [],
+  env: NodeJS.ProcessEnv = {},
 ): CommandResult {
   const result = spawnSync(process.execPath, [script, ...args], {
     cwd,
     encoding: "utf8",
+    env: { ...process.env, GITHUB_OUTPUT: undefined, ...env },
   });
   return {
     status: result.status,

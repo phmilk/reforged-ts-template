@@ -1,6 +1,6 @@
-# Builds the map in release mode, lints and tests it on Ubuntu and Windows,
-# then attaches the packed archive to the run. `test:map` never runs here,
-# and the workflow reads no secrets.
+# Builds the map in release mode, lints, type-checks and tests it on Ubuntu
+# and Windows, then attaches the packed archive to the run. `test:map` never
+# runs here, and the workflow reads no secrets.
 name: CI
 
 on:
@@ -11,15 +11,19 @@ on:
 permissions:
   contents: read
 
+# A new push to a pull request cancels its running checks; runs on main all finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   ci:
-    name: ${{ matrix.os }} / Node ${{ matrix.node }}
+    name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        node: [24]
     steps:
       - uses: actions/checkout@v7
 
@@ -28,39 +32,26 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: ${{ matrix.node }}
+          node-version-file: .node-version
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm build --mode release
+      # scripts/build.ts sets the output `archive`: the packed archive's path,
+      # wherever `outputFolder` and `archiveName` in reforged.config.ts put it.
+      - name: Build in release mode
+        id: build
+        run: pnpm build --mode release
 
       - run: pnpm lint
 
-      - run: pnpm test
+      - run: pnpm typecheck
 
-      # The packed archive is the one top-level map file in the output folder
-      # (`outputFolder` and `archiveName` in reforged.config.ts; `dist/staging` holds a folder, not a file).
-      - name: Find the packed archive
-        id: archive
-        shell: bash
-        run: |
-          shopt -s nullglob
-          files=()
-          for f in dist/*.w3x dist/*.w3m; do
-            [ -f "$f" ] && files+=("$f")
-          done
-          if [ "${#files[@]}" -ne 1 ]; then
-            echo "::error::Expected one packed archive in dist, found ${#files[@]}: ${files[*]}"
-            exit 1
-          fi
-          file="${files[0]}"
-          name="$(basename "$file")"
-          echo "path=$file" >> "$GITHUB_OUTPUT"
-          echo "map=${name%.*}" >> "$GITHUB_OUTPUT"
+      - run: pnpm test
 
       - uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.archive.outputs.map }}-${{ github.event.pull_request.head.sha || github.sha }}-${{ runner.os }}
-          path: ${{ steps.archive.outputs.path }}
+          name: ${{ github.event.repository.name }}-${{ github.event.pull_request.head.sha || github.sha }}-${{ runner.os }}
+          path: ${{ steps.build.outputs.archive }}
           if-no-files-found: error
+          overwrite: true

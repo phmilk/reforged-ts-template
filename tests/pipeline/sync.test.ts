@@ -9,6 +9,7 @@ import {
   applyRelease,
   LIBRARY_TERMS,
   parsePayload,
+  pullRequestNames,
   startMarker,
   SYNCED_FILES,
   syncRepository,
@@ -295,6 +296,35 @@ describe("the release payload", () => {
   ])("refuses %s, naming the field", (_, change, message) => {
     expect(() => parsePayload({ ...payload(), ...change })).toThrow(message);
   });
+
+  it.each([
+    ["an empty tag", ""],
+    ["a tag with ..", "reforged-ts@1..2"],
+    ["a tag with a leading .", ".reforged-ts@1.2.0"],
+    ["a tag with a trailing .", "reforged-ts@1.2."],
+    ["a tag ending in .lock", "reforged-ts@1.2.0.lock"],
+    ["a tag with a slash", "reforged-ts/1.2.0"],
+    ["a tag with a space", "reforged-ts 1.2.0"],
+    ["a tag with a shell character", "v1.2.0;rm"],
+    ["a tag with a newline", "v1.2.0\ntitle=x"],
+    ["a tag with a reflog brace", "v1.2.0@{1}"],
+  ])("refuses %s, naming the tag", (_, tag) => {
+    expect(() => parsePayload({ ...payload(), tag })).toThrow(/tag/);
+  });
+
+  it.each(["reforged-ts@1.2.0", "v1.2.0-rc.1", "release_1.2"])(
+    "accepts the tag %s",
+    (tag) => {
+      expect(parsePayload({ ...payload(), tag }).tag).toBe(tag);
+    },
+  );
+
+  it("names the pull request's branch after the tag and its title after the reforged-ts version", () => {
+    expect(pullRequestNames(payload())).toEqual({
+      branch: "sync/reforged-ts@1.2.0",
+      title: "chore(deps): reforged-ts 1.2.0",
+    });
+  });
 });
 
 describe("the sync on a repository", () => {
@@ -350,5 +380,21 @@ describe("the sync command", () => {
     const result = runScript(dir, path.join(ROOT, "scripts/sync.ts"), [file]);
     expect(result.status).toBe(1);
     expect(result.stderr).toMatch(/sync failed: .*tag/);
+  });
+
+  it("sets no step output when the tag cannot name a branch", () => {
+    const dir = makeTempDir();
+    const file = path.join(dir, "payload.json");
+    const outputs = path.join(dir, "github-output");
+    fs.writeFileSync(file, JSON.stringify({ ...payload(), tag: "a..b" }));
+    fs.writeFileSync(outputs, "");
+    const result = runScript(dir, path.join(ROOT, "scripts/sync.ts"), [file], {
+      GITHUB_OUTPUT: outputs,
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(
+      /sync failed: .*`tag` cannot name a git branch/,
+    );
+    expect(fs.readFileSync(outputs, "utf8")).toBe("");
   });
 });

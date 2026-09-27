@@ -14,7 +14,8 @@
 # installed, a fine-grained personal access token `SYNC_TOKEN` scoped to this
 # repository with contents and pull requests read/write. The App's token wins
 # when both are set. The default token is never used for the pull request: CI
-# would not run on it.
+# would not run on it. Only the steps that need a secret see it: the install,
+# build and check steps run third-party code.
 #
 # Dry run with a fake payload, from a branch:
 #   gh workflow run sync.yml --ref <branch> -f payload="$(cat payload.json)"
@@ -33,8 +34,10 @@ on:
 permissions:
   contents: read
 
+# Runs queue per event and ref, never cancelled: a dry run from a branch
+# neither waits for nor cancels a release's run.
 concurrency:
-  group: sync
+  group: sync-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -42,30 +45,33 @@ jobs:
     if: github.repository == 'phmilk/reforged-ts-template'
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      SYNC_APP_ID: ${{ secrets.SYNC_APP_ID }}
-      SYNC_APP_PRIVATE_KEY: ${{ secrets.SYNC_APP_PRIVATE_KEY }}
-      SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
     steps:
       - name: Check a pull-request token is configured
+        id: token
+        env:
+          SYNC_APP_ID: ${{ secrets.SYNC_APP_ID }}
+          SYNC_APP_PRIVATE_KEY: ${{ secrets.SYNC_APP_PRIVATE_KEY }}
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
         run: |
           if [ -n "$SYNC_APP_ID" ] && [ -n "$SYNC_APP_PRIVATE_KEY" ]; then
             echo "The pull request opens with the GitHub App's token."
+            echo "app=true" >> "$GITHUB_OUTPUT"
           elif [ -n "$SYNC_TOKEN" ]; then
             echo "The pull request opens with the SYNC_TOKEN secret."
+            echo "app=false" >> "$GITHUB_OUTPUT"
           else
             echo "::error::Set the secrets SYNC_APP_ID and SYNC_APP_PRIVATE_KEY (GitHub App) or SYNC_TOKEN (fine-grained token)."
             exit 1
           fi
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       # The pnpm version comes from package.json's packageManager.
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
 
@@ -77,20 +83,13 @@ jobs:
         run: printf '%s' "$PAYLOAD" > "$RUNNER_TEMP/payload.json"
 
       # scripts/sync.ts imports only Node built-ins: it runs before any install.
+      # It checks the tag names a git branch and sets the outputs `branch`
+      # (sync/<tag>) and `title` (after the reforged-ts version).
       - name: Sync
+        id: sync
         run: |
           node scripts/sync.ts "$RUNNER_TEMP/payload.json" --summary "$RUNNER_TEMP/summary.md"
           cat "$RUNNER_TEMP/summary.md" >> "$GITHUB_STEP_SUMMARY"
-
-      # The sync has checked the payload by now; the tag still becomes a
-      # branch name, so anything outside [A-Za-z0-9._-] is replaced.
-      - name: Name the pull request
-        id: names
-        run: |
-          tag=$(jq -r '.tag' "$RUNNER_TEMP/payload.json" | tr -c 'A-Za-z0-9._-' '-' | sed 's/-*$//')
-          version=$(jq -r '.versions["reforged-ts"]' "$RUNNER_TEMP/payload.json" | tr -c 'A-Za-z0-9.+-' '-' | sed 's/-*$//')
-          echo "branch=sync/$tag" >> "$GITHUB_OUTPUT"
-          echo "title=chore(deps): reforged-ts $version" >> "$GITHUB_OUTPUT"
 
       - name: Refresh the lockfile
         run: pnpm install --no-frozen-lockfile
@@ -103,20 +102,22 @@ jobs:
 
       - name: Create the GitHub App token
         id: app
-        if: env.SYNC_APP_ID != '' && env.SYNC_APP_PRIVATE_KEY != ''
-        uses: actions/create-github-app-token@v2
+        if: steps.token.outputs.app == 'true'
+        uses: actions/create-github-app-token@v3
         with:
+          # `app-id` is deprecated in v3 in favour of `client-id`, but still
+          # takes the App ID the SYNC_APP_ID secret holds.
           app-id: ${{ secrets.SYNC_APP_ID }}
           private-key: ${{ secrets.SYNC_APP_PRIVATE_KEY }}
 
       # Only the synced files and the lockfile: build outputs stay out.
       - name: Open the pull request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ steps.app.outputs.token || secrets.SYNC_TOKEN }}
-          branch: ${{ steps.names.outputs.branch }}
-          title: ${{ steps.names.outputs.title }}
-          commit-message: ${{ steps.names.outputs.title }}
+          branch: ${{ steps.sync.outputs.branch }}
+          title: ${{ steps.sync.outputs.title }}
+          commit-message: ${{ steps.sync.outputs.title }}
           body-path: ${{ runner.temp }}/summary.md
           add-paths: |
             package.json
