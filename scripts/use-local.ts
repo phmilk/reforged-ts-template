@@ -48,7 +48,7 @@ const INSTALL_WITHOUT_LOCKFILE = [...INSTALL, "--no-lockfile"];
 const quoteForCmd = (arg: string) =>
   /^[\w./:=-]+$/.test(arg) ? arg : `"${arg.replaceAll('"', '""')}"`;
 
-/** How to start pnpm: `command`, then `args` before pnpm's own arguments. */
+/** A pnpm run with `args`, as `spawnSync` takes it. */
 export interface PnpmCommand {
   command: string;
   args: string[];
@@ -56,31 +56,45 @@ export interface PnpmCommand {
 }
 
 /**
- * The pnpm that runs this script, which `pnpm <script>` names in `execPath`
- * (`npm_execpath`; npm's is not used): pnpm 12's native binary directly, a
- * JavaScript pnpm through node. Else the one on the PATH, through the shell
- * on Windows, where it is a `.cmd` or `.exe`.
+ * Runs pnpm with `args`: the pnpm that runs this script, which
+ * `pnpm <script>` names in `execPath` (`npm_execpath`; npm's is not used),
+ * pnpm 12's native binary directly and a JavaScript pnpm through node. Else
+ * the one on the PATH, through the shell on Windows, where it is a `.cmd` or
+ * `.exe`, with `args` quoted for it.
  */
 export function pnpmCommand(
+  args: string[],
   execPath: string | undefined,
   platform: NodeJS.Platform,
 ): PnpmCommand {
-  const name = execPath?.split(/[\\/]/).at(-1) ?? "";
-  if (execPath !== undefined && /^pnpm\.[cm]?js$/.test(name))
-    return { command: process.execPath, args: [execPath], shell: false };
-  if (execPath !== undefined && /^pnpm(\.exe)?$/.test(name))
-    return { command: execPath, args: [], shell: false };
-  return { command: "pnpm", args: [], shell: platform === "win32" };
+  const name = execPath?.split(/[\\/]/).at(-1);
+  if (execPath === undefined || name === undefined) {
+    const shell = platform === "win32";
+    return {
+      command: "pnpm",
+      args: shell ? args.map(quoteForCmd) : args,
+      shell,
+    };
+  }
+  if (/^pnpm\.[cm]?js$/.test(name))
+    return {
+      command: process.execPath,
+      args: [execPath, ...args],
+      shell: false,
+    };
+  if (/^pnpm(\.exe)?$/.test(name))
+    return { command: execPath, args, shell: false };
+  return pnpmCommand(args, undefined, platform);
 }
 
 /** Runs the pnpm of `pnpmCommand`; its output goes to the terminal. */
 const runPnpm: Pnpm = (args, cwd) => {
-  const pnpm = pnpmCommand(process.env.npm_execpath, process.platform);
-  const result = spawnSync(
-    pnpm.command,
-    [...pnpm.args, ...(pnpm.shell ? args.map(quoteForCmd) : args)],
-    { cwd, stdio: "inherit", shell: pnpm.shell },
-  );
+  const pnpm = pnpmCommand(args, process.env.npm_execpath, process.platform);
+  const result = spawnSync(pnpm.command, pnpm.args, {
+    cwd,
+    stdio: "inherit",
+    shell: pnpm.shell,
+  });
   const error: NodeJS.ErrnoException | undefined = result.error;
   if (error?.code === "ENOENT")
     throw new AuthorError("pnpm was not found on the PATH.");

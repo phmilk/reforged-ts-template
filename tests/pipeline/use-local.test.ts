@@ -79,8 +79,8 @@ describe("the pnpm hook", () => {
 /**
  * A committed Map project reduced to what `use:local` touches: a manifest on
  * the four library packages (and nothing else, so installing needs no
- * registry) with the Template's pnpm pin, the ignore file, the pnpm settings,
- * the pnpm hook and the scripts.
+ * registry) with the Template's pnpm pin, the ignore file, the pnpm settings
+ * as committed in HEAD, the pnpm hook and the scripts.
  */
 function makeMapProject(): string {
   const dir = makeTempDir();
@@ -216,41 +216,42 @@ describe("pnpmCommand", () => {
   const node = process.execPath;
   // Relative paths: an absolute one in a committed file fails absolute-paths.test.ts.
   const pnpmFolder = ["pnpm", "node_modules", "pnpm"];
+  const args = ["pack", "--pack-destination", "my maps"];
 
   it("runs pnpm 12's native binary, which `pnpm <script>` names in npm_execpath, directly", () => {
     const exe = [...pnpmFolder, "pnpm.exe"].join("\\");
-    expect(pnpmCommand(exe, "win32")).toEqual({
+    expect(pnpmCommand(args, exe, "win32")).toEqual({
       command: exe,
-      args: [],
+      args,
       shell: false,
     });
     const binary = [...pnpmFolder, "pnpm"].join("/");
-    expect(pnpmCommand(binary, "linux")).toEqual({
+    expect(pnpmCommand(args, binary, "linux")).toEqual({
       command: binary,
-      args: [],
+      args,
       shell: false,
     });
   });
 
   it("runs a JavaScript pnpm through node", () => {
     const script = [...pnpmFolder, "bin", "pnpm.cjs"].join("/");
-    expect(pnpmCommand(script, "win32")).toEqual({
+    expect(pnpmCommand(args, script, "win32")).toEqual({
       command: node,
-      args: [script],
+      args: [script, ...args],
       shell: false,
     });
   });
 
   it("falls back to the pnpm on the PATH, through the shell on Windows, when npm_execpath is not pnpm's", () => {
     for (const execPath of [undefined, "npm/bin/npm-cli.js"]) {
-      expect(pnpmCommand(execPath, "win32")).toEqual({
+      expect(pnpmCommand(args, execPath, "win32")).toEqual({
         command: "pnpm",
-        args: [],
+        args: ["pack", "--pack-destination", '"my maps"'],
         shell: true,
       });
-      expect(pnpmCommand(execPath, "linux")).toEqual({
+      expect(pnpmCommand(args, execPath, "linux")).toEqual({
         command: "pnpm",
-        args: [],
+        args,
         shell: false,
       });
     }
