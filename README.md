@@ -107,7 +107,7 @@ Nothing committed changes, in either direction: the committed pnpm hook `.pnpmfi
 
 This repository keeps the Template itself up to date with the library. A Map project generated from it can delete that machinery; nothing is ever synced into a generated project:
 
-- `.github/workflows/sync.yml`, the workflow that applies a library release to the Template (still to come). It runs only in `phmilk/reforged-ts-template`, so it is inert in your repository.
+- `.github/workflows/sync.yml`, the workflow that applies a library release to the Template and opens a pull request. It runs only in `phmilk/reforged-ts-template`, so it is inert in your repository.
 - The sync script the workflow runs, `scripts/sync.ts`, and its test `tests/pipeline/sync.test.ts`.
 - The tests that hold the Template's files to the sync's shape: `tests/pipeline/seeds.test.ts` (`AGENTS.md` and `CONTEXT.md`), `tests/pipeline/readme.test.ts` (this README) and their helper `tests/pipeline/sync-markers.ts`.
 - The Template's maintenance docs: `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md` and the Template maintenance section of `AGENTS.md`, which lists all of the above.

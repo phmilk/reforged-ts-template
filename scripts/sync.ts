@@ -1,8 +1,8 @@
 // The sync: applies a reforged-ts release to the Template's files. The
 // library's release workflow will dispatch a payload (the released versions,
-// the tag and three URLs) to the Template's sync workflow (sync.yml, still to
-// come), which runs this script, builds, checks and opens a pull request with
-// its summary.
+// the tag and three URLs) to the Template's sync workflow
+// (.github/workflows/sync.yml), which runs this script, builds, checks and
+// opens a pull request with its summary.
 // Template maintenance: a generated Map project deletes it (see AGENTS.md).
 import fs from "node:fs";
 import path from "node:path";

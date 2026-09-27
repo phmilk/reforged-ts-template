@@ -74,11 +74,12 @@ Each skill is a step list for a recurring task. An agent without skill support r
 
 ## Template maintenance
 
-This section, `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, the sync-shape tests (`tests/pipeline/seeds.test.ts`, `tests/pipeline/readme.test.ts` and their helper `tests/pipeline/sync-markers.ts`), and the sync script `scripts/sync.ts` with its test `tests/pipeline/sync.test.ts` (run by the sync workflow `.github/workflows/sync.yml`, still to come) serve the development of the Template itself. Delete them in a generated Map project, and keep Your project below.
+This section, `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, the sync-shape tests (`tests/pipeline/seeds.test.ts`, `tests/pipeline/readme.test.ts` and their helper `tests/pipeline/sync-markers.ts`), the sync script `scripts/sync.ts` with its test `tests/pipeline/sync.test.ts`, and the sync workflow `.github/workflows/sync.yml` that runs it serve the development of the Template itself. Delete them in a generated Map project, and keep Your project below.
 
 - **Issue tracker**: the Template's issues live in `phmilk/reforged-ts-template`'s GitHub Issues and are driven with the `gh` CLI; the library's live in `phmilk/reforged-ts`. Specs carry the `spec` label and their tickets are sub-issues with native "blocked by" dependencies. See `docs/agents/issue-tracker.md`.
 - **Triage labels**: the five canonical triage labels are used as-is: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. Two kind labels sit next to them: `spec` on an issue created with `to-spec`, `ticket` on one created with `to-tickets`. See `docs/agents/triage-labels.md`.
 - **Sync markers**: on each library release, the Template's sync sets the four library packages' ranges in `package.json` and rewrites the text between the `reforged-ts:<name>:start` and `reforged-ts:<name>:end` marker comments of `AGENTS.md`, `CONTEXT.md` and the README, and nothing else. Edit around the markers, never between them.
+- **Sync workflow**: `.github/workflows/sync.yml` runs on the library's `reforged-ts-release` dispatch (or by hand, `gh workflow run sync.yml --ref <branch> -f payload="$(cat payload.json)"`, for a dry run), then syncs, refreshes the lockfile, builds in release mode, runs `pnpm check` and opens a pull request named after the tag; a maintainer merges it. It opens the pull request with the GitHub App's token when the repository secrets `SYNC_APP_ID` and `SYNC_APP_PRIVATE_KEY` are set, and otherwise with the fine-grained token in `SYNC_TOKEN` (contents and pull requests read/write on this repository); with neither, it fails before syncing.
 
 ## Your project
 
