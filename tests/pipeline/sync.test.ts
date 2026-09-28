@@ -371,6 +371,24 @@ describe("the release payload", () => {
       title: "chore(deps): reforged-ts 1.2.0",
     });
   });
+
+  it("titles a release without the library after the package its tag names", () => {
+    expect(
+      pullRequestNames({ ...payload(), tag: "reforged-types@1.1.0" }),
+    ).toEqual({
+      branch: "sync/reforged-types@1.1.0",
+      title: "chore(deps): reforged-types 1.1.0",
+    });
+  });
+
+  it.each(["v1.2.0-rc.1", "reforged-types@9.9.9", "other@1.1.0"])(
+    "titles the pull request after the reforged-ts version when the tag %s names no released package",
+    (tag) => {
+      expect(pullRequestNames({ ...payload(), tag }).title).toBe(
+        "chore(deps): reforged-ts 1.2.0",
+      );
+    },
+  );
 });
 
 describe("the sync on a repository", () => {

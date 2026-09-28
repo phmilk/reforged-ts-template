@@ -85,7 +85,7 @@ jobs:
 
       # scripts/sync.ts imports only Node built-ins: it runs before any install.
       # It checks the tag names a git branch and sets the outputs `branch`
-      # (sync/<tag>) and `title` (after the reforged-ts version).
+      # (sync/<tag>) and `title` (after the package and version the tag names).
       - name: Sync
         id: sync
         run: |
