@@ -9,7 +9,7 @@ import {
   type ResolvedConfig,
 } from "./config.ts";
 import { AuthorError } from "./errors.ts";
-import { runAsEntry } from "./cli.ts";
+import { runAsEntry, writeGithubOutputs } from "./cli.ts";
 import { packMapFolder } from "./pack.ts";
 import { generate } from "./generate.ts";
 import {
@@ -101,11 +101,22 @@ export function builtMessage(
   return `Built ${path.relative(config.root, result.archive)} (${String(result.size)} bytes, mode ${config.mode})`;
 }
 
-/** Command line: `node scripts/build.ts [--mode dev|release]`, run from the repository root. Exits non-zero on any failure. */
+/**
+ * Command line: `node scripts/build.ts [--mode dev|release]`, run from the
+ * repository root. Exits non-zero on any failure. In GitHub Actions it also
+ * sets the step output `archive`: the packed archive, relative to the root.
+ */
 await runAsEntry(import.meta.url, "Build", async () => {
   const config = await loadConfig(
     path.resolve(CONFIG_FILE),
     process.argv.slice(2),
   );
-  console.log(builtMessage(config, build(config)));
+  const result = build(config);
+  console.log(builtMessage(config, result));
+  writeGithubOutputs({
+    archive: path
+      .relative(config.root, result.archive)
+      .split(path.sep)
+      .join("/"),
+  });
 });

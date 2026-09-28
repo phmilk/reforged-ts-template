@@ -1,0 +1,131 @@
+# The sync: when reforged-ts releases, its release workflow dispatches
+# `reforged-ts-release` here with the payload scripts/sync.ts consumes (the
+# released versions, the tag and three URLs). The job applies the release,
+# refreshes the lockfile, builds in release mode, runs `pnpm check` and opens
+# a pull request a maintainer merges. Any red step stops before the pull
+# request opens; there is no auto-merge.
+#
+# Template maintenance: a generated Map project deletes this file (see
+# AGENTS.md). The job runs only in phmilk/reforged-ts-template, so a copy
+# left in a generated project stays inert.
+#
+# Credentials (phmilk/reforged-ts-template, #26), named as in the library:
+# the GitHub App's client ID in the repository variable `APP_CLIENT_ID` and a
+# private key in the secret `APP_PRIVATE_KEY`, or, without the App, a
+# fine-grained personal access token in the secret `SYNC_TOKEN` scoped to this
+# repository with contents and pull requests read/write. The App's token wins
+# when both are set. The default token is never used for the pull request: CI
+# would not run on it. Only the steps that need a secret see it: the install,
+# build and check steps run third-party code.
+#
+# Dry run with a fake payload, from a branch:
+#   gh workflow run sync.yml --ref <branch> -f payload="$(cat payload.json)"
+name: sync
+
+on:
+  repository_dispatch:
+    types: [reforged-ts-release]
+  workflow_dispatch:
+    inputs:
+      payload:
+        description: The release payload as JSON, as reforged-ts's release dispatches it.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# Runs queue per event and ref, never cancelled: a dry run from a branch
+# neither waits for nor cancels a release's run.
+concurrency:
+  group: sync-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == 'phmilk/reforged-ts-template'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check a pull-request token is configured
+        id: token
+        env:
+          APP_CLIENT_ID: ${{ vars.APP_CLIENT_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+        run: |
+          if [ -n "$APP_CLIENT_ID" ] && [ -n "$APP_PRIVATE_KEY" ]; then
+            echo "The pull request opens with the GitHub App's token."
+            echo "app=true" >> "$GITHUB_OUTPUT"
+          elif [ -n "$SYNC_TOKEN" ]; then
+            echo "The pull request opens with the SYNC_TOKEN secret."
+            echo "app=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Set the repository variable APP_CLIENT_ID and the secret APP_PRIVATE_KEY (GitHub App), or the secret SYNC_TOKEN (fine-grained token)."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # The pnpm version comes from package.json's packageManager.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+
+      # The payload never reaches the shell through an expression: it goes
+      # through an environment variable into a file the sync script checks.
+      - name: Write the payload
+        env:
+          PAYLOAD: ${{ github.event_name == 'repository_dispatch' && toJSON(github.event.client_payload) || inputs.payload }}
+        run: printf '%s' "$PAYLOAD" > "$RUNNER_TEMP/payload.json"
+
+      # scripts/sync.ts imports only Node built-ins: it runs before any install.
+      # It checks the tag names a git branch and sets the outputs `branch`
+      # (sync/<tag>) and `title` (after the reforged-ts version).
+      - name: Sync
+        id: sync
+        run: |
+          node scripts/sync.ts "$RUNNER_TEMP/payload.json" --summary "$RUNNER_TEMP/summary.md"
+          cat "$RUNNER_TEMP/summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Refresh the lockfile
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build in release mode
+        run: pnpm build --mode release
+
+      - name: Check
+        run: pnpm check
+
+      - name: Create the GitHub App token
+        id: app
+        if: steps.token.outputs.app == 'true'
+        # Pinned to the commit the library pins: the one action given the key.
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          # What opening the pull request needs, not the App's issues access.
+          permission-contents: write
+          permission-pull-requests: write
+
+      # Only the synced files and the lockfile: build outputs stay out.
+      - name: Open the pull request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ steps.app.outputs.token || secrets.SYNC_TOKEN }}
+          branch: ${{ steps.sync.outputs.branch }}
+          title: ${{ steps.sync.outputs.title }}
+          commit-message: ${{ steps.sync.outputs.title }}
+          body-path: ${{ runner.temp }}/summary.md
+          add-paths: |
+            package.json
+            pnpm-lock.yaml
+            CONTEXT.md
+            AGENTS.md
+            README.md
+          delete-branch: true

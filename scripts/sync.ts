@@ -1,12 +1,12 @@
 // The sync: applies a reforged-ts release to the Template's files. The
 // library's release workflow will dispatch a payload (the released versions,
-// the tag and three URLs) to the Template's sync workflow (sync.yml, still to
-// come), which runs this script, builds, checks and opens a pull request with
-// its summary.
+// the tag and three URLs) to the Template's sync workflow
+// (.github/workflows/sync.yml), which runs this script, builds, checks and
+// opens a pull request with its summary.
 // Template maintenance: a generated Map project deletes it (see AGENTS.md).
 import fs from "node:fs";
 import path from "node:path";
-import { runAsEntry } from "./cli.ts";
+import { runAsEntry, writeGithubOutputs } from "./cli.ts";
 import { AuthorError } from "./errors.ts";
 import { LIBRARY_PACKAGES, type LibraryPackage } from "./use-local.ts";
 
@@ -92,6 +92,37 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 /**
+ * `tag`, checked as one component of a git branch name (`sync/<tag>`): only
+ * letters, digits, `.`, `_`, `-` and `@` (the library tags its releases
+ * `<package>@<version>`), no `..`, no leading or trailing `.`, no `.lock`
+ * suffix. Anything else is an AuthorError naming the tag.
+ */
+function branchComponent(tag: string): string {
+  if (
+    !/^[A-Za-z0-9._@-]+$/.test(tag) ||
+    tag.includes("..") ||
+    tag.startsWith(".") ||
+    tag.endsWith(".") ||
+    tag.endsWith(".lock")
+  )
+    throw new AuthorError(
+      `the payload's \`tag\` cannot name a git branch (letters, digits, ".", "_", "-" and "@"; no "..", no leading or trailing ".", no ".lock" suffix): ${JSON.stringify(tag)}`,
+    );
+  return tag;
+}
+
+/** The sync pull request's branch and title, from a checked payload. */
+export function pullRequestNames(payload: ReleasePayload): {
+  branch: string;
+  title: string;
+} {
+  return {
+    branch: `sync/${payload.tag}`,
+    title: `chore(deps): reforged-ts ${payload.versions["reforged-ts"]}`,
+  };
+}
+
+/**
  * The payload of a `reforged-ts-release` dispatch, checked. A missing or
  * malformed field is an AuthorError naming it.
  */
@@ -131,7 +162,7 @@ export function parsePayload(value: unknown): ReleasePayload {
       `the payload's \`llmsUrl\` does not end in /llms.txt: ${llmsUrl}`,
     );
   return {
-    tag: requiredString("tag"),
+    tag: branchComponent(requiredString("tag")),
     versions: parsed,
     contextUrl: httpsUrl("contextUrl"),
     matrixUrl: httpsUrl("matrixUrl"),
@@ -401,7 +432,8 @@ const USAGE = "Usage: node scripts/sync.ts <payload.json> [--summary <file>]";
  * Command line: `node scripts/sync.ts <payload.json> [--summary <file>]`, run
  * from the repository root by the sync workflow. Reads the dispatch payload
  * from the JSON file, syncs, prints the summary and, with `--summary`, also
- * writes it to that file (the pull request's body).
+ * writes it to that file (the pull request's body). In GitHub Actions it also
+ * sets the step outputs `branch` and `title` (`pullRequestNames`).
  */
 await runAsEntry(import.meta.url, "sync", async () => {
   const args = process.argv.slice(2);
@@ -425,7 +457,9 @@ await runAsEntry(import.meta.url, "sync", async () => {
       `cannot read the payload ${rest[0]}: ${(error as Error).message}`,
     );
   }
-  const result = await syncRepository(process.cwd(), parsePayload(payload));
+  const release = parsePayload(payload);
+  const result = await syncRepository(process.cwd(), release);
   if (summaryFile !== undefined) fs.writeFileSync(summaryFile, result.summary);
   console.log(result.summary);
+  writeGithubOutputs(pullRequestNames(release));
 });

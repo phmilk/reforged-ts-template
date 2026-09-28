@@ -1,0 +1,57 @@
+# Builds the map in release mode, lints, type-checks and tests it on Ubuntu
+# and Windows, then attaches the packed archive to the run. `test:map` never
+# runs here, and the workflow reads no secrets.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# A new push to a pull request cancels its running checks; runs on main all finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  ci:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
+
+      # No `version` input: the action reads it from `packageManager` in package.json.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # scripts/build.ts sets the output `archive`: the packed archive's path,
+      # wherever `outputFolder` and `archiveName` in reforged.config.ts put it.
+      - name: Build in release mode
+        id: build
+        run: pnpm build --mode release
+
+      - run: pnpm lint
+
+      - run: pnpm typecheck
+
+      - run: pnpm test
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ github.event.repository.name }}-${{ github.event.pull_request.head.sha || github.sha }}-${{ runner.os }}
+          path: ${{ steps.build.outputs.archive }}
+          if-no-files-found: error
+          overwrite: true
