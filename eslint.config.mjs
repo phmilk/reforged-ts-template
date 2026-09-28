@@ -15,6 +15,8 @@ export default defineConfig(
   globalIgnores([
     // The World Editor owns the map folder, its war3map.lua included.
     "maps/**",
+    // The pipeline tests' fixture map: a byte-for-byte copy of editor-saved files.
+    "tests/pipeline/fixtures/**",
     // Build outputs: the staged map and the archive, the compiled Lua tests.
     "dist/**",
     "dist-test/**",
