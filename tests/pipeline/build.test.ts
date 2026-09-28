@@ -119,9 +119,22 @@ describe("node scripts/build.ts (pnpm build)", () => {
       recursive: true,
       force: true,
     });
+    // A map module imported only for its side effects, its name hyphenated as
+    // map files often are: its bare require must not count as the entry's
+    // first statement.
+    fs.writeFileSync(
+      path.join(project, "src", "welcome-message.ts"),
+      'import { Init } from "reforged-ts";\n\nInit.onGameStart(() => {\n  print("welcome");\n});\n',
+    );
+    const main = path.join(project, "src", "main.ts");
+    fs.writeFileSync(
+      main,
+      'import "./welcome-message";\n' + fs.readFileSync(main, "utf8"),
+    );
 
     const result = runScript(project, "scripts/build.ts");
 
+    expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
     expect(fs.readFileSync(path.join(project, ENV), "utf8")).toContain(
       "export const devMode: boolean = true;",
@@ -133,13 +146,18 @@ describe("node scripts/build.ts (pnpm build)", () => {
     expect(script).toMatch(
       /\["generated\.env"\][^]*?____exports\.devMode = true\n/,
     );
-    // After the imports' requires, the entry's first statement is the configure call.
-    const statements = entryModule(script)
-      .split("\n")
-      .slice(2)
-      .filter(
-        (line) => line !== "" && !/^local \w+ = (require\(|____)/.test(line),
-      );
+    // After the imports' requires (bound or bare, for side effects), the
+    // entry's first statement is the configure call. An import's module top
+    // level still runs before it, as imports do: that code only registers Init
+    // stages, which run after configure.
+    const lines = entryModule(script).split("\n").slice(2);
+    expect(lines).toContain('require("welcome-message")');
+    const statements = lines.filter(
+      (line) =>
+        line !== "" &&
+        !/^local \w+ = (require\(|____)/.test(line) &&
+        !/^require\(".*"\)$/.test(line),
+    );
     expect(statements[0]).toBe("Reforged:configure({devMode = devMode})");
   });
 
