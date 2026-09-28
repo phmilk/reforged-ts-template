@@ -297,17 +297,10 @@ describe("node scripts/generate.ts (the prepare script)", () => {
       recursive: true,
       force: true,
     });
-    // Source using an editor global (one the test adds to the copy's map
-    // script, whatever the map holds): needs the generated declarations.
-    const script = path.join(project, MAP, "war3map.lua");
-    fs.writeFileSync(
-      script,
-      "gg_trg_Pipeline_Test_Trigger = nil\r\n" +
-        fs.readFileSync(script, "utf8"),
-    );
+    // Source using an editor global: needs the generated declarations.
     fs.writeFileSync(
       path.join(project, "src", "uses-globals.ts"),
-      "export const t: trigger = gg_trg_Pipeline_Test_Trigger;\n",
+      "export const t: trigger = gg_trg_Melee_Initialization;\n",
     );
 
     const result = runScript(project, "scripts/generate.ts");
@@ -347,8 +340,7 @@ describe("node scripts/generate.ts (the prepare script)", () => {
     const result = runScript(project, "scripts/generate.ts");
 
     expect(result.status).toBe(0);
-    // The map's own globals may add warnings of their own.
-    expect(result.stderr).toContain(
+    expect(result.stderr).toBe(
       "Warning: gg_qst_Main: unknown editor prefix gg_qst_, declared as handle.\n",
     );
   });

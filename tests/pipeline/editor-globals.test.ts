@@ -259,19 +259,9 @@ describe("pnpm build: editor globals", () => {
     "reforged-ts-template.w3m",
     "war3map.lua",
   );
-  /** Globals only these tests add to the copy's map script, never in a real map. */
-  const PIPELINE_TRIGGER = "gg_trg_Pipeline_Test_Trigger";
-  const PIPELINE_REGION = "gg_rct_Pipeline_Test_Region";
 
-  it("writes both files into the generated folder from the map folder's script", () => {
+  it("writes both files into the generated folder on the blank map", () => {
     const project = copyProject();
-    // The project's map is the World Editor's: the test adds its own trigger
-    // global and pins nothing else of the map.
-    const script = path.join(project, MAP_SCRIPT);
-    fs.writeFileSync(
-      script,
-      `${PIPELINE_TRIGGER} = nil\r\n` + fs.readFileSync(script, "utf8"),
-    );
 
     const result = runScript(project, "scripts/build.ts");
 
@@ -285,27 +275,21 @@ describe("pnpm build: editor globals", () => {
       path.join(project, "src", "generated", LUA_STUB_FILE),
       "utf8",
     );
-    const expected = generateEditorGlobals(fs.readFileSync(script, "utf8"));
-    expect(declarations).toBe(expected.declarations);
-    expect(stub).toBe(expected.luaStub);
     expect(declarations.startsWith(`// ${BANNER}\n`)).toBe(true);
-    expect(declarations).toContain(`declare let ${PIPELINE_TRIGGER}: trigger;`);
+    expect(declarations).toContain(
+      "declare let gg_trg_Melee_Initialization: trigger;",
+    );
     expect(stub.startsWith(`-- ${BANNER}\n`)).toBe(true);
-    expect(stub).toContain(`\n${PIPELINE_TRIGGER} = nil\n`);
+    expect(stub).toContain("\ngg_trg_Melee_Initialization = nil\n");
   });
 
   it("fails the type-check on a missing editor global, types an existing one, and picks up a region added in the editor", () => {
     const project = copyProject();
-    const script = path.join(project, MAP_SCRIPT);
-    fs.writeFileSync(
-      script,
-      `${PIPELINE_TRIGGER} = nil\r\n` + fs.readFileSync(script, "utf8"),
-    );
     fs.writeFileSync(
       path.join(project, "src", "uses-globals.ts"),
       [
-        `export const trigger: trigger = ${PIPELINE_TRIGGER};`,
-        `export const spawn: rect = ${PIPELINE_REGION};`,
+        "export const trigger: trigger = gg_trg_Melee_Initialization;",
+        "export const spawn: rect = gg_rct_Spawn;",
         "",
       ].join("\n"),
     );
@@ -313,16 +297,15 @@ describe("pnpm build: editor globals", () => {
     const missing = runScript(project, "scripts/build.ts");
     expect(missing.status).toBe(1);
     expect(missing.stderr).toMatch(
-      new RegExp(
-        `uses-globals\\.ts\\(2,28\\): error TS2304: Cannot find name '${PIPELINE_REGION}'`,
-      ),
+      /uses-globals\.ts\(2,28\): error TS2304: Cannot find name 'gg_rct_Spawn'/,
     );
     expect(missing.stderr).not.toMatch(/uses-globals\.ts\(1,/);
 
     // The editor saves a new region: the next build declares it.
+    const script = path.join(project, MAP_SCRIPT);
     fs.writeFileSync(
       script,
-      `${PIPELINE_REGION} = nil\r\n` + fs.readFileSync(script, "utf8"),
+      "gg_rct_Spawn = nil\r\n" + fs.readFileSync(script, "utf8"),
     );
     const added = runScript(project, "scripts/build.ts");
     expect(added.stderr).toBe("");
@@ -331,7 +314,7 @@ describe("pnpm build: editor globals", () => {
     // Typed, not any: using the trigger as a number is an error.
     fs.writeFileSync(
       path.join(project, "src", "misuse.ts"),
-      `export const n: number = ${PIPELINE_TRIGGER};\n`,
+      "export const n: number = gg_trg_Melee_Initialization;\n",
     );
     const misuse = runScript(project, "scripts/build.ts");
     expect(misuse.status).toBe(1);

@@ -4,15 +4,17 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import config from "../../reforged.config.ts";
+import { resolveConfig } from "../../scripts/config.ts";
 
 export const ROOT = path.resolve(fileURLToPath(import.meta.url), "../../..");
 /**
  * The pipeline tests' fixture map: a copy of the Template's blank map folder
  * as the 3.0 World Editor saved it (17 files, war3map.w3i version 39),
- * committed with the tests. Every test that pins map contents (file counts,
- * hashes, file lists, war3map.lua text) reads it, never the project's
- * `mapFolder`, which the World Editor edits. Git (`.gitattributes`) and ESLint
- * leave it byte for byte; nothing edits it in place.
+ * committed with the tests. Every pipeline test reads it, directly or as the
+ * map of a `copyProject()` copy, never the project's `mapFolder`, which the
+ * World Editor edits. Git (`.gitattributes`) and ESLint leave it byte for
+ * byte; nothing edits it in place.
  */
 export const FIXTURE_MAP = path.join(
   ROOT,
@@ -51,9 +53,11 @@ export function hashTree(folder: string): Record<string, string> {
 
 /**
  * A throwaway copy of the Template (manifest, tsconfigs, config, vitest,
- * ESLint and Prettier configs, source, maps, scripts, tests) with the real
+ * ESLint and Prettier configs, source, scripts, tests) with the real
  * node_modules linked in, so a command runs end to end without touching the
- * repository.
+ * repository. Its map folder, the `mapFolder` of its `reforged.config.ts`,
+ * holds `FIXTURE_MAP`, not the project's map: what the World Editor saves
+ * there never changes a command's output, and a test may edit the copy's map.
  */
 export function copyProject(): string {
   const dir = makeTempDir();
@@ -68,12 +72,14 @@ export function copyProject(): string {
     "eslint.config.mjs",
     ".prettierrc",
     "src",
-    "maps",
     "scripts",
     "tests",
   ]) {
     fs.cpSync(path.join(ROOT, name), path.join(dir, name), { recursive: true });
   }
+  fs.cpSync(FIXTURE_MAP, resolveConfig(config, dir).mapFolder, {
+    recursive: true,
+  });
   fs.symlinkSync(
     path.join(ROOT, "node_modules"),
     path.join(dir, "node_modules"),
