@@ -1,0 +1,23 @@
+# pnpm's settings: pnpm 11 and later read them here only, never from
+# package.json or .npmrc (which keeps registry and auth settings only).
+
+# A script starts without an install first: `pnpm use:local` must run on a
+# fresh clone, and an install it did not start would resolve the library
+# packages without their local tarballs.
+verifyDepsBeforeRun: false
+
+# pnpm installs no version published less than a day ago, except the library
+# packages: phmilk/reforged-ts publishes them from its release workflow, and
+# a Map project takes a release the day it is out.
+minimumReleaseAgeExclude:
+  - reforged-ts
+  - reforged-types
+  - reforged-test
+  - eslint-plugin-reforged
+
+# The dependencies whose install scripts may run; an install that meets one
+# not listed here fails. unrs-resolver (the lint's import resolver) ships its
+# native binding as an optional dependency for each platform, and its script
+# only checks for one.
+allowBuilds:
+  unrs-resolver: false

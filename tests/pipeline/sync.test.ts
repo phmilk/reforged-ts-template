@@ -17,6 +17,7 @@ import {
   type ReleasePayload,
   type SyncFiles,
 } from "../../scripts/sync.ts";
+import { LIBRARY_PACKAGES } from "../../scripts/use-local.ts";
 import { makeTempDir, runScript, ROOT } from "./helpers.ts";
 import { markedBlock, readRepoFile } from "./sync-markers.ts";
 
@@ -125,6 +126,51 @@ describe("the sync's entry point", () => {
     };
     expect(manifest.dependencies["reforged-ts"]).toBe("^1.2.0");
     expect(manifest.devDependencies["reforged-test"]).toBe("^1.0.3");
+  });
+
+  it("writes caret ranges on prerelease versions, nothing else in package.json", () => {
+    const manifest = {
+      name: "fixture",
+      dependencies: {
+        "reforged-ts": "^1.0.0-alpha.0",
+        "reforged-types": "^1.0.0-alpha.0",
+        "other-runtime": "^2.0.0-beta.1",
+      },
+      devDependencies: {
+        "eslint-plugin-reforged": "^1.0.0-alpha.0",
+        "reforged-test": "^1.0.0-alpha.0",
+        "other-dev": "1.0.0-alpha.0",
+      },
+    };
+    const before = JSON.stringify(manifest, null, 2) + "\n";
+    const release = payload();
+    for (const name of LIBRARY_PACKAGES)
+      release.versions[name] = "1.0.0-alpha.3";
+    const after = apply({ ...shipped(), "package.json": before }, release)
+      .files["package.json"];
+    expect(JSON.parse(after)).toEqual({
+      ...manifest,
+      dependencies: {
+        ...manifest.dependencies,
+        "reforged-ts": "^1.0.0-alpha.3",
+        "reforged-types": "^1.0.0-alpha.3",
+      },
+      devDependencies: {
+        ...manifest.devDependencies,
+        "eslint-plugin-reforged": "^1.0.0-alpha.3",
+        "reforged-test": "^1.0.0-alpha.3",
+      },
+    });
+    expect(changedLines(before, after)).toHaveLength(4);
+  });
+
+  it("ships the four packages with caret ranges", () => {
+    const manifest = JSON.parse(shipped()["package.json"]) as {
+      dependencies: Record<string, string>;
+      devDependencies: Record<string, string>;
+    };
+    const ranges = { ...manifest.dependencies, ...manifest.devDependencies };
+    for (const name of LIBRARY_PACKAGES) expect(ranges[name]).toMatch(/^\^\d/);
   });
 
   it("replaces only the library terms between the CONTEXT.md markers, in the library file's order", () => {
