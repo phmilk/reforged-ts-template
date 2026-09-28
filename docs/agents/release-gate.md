@@ -7,7 +7,7 @@ The Template is the Map project the library tests its releases against: no relea
 ## What the gate does to a Template checkout
 
 1. **The clone.** It clones the Template at `v<major>` of the library version it releases. Every 1.x, alphas included, maps to `v1`. There is no fallback to `main`: a missing ref stops the release.
-2. **The install.** It writes one `pnpm.overrides` entry into the clone's `package.json` per package the release publishes, pointing at that package's tarball (`file:<tarball>`), then runs `pnpm install --no-frozen-lockfile`. It checks that the Template's direct dependencies resolved to the packed versions. A package the release does not publish comes from npm.
+2. **The install.** It writes one `overrides` entry into the clone's `pnpm-workspace.yaml` per package the release publishes, pointing at that package's tarball (`file:<tarball>`), then runs `pnpm install --no-frozen-lockfile`: the overrides change the committed lockfile's configuration, so a frozen install would refuse them. It checks that the Template's direct dependencies resolved to the packed versions. A package the release does not publish comes from npm.
 3. **The commands.** It runs the scripts `build --mode release`, `lint` and `test`, by name and in that order, and stops at the first one that fails or is missing.
 
 What that asks of the Template:
@@ -15,7 +15,7 @@ What that asks of the Template:
 - The three scripts keep their names, and `build` accepts `--mode release`.
 - The install needs no manual step: `prepare` writes `src/generated`, so the build and the type-aware lint find it.
 - No game, no network beyond the registry, no absolute path in a committed file (`tests/pipeline/absolute-paths.test.ts`). The gate runs on Ubuntu; the Template also supports Windows, where the clone's path must stay short (vitest fails at startup past 260 characters).
-- The overrides live in `package.json`, which pnpm 10 reads (`packageManager`). pnpm 11 ignores `pnpm.overrides` there, and an `overrides` key in a `pnpm-workspace.yaml` would replace them: the gate reports either as an install failure.
+- The overrides live in `pnpm-workspace.yaml`, the one place pnpm 12 (`packageManager`) reads settings from; the gate keeps the file's other settings and comments. A pnpmfile that replaced them would make the Template resolve other versions than the packed ones, which the gate reports as an install failure. `.pnpmfile.cjs` is inert without `.local-packages/`, which a clone never has.
 
 The overrides, the lockfile they produce and the build output stay in the throwaway clone. None of it is ever committed here.
 
@@ -25,13 +25,13 @@ During the alpha phase the install prints unmet-peer warnings: the library's pac
 
 `package.json` declares the four library packages as `^<latest released version>`: on each library release the sync (`scripts/sync.ts`) sets them to the versions it released. They start at `^1.0.0-alpha.0`, on the `next` channel. A caret range on a prerelease admits later prereleases of the same `major.minor.patch` only (`^1.0.0-alpha.0` matches `1.0.0-alpha.3`, not `1.1.0-alpha.0`), and any later release of that major.
 
-The lockfile is committed after the library's first `next` publish, from a plain `pnpm install` against the registry. Until then the packages return 404 on npm and no lockfile is committed. Once committed, the lockfile follows the ranges on its own: the sync workflow runs a non-frozen `pnpm install` after the sync and commits the refreshed lockfile in the same sync pull request.
+The lockfile is committed, from a plain `pnpm install` against the registry after the library's first `next` publish; `pnpm install --frozen-lockfile` installs it on a fresh clone. It follows the ranges on its own: the sync workflow runs a non-frozen `pnpm install` after the sync and commits the refreshed lockfile in the same sync pull request.
 
 ## Installing tarballs without committing them
 
 Two ways, both leaving every committed file as it is.
 
-**`pnpm use:local <checkout>`**, the daily one (see the README, "Developing against a local checkout of the library"). It builds and packs the four packages of a reforged-ts checkout into `.local-packages/` (ignored) and installs them through the committed pnpm hook `.pnpmfile.cjs`, which is inert without that folder. No lockfile is written. `pnpm use:local --reset` goes back to the registry.
+**`pnpm use:local <checkout>`**, the daily one (see the README, "Developing against a local checkout of the library"). It builds and packs the four packages of a reforged-ts checkout into `.local-packages/` (ignored) and installs them through the committed pnpm hook `.pnpmfile.cjs`, which is inert without that folder. It installs without the lockfile (`--no-lockfile`), so the committed one stays as it is. `pnpm use:local --reset` goes back to the registry, reinstalling from the committed lockfile.
 
 ```sh
 pnpm use:local ../reforged-ts
@@ -48,7 +48,7 @@ git clone --branch main https://github.com/phmilk/reforged-ts-template.git ../t
 pnpm release:template-gate --template ../t --pack-dir ../pack
 ```
 
-Clone the branch under test in place of `main` (the release itself clones `v<major>`). Without the library's gate script, the same sequence by hand in the clone: add a `pnpm.overrides` entry per tarball to its `package.json` (`"reforged-ts": "file:<path to the tarball>"`), then `pnpm install --no-frozen-lockfile`, `pnpm build --mode release`, `pnpm lint`, `pnpm test`. Delete the clone afterwards.
+Clone the branch under test in place of `main` (the release itself clones `v<major>`). Without the library's gate script, the same sequence by hand in the clone: add an `overrides` entry per tarball to its `pnpm-workspace.yaml` (`reforged-ts: file:<path to the tarball>`), then `pnpm install --no-frozen-lockfile`, `pnpm build --mode release`, `pnpm lint`, `pnpm test`. Delete the clone afterwards.
 
 Never make that change in a working copy you commit from: a committed override points every Map project at a file that exists on one machine only (the absolute-path test fails on an absolute one, as the gate writes). The same goes for a lockfile written while the overrides or `use:local` were in effect.
 
@@ -59,6 +59,6 @@ Never make that change in a working copy you commit from: a committed override p
 - During the current major, `v<major>` is kept up to date with `main`: the maintainer fast-forwards it (`git push origin main:v1`) before each gated release.
 - When a new library major starts, `v<previous major>` stops following `main` and is kept for that line; `main` moves on to the new major, and a new `v<major>` branch follows it.
 
-**Maintainer step, before the library's first gated release:** the `v1` branch does not exist yet, and the gate stops at the clone without it. Create it from `main` (`git push origin main:refs/heads/v1`). Use a branch, not a tag: one ref model for every major, fast-forwarded rather than moved. While the Template is private the gate also needs the library's `TEMPLATE_READ_TOKEN` secret.
+**The ref today:** `v1` exists as a tag on `main`, which the gate accepts as well as a branch. A tag is moved rather than fast-forwarded: before each gated release, `git tag -f v1 main && git push --force origin v1`. Replacing it with a `v1` branch (`git push origin :refs/tags/v1 main:refs/heads/v1`) turns that into the fast-forward above. The Template is public, so the gate clones it without a token.
 
 If the library's gate fell back to `main` for the current major, the fast-forward step would go away. That is a change to the library's gate, not to this repository.

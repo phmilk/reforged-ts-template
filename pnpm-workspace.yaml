@@ -1,12 +1,6 @@
 # pnpm's settings: pnpm 11 and later read them here only, never from
 # package.json or .npmrc (which keeps registry and auth settings only).
 
-# No lockfile until the library packages are on npm in the ranges
-# package.json names: the install resolves them only through
-# `pnpm use:local`, whose tarballs must not reach a committed lockfile. Once
-# the ranges resolve from npm, this line goes and the lockfile is committed.
-lockfile: false
-
 # A script starts without an install first: `pnpm use:local` must run on a
 # fresh clone, and an install it did not start would resolve the library
 # packages without their local tarballs.
