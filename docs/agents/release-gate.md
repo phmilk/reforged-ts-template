@@ -25,7 +25,7 @@ During the alpha phase the install prints unmet-peer warnings: the library's pac
 
 `package.json` declares the four library packages as `^<latest released version>`: on each library release the sync (`scripts/sync.ts`) sets them to the versions it released. They are on the `next` channel, at `^1.0.0-alpha.1`. The floor matters, not just the channel: when npm's `latest` dist-tag satisfies a range, pnpm installs it rather than the highest match, and `latest` still names `1.0.0-alpha.0`, the one-time manual first publish. `^1.0.0-alpha.0` would install that one. A caret range on a prerelease admits later prereleases of the same `major.minor.patch` only (`^1.0.0-alpha.0` matches `1.0.0-alpha.3`, not `1.1.0-alpha.0`), and any later release of that major.
 
-The lockfile is committed, from a plain `pnpm install` against the registry after the library's first `next` publish; `pnpm install --frozen-lockfile` installs it on a fresh clone. It follows the ranges on its own: the sync workflow runs a non-frozen `pnpm install` after the sync and commits the refreshed lockfile in the same sync pull request.
+The lockfile is committed, from a plain `pnpm install` against the registry after the library's first `next` publish; `pnpm install --frozen-lockfile` installs it on a fresh clone. The sync workflow keeps it following the ranges: after the sync it runs `pnpm update` on the four library packages (a non-frozen `pnpm install` would keep a locked version the new range no longer admits), checks the result with `pnpm install --frozen-lockfile`, and commits the refreshed lockfile in the same sync pull request.
 
 ## Installing tarballs without committing them
 
