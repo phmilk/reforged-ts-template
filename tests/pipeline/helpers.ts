@@ -6,8 +6,21 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const ROOT = path.resolve(fileURLToPath(import.meta.url), "../../..");
-/** The blank map folder saved by the 3.0 World Editor, committed as the fixture. */
-export const FIXTURE_MAP = path.join(ROOT, "maps", "reforged-ts-template.w3m");
+/**
+ * The pipeline tests' fixture map: a copy of the Template's blank map folder
+ * as the 3.0 World Editor saved it (17 files, war3map.w3i version 39),
+ * committed with the tests. Every test that pins map contents (file counts,
+ * hashes, file lists, war3map.lua text) reads it, never the project's
+ * `mapFolder`, which the World Editor edits. Git (`.gitattributes`) and ESLint
+ * leave it byte for byte; nothing edits it in place.
+ */
+export const FIXTURE_MAP = path.join(
+  ROOT,
+  "tests",
+  "pipeline",
+  "fixtures",
+  "blank-map.w3m",
+);
 
 /**
  * The entry's module in the bundle, whatever the starter says: typescript-to-lua
