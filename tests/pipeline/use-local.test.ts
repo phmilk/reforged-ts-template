@@ -6,6 +6,7 @@ import {
   LIST_FILE,
   LOCAL_FOLDER,
   LIBRARY_PACKAGES,
+  pnpmCommand,
   resetLocal,
   type Pnpm,
 } from "../../scripts/use-local.ts";
@@ -78,14 +79,19 @@ describe("the pnpm hook", () => {
 /**
  * A committed Map project reduced to what `use:local` touches: a manifest on
  * the four library packages (and nothing else, so installing needs no
- * registry), the ignore file, the pnpm hook and the scripts.
+ * registry) with the Template's pnpm pin, the ignore file, the pnpm settings
+ * as committed in HEAD, the pnpm hook and the scripts.
  */
 function makeMapProject(): string {
   const dir = makeTempDir();
+  const { packageManager } = JSON.parse(
+    fs.readFileSync(path.join(ROOT, "package.json"), "utf8"),
+  ) as { packageManager: string };
   const pkg = {
     name: "map",
     private: true,
     type: "module",
+    packageManager,
     dependencies: { "reforged-ts": "^1.0.0", "reforged-types": "^1.0.0" },
     devDependencies: {
       "reforged-test": "^1.0.0",
@@ -98,6 +104,11 @@ function makeMapProject(): string {
   );
   for (const name of [".gitignore", PNPMFILE, "scripts"])
     fs.cpSync(path.join(ROOT, name), path.join(dir, name), { recursive: true });
+  // As committed: the release's Template gate adds overrides to the checkout's copy.
+  fs.writeFileSync(
+    path.join(dir, "pnpm-workspace.yaml"),
+    git(ROOT, "show", "HEAD:pnpm-workspace.yaml"),
+  );
   git(dir, "init", "-q");
   git(dir, "add", ".");
   git(dir, "commit", "-q", "-m", "init");
@@ -201,6 +212,52 @@ describe("pnpm use:local", () => {
   }, 120_000);
 });
 
+describe("pnpmCommand", () => {
+  const node = process.execPath;
+  // Relative paths: an absolute one in a committed file fails absolute-paths.test.ts.
+  const pnpmFolder = ["pnpm", "node_modules", "pnpm"];
+  const args = ["pack", "--pack-destination", "my maps"];
+
+  it("runs pnpm 12's native binary, which `pnpm <script>` names in npm_execpath, directly", () => {
+    const exe = [...pnpmFolder, "pnpm.exe"].join("\\");
+    expect(pnpmCommand(args, exe, "win32")).toEqual({
+      command: exe,
+      args,
+      shell: false,
+    });
+    const binary = [...pnpmFolder, "pnpm"].join("/");
+    expect(pnpmCommand(args, binary, "linux")).toEqual({
+      command: binary,
+      args,
+      shell: false,
+    });
+  });
+
+  it("runs a JavaScript pnpm through node", () => {
+    const script = [...pnpmFolder, "bin", "pnpm.cjs"].join("/");
+    expect(pnpmCommand(args, script, "win32")).toEqual({
+      command: node,
+      args: [script, ...args],
+      shell: false,
+    });
+  });
+
+  it("falls back to the pnpm on the PATH, through the shell on Windows, when npm_execpath is not pnpm's", () => {
+    for (const execPath of [undefined, "npm/bin/npm-cli.js"]) {
+      expect(pnpmCommand(args, execPath, "win32")).toEqual({
+        command: "pnpm",
+        args: ["pack", "--pack-destination", '"my maps"'],
+        shell: true,
+      });
+      expect(pnpmCommand(args, execPath, "linux")).toEqual({
+        command: "pnpm",
+        args,
+        shell: false,
+      });
+    }
+  });
+});
+
 describe("resetLocal", () => {
   /** Records the pnpm calls instead of running them: going back to the registry needs the network. */
   const recorder = () => {
@@ -217,7 +274,12 @@ describe("resetLocal", () => {
     resetLocal(project, pnpm);
     expect(fs.existsSync(path.join(project, LOCAL_FOLDER))).toBe(false);
     expect(calls).toEqual([
-      ["install", "--config.confirmModulesPurge=false", "--no-lockfile"],
+      [
+        "install",
+        "--config.confirm-modules-purge=false",
+        "--config.optimistic-repeat-install=false",
+        "--no-lockfile",
+      ],
     ]);
     expect(git(project, "status", "--porcelain", "--untracked-files=all")).toBe(
       "",
@@ -235,7 +297,12 @@ describe("resetLocal", () => {
     const { calls, pnpm } = recorder();
     resetLocal(project, pnpm);
     expect(calls).toEqual([
-      ["install", "--config.confirmModulesPurge=false", "--frozen-lockfile"],
+      [
+        "install",
+        "--config.confirm-modules-purge=false",
+        "--config.optimistic-repeat-install=false",
+        "--frozen-lockfile",
+      ],
     ]);
   });
 });

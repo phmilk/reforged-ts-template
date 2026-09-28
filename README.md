@@ -9,7 +9,7 @@ A Map project template: a Warcraft III 3.0.0 map whose code is TypeScript compil
 - **Warcraft III 3.0.0** with a Battle.net login saved on the machine: `pnpm test:map` starts the game with the flag that reuses it.
 - **The World Editor**, which ships with the game. The map is saved as a folder, with Lua as its script language.
 - **Node 24** (`.node-version`).
-- **pnpm 10** (`packageManager` in `package.json`; `corepack enable` provides it).
+- **pnpm 12** (`packageManager` in `package.json`): install it with `npm install --global pnpm@12`. pnpm 11 or later switches to the pinned version by itself; pnpm 10 cannot start pnpm 12 on Windows. Its settings live in `pnpm-workspace.yaml`.
 
 On Linux the game runs through Wine: set `winePath` in `reforged.config.ts`.
 
@@ -87,7 +87,7 @@ The type-aware rules find each file's program through the nearest `tsconfig.json
 
 The Template depends on four packages of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts): `reforged-ts` and `reforged-types` (the map's code), `reforged-test` (the Lua test harness) and `eslint-plugin-reforged` (the lint rules). `package.json` declares the four the same way, as caret ranges on the latest released versions, which the Template's sync sets on each library release. They start at `^1.0.0-alpha.0`, on the `next` channel.
 
-During the build phase the library publishes its packages as `1.0.0-alpha.N` under npm's `next` dist-tag, and none is published yet: until the first publish, a plain `pnpm install` cannot resolve them. Clone the library next to your project and install with `pnpm use:local ../reforged-ts` (below). Once the packages are on npm, the lockfile is committed.
+During the build phase the library publishes its packages as `1.0.0-alpha.N` under npm's `next` dist-tag. `package.json` names them with caret ranges on that channel (`^1.0.0-alpha.0`), and the committed lockfile pins the versions a fresh `pnpm install` gets from the registry. To try a library change before it is published, use a local checkout of the library (below).
 
 ### Developing against a local checkout of the library
 
@@ -101,7 +101,7 @@ pnpm use:local --reset          # back to the registry versions
 
 `pnpm use:local <path>` runs the checkout's build for the four packages (`eslint-plugin-reforged` included, so `pnpm lint` runs the checkout's rules), packs them into `.local-packages/` (ignored by git) and installs them in place of the registry versions. It works on a fresh clone with no `node_modules`. Rerun it after changing the library to pick up the change.
 
-Nothing committed changes, in either direction: the committed pnpm hook `.pnpmfile.cjs` swaps the four packages for their tarballs only while `.local-packages/packages.json` exists, and the local install writes no lockfile. `git status` stays clean after `use:local` and after `--reset`. While the local packages are in use, install with `pnpm use:local` rather than a plain `pnpm install` or `pnpm add`: those write a lockfile pointing at the local tarballs, which must not be committed.
+Nothing committed changes, in either direction: the committed pnpm hook `.pnpmfile.cjs` swaps the four packages for their tarballs only while `.local-packages/packages.json` exists, and neither command writes the lockfile: `use:local` installs without it (`--no-lockfile`) and `--reset` reinstalls from the committed one (`--frozen-lockfile`). `git status` stays clean after `use:local` and after `--reset`. While the local packages are in use, reinstall with `pnpm use:local` rather than a plain `pnpm install`, which sees no change to the manifests and keeps the tarballs it installed last.
 
 ## Deletable in a generated project
 
