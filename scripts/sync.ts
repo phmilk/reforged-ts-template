@@ -1,5 +1,5 @@
 // The sync: applies a reforged-ts release to the Template's files. The
-// library's release workflow will dispatch a payload (the released versions,
+// library's release workflow dispatches a payload (the released versions,
 // the tag and three URLs) to the Template's sync workflow
 // (.github/workflows/sync.yml), which runs this script, builds, checks and
 // opens a pull request with its summary.
@@ -111,14 +111,27 @@ function branchComponent(tag: string): string {
   return tag;
 }
 
-/** The sync pull request's branch and title, from a checked payload. */
+/**
+ * The sync pull request's branch and title, from a checked payload. The
+ * title names the package the release's tag names (`<package>@<version>`,
+ * the first of the four the release published): a release without the
+ * library is titled after the package it released. A tag that names no
+ * package of `versions` at its version titles after reforged-ts.
+ */
 export function pullRequestNames(payload: ReleasePayload): {
   branch: string;
   title: string;
 } {
+  const at = payload.tag.lastIndexOf("@");
+  const tagged = LIBRARY_PACKAGES.find(
+    (name) =>
+      payload.tag.slice(0, at) === name &&
+      payload.tag.slice(at + 1) === payload.versions[name],
+  );
+  const name = tagged ?? "reforged-ts";
   return {
     branch: `sync/${payload.tag}`,
-    title: `chore(deps): reforged-ts ${payload.versions["reforged-ts"]}`,
+    title: `chore(deps): ${name} ${payload.versions[name]}`,
   };
 }
 
