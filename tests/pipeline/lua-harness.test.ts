@@ -125,20 +125,39 @@ describe("pnpm test: the Lua harness", () => {
         "",
       ].join("\n"),
     );
+    // A test of the map's own, beside the starter's and this test's fixtures.
+    fs.writeFileSync(
+      path.join(project, "tests", "lua", "map-own.test.ts"),
+      [
+        "/** @noSelfInFile */",
+        'import { describe, expect, it } from "reforged-test/lua";',
+        'describe("the map\'s own test", () => {',
+        '  it("passes", () => {',
+        "    expect(1 + 1).toBe(2);",
+        "  });",
+        "});",
+        "",
+      ].join("\n"),
+    );
 
     const run = runLuaProject(project);
 
     const byName = new Map(run.tests.map((test) => [test.fullName, test]));
-    expect([...byName.keys()].sort(), run.output).toEqual(
-      [
+    // Only the tests this one owns are checked by name: the map's own tests may run beside them.
+    expect([...byName.keys()], run.output).toEqual(
+      expect.arrayContaining([
         "tests/lua/main.test.ts the starter source prints its line when the game starts",
         "tests/lua/main.test.ts the starter source runs the Subscription's handler when a unit dies",
         "tests/lua/main.test.ts the starter source starts a Timer repeating every 60 seconds",
         "tests/lua/spawn.test.ts spawn reads the editor variable from the generated stub",
         "tests/lua/spawn.test.ts spawn fails on a Native no stub defines",
         "tests/lua/spawn.test.ts spawn uses the map-specific stub",
-      ].sort(),
+      ]),
     );
+    // The map's own test ran and passed.
+    expect(
+      byName.get("tests/lua/map-own.test.ts the map's own test passes")?.status,
+    ).toBe("passed");
     // The starter's test still passes beside a second map-specific stub file.
     for (const test of run.tests.filter((test) =>
       test.fullName.startsWith("tests/lua/main.test.ts"),
