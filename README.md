@@ -85,9 +85,9 @@ The type-aware rules find each file's program through the nearest `tsconfig.json
 
 ## The library packages
 
-The Template depends on four packages of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts): `reforged-ts` and `reforged-types` (the map's code), `reforged-test` (the Lua test harness) and `eslint-plugin-reforged` (the lint rules). `package.json` declares the four the same way, with caret ranges on the first major.
+The Template depends on four packages of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts): `reforged-ts` and `reforged-types` (the map's code), `reforged-test` (the Lua test harness) and `eslint-plugin-reforged` (the lint rules). `package.json` declares the four the same way, as caret ranges on the latest released versions, which the Template's sync sets on each library release. They are on the `next` channel, at `^1.0.0-alpha.1`.
 
-During the build phase the library publishes its packages as `1.0.0-alpha.N` under npm's `next` dist-tag, and none is published yet: until the first publish, a plain `pnpm install` cannot resolve them. Clone the library next to your project and install with `pnpm use:local ../reforged-ts` (below). Once the packages are on npm, the ranges move to the `next` channel, `lockfile: false` leaves `pnpm-workspace.yaml` and the lockfile is committed.
+During the build phase the library publishes its packages as `1.0.0-alpha.N` under npm's `next` dist-tag. The committed lockfile pins the versions a fresh `pnpm install` gets from the registry. To try a library change before it is published, use a local checkout of the library (below).
 
 ### Developing against a local checkout of the library
 
@@ -101,7 +101,7 @@ pnpm use:local --reset          # back to the registry versions
 
 `pnpm use:local <path>` runs the checkout's build for the four packages (`eslint-plugin-reforged` included, so `pnpm lint` runs the checkout's rules), packs them into `.local-packages/` (ignored by git) and installs them in place of the registry versions. It works on a fresh clone with no `node_modules`. Rerun it after changing the library to pick up the change.
 
-Nothing committed changes, in either direction: the committed pnpm hook `.pnpmfile.cjs` swaps the four packages for their tarballs only while `.local-packages/packages.json` exists, and no install writes a lockfile until the packages are on npm (`lockfile: false` in `pnpm-workspace.yaml`). `git status` stays clean after `use:local` and after `--reset`. While the local packages are in use, reinstall with `pnpm use:local` rather than a plain `pnpm install`, which sees no change to the manifests and keeps the tarballs it installed last.
+Nothing committed changes, in either direction: the committed pnpm hook `.pnpmfile.cjs` swaps the four packages for their tarballs only while `.local-packages/packages.json` exists, and neither command writes the lockfile: `use:local` installs without it (`--no-lockfile`) and `--reset` reinstalls from the committed one (`--frozen-lockfile`). `git status` stays clean after `use:local` and after `--reset`. While the local packages are in use, reinstall with `pnpm use:local` rather than a plain `pnpm install`, which sees no change to the manifests and keeps the tarballs it installed last.
 
 ## Deletable in a generated project
 
@@ -110,7 +110,7 @@ This repository keeps the Template itself up to date with the library. A Map pro
 - `.github/workflows/sync.yml`, the workflow that applies a library release to the Template (still to come). It runs only in `phmilk/reforged-ts-template`, so it is inert in your repository.
 - The sync script the workflow runs, `scripts/sync.ts`, and its test `tests/pipeline/sync.test.ts`.
 - The tests that hold the Template's files to the sync's shape: `tests/pipeline/seeds.test.ts` (`AGENTS.md` and `CONTEXT.md`), `tests/pipeline/readme.test.ts` (this README) and their helper `tests/pipeline/sync-markers.ts`.
-- The Template's maintenance docs: `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md` and the Template maintenance section of `AGENTS.md`, which lists all of the above.
+- The Template's maintenance docs: `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `docs/agents/release-gate.md` and the Template maintenance section of `AGENTS.md`, which lists all of the above.
 
 ## Links
 
