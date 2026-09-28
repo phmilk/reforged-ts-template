@@ -4,3 +4,7 @@
 
 # The World Editor owns every file under maps/; git stores them byte for byte.
 maps/** -text -diff
+
+# The pipeline tests' fixture map is a copy of those editor-saved files: its
+# bytes (the war3map.w3i hash, the war3map.lua text) are what the tests pin.
+tests/pipeline/fixtures/** -text -diff

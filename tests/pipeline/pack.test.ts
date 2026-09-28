@@ -18,7 +18,7 @@ const fileBytes = (map: War3Map, name: string): Uint8Array | undefined => {
   return file ? new Uint8Array(file.bytes()) : undefined;
 };
 
-describe("packMapFolder on the committed blank map folder", () => {
+describe("packMapFolder on the blank map fixture", () => {
   let archive: Uint8Array;
   let map: War3Map;
   const inputs = listMapFiles(FIXTURE_MAP);
@@ -133,7 +133,7 @@ describe("packMapFolder on a map folder with the editor's war3map.imp", () => {
   it("stores the editor's imports file byte for byte instead of generating one", () => {
     const dir = makeTempDir();
     fs.cpSync(FIXTURE_MAP, dir, { recursive: true });
-    fs.mkdirSync(path.join(dir, "war3mapImported"));
+    fs.mkdirSync(path.join(dir, "war3mapImported"), { recursive: true });
     fs.writeFileSync(
       path.join(dir, "war3mapImported", "a.blp"),
       new Uint8Array([1, 2, 3]),
