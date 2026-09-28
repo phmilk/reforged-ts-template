@@ -85,9 +85,9 @@ The type-aware rules find each file's program through the nearest `tsconfig.json
 
 ## The library packages
 
-The Template depends on four packages of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts): `reforged-ts` and `reforged-types` (the map's code), `reforged-test` (the Lua test harness) and `eslint-plugin-reforged` (the lint rules). `package.json` declares the four the same way, as caret ranges on the latest released versions, which the Template's sync sets on each library release. They start at `^1.0.0-alpha.0`, on the `next` channel.
+The Template depends on four packages of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts): `reforged-ts` and `reforged-types` (the map's code), `reforged-test` (the Lua test harness) and `eslint-plugin-reforged` (the lint rules). `package.json` declares the four the same way, as caret ranges on the latest released versions, which the Template's sync sets on each library release. They are on the `next` channel, at `^1.0.0-alpha.1`.
 
-During the build phase the library publishes its packages as `1.0.0-alpha.N` under npm's `next` dist-tag. `package.json` names them with caret ranges on that channel (`^1.0.0-alpha.0`), and the committed lockfile pins the versions a fresh `pnpm install` gets from the registry. To try a library change before it is published, use a local checkout of the library (below).
+During the build phase the library publishes its packages as `1.0.0-alpha.N` under npm's `next` dist-tag. The committed lockfile pins the versions a fresh `pnpm install` gets from the registry. To try a library change before it is published, use a local checkout of the library (below).
 
 ### Developing against a local checkout of the library
 
