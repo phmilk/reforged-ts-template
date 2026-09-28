@@ -9,9 +9,10 @@
 # AGENTS.md). The job runs only in phmilk/reforged-ts-template, so a copy
 # left in a generated project stays inert.
 #
-# Secrets (repository secrets of phmilk/reforged-ts-template, #26): the
-# GitHub App's `SYNC_APP_ID` and `SYNC_APP_PRIVATE_KEY`, or, until the App is
-# installed, a fine-grained personal access token `SYNC_TOKEN` scoped to this
+# Credentials (phmilk/reforged-ts-template, #26), named as in the library:
+# the GitHub App's client ID in the repository variable `APP_CLIENT_ID` and a
+# private key in the secret `APP_PRIVATE_KEY`, or, without the App, a
+# fine-grained personal access token in the secret `SYNC_TOKEN` scoped to this
 # repository with contents and pull requests read/write. The App's token wins
 # when both are set. The default token is never used for the pull request: CI
 # would not run on it. Only the steps that need a secret see it: the install,
@@ -49,18 +50,18 @@ jobs:
       - name: Check a pull-request token is configured
         id: token
         env:
-          SYNC_APP_ID: ${{ secrets.SYNC_APP_ID }}
-          SYNC_APP_PRIVATE_KEY: ${{ secrets.SYNC_APP_PRIVATE_KEY }}
+          APP_CLIENT_ID: ${{ vars.APP_CLIENT_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
           SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
         run: |
-          if [ -n "$SYNC_APP_ID" ] && [ -n "$SYNC_APP_PRIVATE_KEY" ]; then
+          if [ -n "$APP_CLIENT_ID" ] && [ -n "$APP_PRIVATE_KEY" ]; then
             echo "The pull request opens with the GitHub App's token."
             echo "app=true" >> "$GITHUB_OUTPUT"
           elif [ -n "$SYNC_TOKEN" ]; then
             echo "The pull request opens with the SYNC_TOKEN secret."
             echo "app=false" >> "$GITHUB_OUTPUT"
           else
-            echo "::error::Set the secrets SYNC_APP_ID and SYNC_APP_PRIVATE_KEY (GitHub App) or SYNC_TOKEN (fine-grained token)."
+            echo "::error::Set the repository variable APP_CLIENT_ID and the secret APP_PRIVATE_KEY (GitHub App), or the secret SYNC_TOKEN (fine-grained token)."
             exit 1
           fi
 
@@ -103,12 +104,14 @@ jobs:
       - name: Create the GitHub App token
         id: app
         if: steps.token.outputs.app == 'true'
-        uses: actions/create-github-app-token@v3
+        # Pinned to the commit the library pins: the one action given the key.
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          # `app-id` is deprecated in v3 in favour of `client-id`, but still
-          # takes the App ID the SYNC_APP_ID secret holds.
-          app-id: ${{ secrets.SYNC_APP_ID }}
-          private-key: ${{ secrets.SYNC_APP_PRIVATE_KEY }}
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          # What opening the pull request needs, not the App's issues access.
+          permission-contents: write
+          permission-pull-requests: write
 
       # Only the synced files and the lockfile: build outputs stay out.
       - name: Open the pull request
