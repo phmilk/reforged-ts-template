@@ -60,7 +60,7 @@ Single-context: `CONTEXT.md` at the repo root and ADRs under `docs/adr/` (none y
 
 <!-- reforged-ts:docs:start -->
 
-The documentation of the installed reforged-ts version, as one plain-text file for a language model: [llms.txt](https://phmilk.github.io/reforged-ts/llms.txt).
+The documentation of the installed reforged-ts version, as one plain-text file for a language model: [llms.txt](https://phmilk.github.io/reforged-ts/docs/next/llms.txt).
 
 <!-- reforged-ts:docs:end -->
 

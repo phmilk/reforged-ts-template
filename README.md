@@ -54,7 +54,7 @@ No stable release yet. During the build phase the packages are published as `1.0
 
 <!-- reforged-ts:docs:start -->
 
-**For AI agents:** the documentation of the pinned library version, as one plain-text file for a language model, is [llms.txt](https://phmilk.github.io/reforged-ts/llms.txt).
+**For AI agents:** the documentation of the pinned library version, as one plain-text file for a language model, is [llms.txt](https://phmilk.github.io/reforged-ts/docs/next/llms.txt).
 
 <!-- reforged-ts:docs:end -->
 
