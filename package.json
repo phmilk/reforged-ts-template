@@ -24,7 +24,7 @@
     "check": "pnpm run lint && pnpm run typecheck && pnpm run test"
   },
   "dependencies": {
-    "reforged-ts": "^1.0.0-alpha.11",
+    "reforged-ts": "^1.0.0-alpha.12",
     "reforged-types": "^1.0.0-alpha.2"
   },
   "devDependencies": {
