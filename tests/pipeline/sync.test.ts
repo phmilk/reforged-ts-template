@@ -110,10 +110,26 @@ function outsideBlocks(text: string): string {
     .reduce((rest, name) => rest.replace(markedBlock(rest, name), ""), text);
 }
 
+/**
+ * The shipped package.json with the four packages on `^0.0.0`, a range no
+ * release writes, so a test sees each of them change whatever the Template
+ * ships: the sync workflow runs the tests after applying the release, when
+ * a shipped version may already be the payload's.
+ */
+function unreleasedManifest(): string {
+  return LIBRARY_PACKAGES.reduce(
+    (text, name) =>
+      text.replace(new RegExp(`("${name}": )"[^"]*"`), '$1"^0.0.0"'),
+    shipped()["package.json"],
+  );
+}
+
 describe("the sync's entry point", () => {
   it("sets the four packages to caret ranges on the released versions, nothing else in package.json", () => {
-    const before = shipped()["package.json"];
-    const after = apply().files["package.json"];
+    const before = unreleasedManifest();
+    const after = apply({ ...shipped(), "package.json": before }).files[
+      "package.json"
+    ];
     expect(changedLines(before, after).map((line) => line.trim())).toEqual([
       '"reforged-ts": "^1.2.0",',
       '"reforged-types": "^1.1.0"',
