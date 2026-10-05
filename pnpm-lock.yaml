@@ -169,8 +169,8 @@ importers:
   .:
     dependencies:
       reforged-ts:
-        specifier: ^1.0.0-alpha.15
-        version: 1.0.0-alpha.15(reforged-test@1.0.0-alpha.4(typescript-to-lua@1.37.1(typescript@6.0.2))(typescript@6.0.2)(vitest@5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))))(reforged-types@1.0.0-alpha.4)
+        specifier: ^1.0.0-alpha.16
+        version: 1.0.0-alpha.16(reforged-test@1.0.0-alpha.4(typescript-to-lua@1.37.1(typescript@6.0.2))(typescript@6.0.2)(vitest@5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))))(reforged-types@1.0.0-alpha.4)
       reforged-types:
         specifier: ^1.0.0-alpha.4
         version: 1.0.0-alpha.4
@@ -203,8 +203,8 @@ importers:
         specifier: ^5.5.6
         version: 5.5.6(eslint-config-prettier@10.1.8(eslint@10.11.0))(eslint@10.11.0)(prettier@3.9.9)
       eslint-plugin-reforged:
-        specifier: ^1.0.0-alpha.4
-        version: 1.0.0-alpha.4(eslint@10.11.0)(reforged-ts@1.0.0-alpha.15(reforged-test@1.0.0-alpha.4(typescript-to-lua@1.37.1(typescript@6.0.2))(typescript@6.0.2)(vitest@5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))))(reforged-types@1.0.0-alpha.4))(reforged-types@1.0.0-alpha.4)(typescript-eslint@8.70.1(eslint@10.11.0)(typescript@6.0.2))(typescript@6.0.2)
+        specifier: ^1.0.0-alpha.5
+        version: 1.0.0-alpha.5(eslint@10.11.0)(reforged-ts@1.0.0-alpha.16(reforged-test@1.0.0-alpha.4(typescript-to-lua@1.37.1(typescript@6.0.2))(typescript@6.0.2)(vitest@5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))))(reforged-types@1.0.0-alpha.4))(reforged-types@1.0.0-alpha.4)(typescript-eslint@8.70.1(eslint@10.11.0)(typescript@6.0.2))(typescript@6.0.2)
       mdx-m3-viewer-th:
         specifier: 5.13.4
         version: 5.13.4
@@ -787,12 +787,12 @@ packages:
       eslint-config-prettier:
         optional: true
 
-  eslint-plugin-reforged@1.0.0-alpha.4:
-    resolution: {integrity: sha512-bZ8JL1Pjjw6wdrjhVfrSSyAn/fEN+H8KsLccB7hq5WO+WQUb9YO7jWSSjcDQrNpjTbhCzzDQ0gh0nY3RbzGOiA==}
+  eslint-plugin-reforged@1.0.0-alpha.5:
+    resolution: {integrity: sha512-aD5vTNrUzgOKo2ZLeYFrTnLlcUoO4Ij+3rWpoACNAo+yiPbTi0lq0Jv1pDavK5JOKLHtwu8Qu5mgXCHFFTAEjg==}
     engines: {node: '>=22.13'}
     peerDependencies:
       eslint: ^9.0.0 || ^10.0.0
-      reforged-ts: ^1.0.0-alpha.15
+      reforged-ts: ^1.0.0-alpha.16
       reforged-types: ^1.0.0-alpha.4
       typescript: 6.0.2
       typescript-eslint: ^8.0.0
@@ -1157,8 +1157,8 @@ packages:
       typescript-to-lua: ^1.37.1
       vitest: ^5.0.1
 
-  reforged-ts@1.0.0-alpha.15:
-    resolution: {integrity: sha512-0Yl2snPVK/9QqJ2ixKKfvNY6CARY00ddOcOrOS+YuiGTMyMWt1XJhWa505mrmGeTR8br0DCwlL5xJUhvAniB0w==}
+  reforged-ts@1.0.0-alpha.16:
+    resolution: {integrity: sha512-dac9Q9DqDsTzc+BxMi/F/k7PtPxeFl6Js0exyEj3U7TT/Xl/L1sDNpTXIPtI6w0AVtnVqtr4Yn+bVYtbSqMjqA==}
     engines: {node: '>=22.13'}
     peerDependencies:
       reforged-test: ^1.0.0-alpha.4
@@ -1858,14 +1858,14 @@ snapshots:
     optionalDependencies:
       eslint-config-prettier: 10.1.8(eslint@10.11.0)
 
-  eslint-plugin-reforged@1.0.0-alpha.4(eslint@10.11.0)(reforged-ts@1.0.0-alpha.15(reforged-test@1.0.0-alpha.4(typescript-to-lua@1.37.1(typescript@6.0.2))(typescript@6.0.2)(vitest@5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))))(reforged-types@1.0.0-alpha.4))(reforged-types@1.0.0-alpha.4)(typescript-eslint@8.70.1(eslint@10.11.0)(typescript@6.0.2))(typescript@6.0.2):
+  eslint-plugin-reforged@1.0.0-alpha.5(eslint@10.11.0)(reforged-ts@1.0.0-alpha.16(reforged-test@1.0.0-alpha.4(typescript-to-lua@1.37.1(typescript@6.0.2))(typescript@6.0.2)(vitest@5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))))(reforged-types@1.0.0-alpha.4))(reforged-types@1.0.0-alpha.4)(typescript-eslint@8.70.1(eslint@10.11.0)(typescript@6.0.2))(typescript@6.0.2):
     dependencies:
       '@typescript-eslint/utils': 8.70.1(eslint@10.11.0)(typescript@6.0.2)
       eslint: 10.11.0
       typescript: 6.0.2
       typescript-eslint: 8.70.1(eslint@10.11.0)(typescript@6.0.2)
     optionalDependencies:
-      reforged-ts: 1.0.0-alpha.15(reforged-test@1.0.0-alpha.4(typescript-to-lua@1.37.1(typescript@6.0.2))(typescript@6.0.2)(vitest@5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))))(reforged-types@1.0.0-alpha.4)
+      reforged-ts: 1.0.0-alpha.16(reforged-test@1.0.0-alpha.4(typescript-to-lua@1.37.1(typescript@6.0.2))(typescript@6.0.2)(vitest@5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))))(reforged-types@1.0.0-alpha.4)
       reforged-types: 1.0.0-alpha.4
     transitivePeerDependencies:
       - supports-color
@@ -2187,7 +2187,7 @@ snapshots:
       typescript-to-lua: 1.37.1(typescript@6.0.2)
       vitest: 5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))
 
-  reforged-ts@1.0.0-alpha.15(reforged-test@1.0.0-alpha.4(typescript-to-lua@1.37.1(typescript@6.0.2))(typescript@6.0.2)(vitest@5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))))(reforged-types@1.0.0-alpha.4):
+  reforged-ts@1.0.0-alpha.16(reforged-test@1.0.0-alpha.4(typescript-to-lua@1.37.1(typescript@6.0.2))(typescript@6.0.2)(vitest@5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))))(reforged-types@1.0.0-alpha.4):
     dependencies:
       reforged-types: 1.0.0-alpha.4
     optionalDependencies:
