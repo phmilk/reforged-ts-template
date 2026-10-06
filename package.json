@@ -24,8 +24,8 @@
     "check": "pnpm run lint && pnpm run typecheck && pnpm run test"
   },
   "dependencies": {
-    "reforged-ts": "^1.0.0-alpha.16",
-    "reforged-types": "^1.0.0-alpha.4"
+    "reforged-ts": "^1.0.0-alpha.17",
+    "reforged-types": "^1.0.0-alpha.5"
   },
   "devDependencies": {
     "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",

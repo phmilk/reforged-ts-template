@@ -35,7 +35,7 @@ One of the four points of a map's initialization (globals, triggers, init trigge
 _Avoid_: hook, lifecycle event, main/config
 
 **Map project**:
-A repository that consumes the library to produce a playable map, normally generated from the Template.
+A repository generated from the Template that consumes the library to produce a playable map; the Template fixes the versions of its Toolchain and of the reforged-ts packages.
 _Avoid_: consumer, user code, game project
 
 **Template**:
