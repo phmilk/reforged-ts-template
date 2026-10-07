@@ -1,13 +1,18 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
+  generateEditorGlobals,
+  MapFolderError,
+  type EditorGlobalsOutput,
+} from "reforged-map";
+import {
   CONFIG_FILE,
   loadConfig,
   type Mode,
   type ResolvedConfig,
 } from "./config.ts";
-import { generateEditorGlobalsFiles } from "./editor-globals.ts";
 import { runAsEntry } from "./cli.ts";
+import { AuthorError } from "./errors.ts";
 
 /** One file the pipeline writes into the generated folder. */
 export interface GeneratedFile {
@@ -45,6 +50,25 @@ export function envFileContents(mode: Mode): string {
 export const generateEnv: Generator = (config) => [
   { name: ENV_FILE, contents: envFileContents(config.mode) },
 ];
+
+/**
+ * The Editor globals of the map folder, which `reforged-map` declares from its
+ * `war3map.lua` and `war3map.wtg`: `editor-globals.d.ts` for the map's code
+ * and `editor-globals.lua` for the harness. Its warnings go to `warn`; a map
+ * folder it cannot read (missing, or without `war3map.lua`) is an AuthorError
+ * with the package's message.
+ */
+export const generateEditorGlobalsFiles: Generator = (config, warn) => {
+  let output: EditorGlobalsOutput;
+  try {
+    output = generateEditorGlobals(config.mapFolder);
+  } catch (error) {
+    if (error instanceof MapFolderError) throw new AuthorError(error.message);
+    throw error;
+  }
+  for (const warning of output.warnings) warn(warning);
+  return output.files;
+};
 
 /** Every writer, run in order by install (`prepare`), every build and the watch. */
 export const GENERATORS: readonly Generator[] = [

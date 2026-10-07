@@ -78,7 +78,7 @@ describe("the pnpm hook", () => {
 
 /**
  * A committed Map project reduced to what `use:local` touches: a manifest on
- * the four library packages (and nothing else, so installing needs no
+ * the five library packages (and nothing else, so installing needs no
  * registry) with the Template's pnpm pin, the ignore file, the pnpm settings
  * as committed in HEAD, the pnpm hook and the scripts.
  */
@@ -96,6 +96,7 @@ function makeMapProject(): string {
     devDependencies: {
       "reforged-test": "^1.0.0",
       "eslint-plugin-reforged": "^1.0.0",
+      "reforged-map": "^1.0.0",
     },
   };
   fs.writeFileSync(
@@ -116,7 +117,7 @@ function makeMapProject(): string {
 }
 
 /**
- * A checkout shaped like phmilk/reforged-ts: a workspace whose four packages
+ * A checkout shaped like phmilk/reforged-ts: a workspace whose five packages
  * build `dist.txt` from `src.txt` and ship only the built file.
  */
 function makeCheckout(): string {

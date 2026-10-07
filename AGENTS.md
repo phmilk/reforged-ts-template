@@ -21,7 +21,7 @@ A task is finished when `pnpm check` is green.
 - The map folder (`mapFolder` in `reforged.config.ts`): owned by the World Editor, read-only here.
 - `reforged.config.ts`: the typed build configuration. It is committed, so it holds only what every machine shares.
 - `pnpm-workspace.yaml`: pnpm's settings. The project runs on pnpm 12 (`packageManager` in `package.json`; `npm install --global pnpm@12` installs it), which reads its settings nowhere else. A new dependency with an install script fails the install until `allowBuilds` lists it.
-- `src/generated/`: `env.ts` (the build mode) and the typings of the map's editor globals, rewritten by every install and build. Read-only: change the config or the map instead.
+- `src/generated/`: `env.ts` (the build mode) and the Editor globals (`editor-globals.d.ts`, `editor-globals.lua` for the harness): the `gg_` and `udg_` globals of the map folder, which `reforged-map` declares from `war3map.lua` and `war3map.wtg`. Rewritten by every install and build. Read-only: change the config or the map instead.
 - `tests/lua/`: the map's tests on the harness; `tests/stubs/`: the extra Native stubs they need.
 - `dist/` and `dist-test/`: build output (the map, the compiled Lua tests), ignored by git.
 
@@ -37,6 +37,15 @@ A task is finished when `pnpm check` is green.
 - A `%` in a script pasted into the World Editor crashes the editor on save.
 - Handle identity is stable across Natives; handle ids are not recycled immediately.
 - The measured facts in full: [Runtime facts](https://phmilk.github.io/reforged-ts/docs/guides/runtime-facts).
+
+## Rawcodes
+
+- A Rawcode is typed by its Object kind: `Rawcode<"unit">`, `Rawcode<"unit" | "upgrade">` (either kind), or `Rawcode` alone for any kind. A plain `number` is not a Rawcode.
+- `FourCC("hfoo")` is an `UnknownRawcode`, which every Rawcode parameter accepts. To have the compiler check a constant that holds a literal, annotate the constant with its kind: `const HOLY_LIGHT: Rawcode<"ability"> = FourCC("AHhb");`.
+- What the game returns (`GetUnitTypeId`, `unit.typeId`, an Event descriptor's `abilityId`) carries its kind into the next call: pass it on without a cast.
+- A GUI variable of an object type (`udg_SpawnType`) is declared with its kind from the Variable Editor's type: a Unit-Type is a `Rawcode<"unit">`, an array a `Record<number, Rawcode<"unit">>`. If its kind is wrong, change the variable's type in the World Editor; never cast the variable.
+- `as Rawcode<"unit">` is only for a number the compiler cannot know (a save code, a sync message), never to silence a kind error.
+- The rules in full: [Rawcodes](https://phmilk.github.io/reforged-ts/docs/guides/rawcodes).
 
 ## Lint
 
@@ -79,7 +88,7 @@ This section, `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `d
 
 - **Issue tracker**: the Template's issues live in `phmilk/reforged-ts-template`'s GitHub Issues and are driven with the `gh` CLI; the library's live in `phmilk/reforged-ts`. Specs carry the `spec` label and their tickets are sub-issues with native "blocked by" dependencies. See `docs/agents/issue-tracker.md`.
 - **Triage labels**: the five canonical triage labels are used as-is: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. Two kind labels sit next to them: `spec` on an issue created with `to-spec`, `ticket` on one created with `to-tickets`. See `docs/agents/triage-labels.md`.
-- **Sync markers**: on each library release, the Template's sync sets the four library packages' ranges in `package.json` and rewrites the text between the `reforged-ts:<name>:start` and `reforged-ts:<name>:end` marker comments of `AGENTS.md`, `CONTEXT.md` and the README, and nothing else. Edit around the markers, never between them.
+- **Sync markers**: on each library release, the Template's sync sets the five library packages' ranges in `package.json` and rewrites the text between the `reforged-ts:<name>:start` and `reforged-ts:<name>:end` marker comments of `AGENTS.md`, `CONTEXT.md` and the README, and nothing else. Edit around the markers, never between them.
 - **Sync workflow**: `.github/workflows/sync.yml` runs on the library's `reforged-ts-release` dispatch (or by hand, `gh workflow run sync.yml --ref <branch> -f payload="$(cat payload.json)"`, for a dry run), then syncs, refreshes the lockfile, builds in release mode, runs `pnpm check` and opens a pull request named after the tag; a maintainer merges it. It opens the pull request with the token of the repository's GitHub App when the repository variable `APP_CLIENT_ID` and the secret `APP_PRIVATE_KEY` are set (the names the library uses), and otherwise with the fine-grained token in the secret `SYNC_TOKEN` (contents and pull requests read/write on this repository); with neither, it fails before syncing.
 - **Release gate**: the library's release builds, lints and tests the Template against its packed packages, from the `v<major>` ref. See `docs/agents/release-gate.md`.
 

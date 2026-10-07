@@ -95,12 +95,12 @@ jobs:
       # A non-frozen `pnpm install` keeps a locked version the new range no
       # longer admits (pnpm 12 rewrites the specifier only), so the build and
       # check would run the previous release. `pnpm update` re-resolves the
-      # four library packages within the ranges the sync set; the frozen
+      # five library packages within the ranges the sync set; the frozen
       # install then fails here, as CI would on the pull request, if the
       # lockfile still disagrees with package.json.
       - name: Refresh the lockfile
         run: |
-          pnpm update reforged-ts reforged-types reforged-test eslint-plugin-reforged
+          pnpm update reforged-ts reforged-types reforged-test eslint-plugin-reforged reforged-map
           pnpm install --frozen-lockfile
 
       - name: Build in release mode

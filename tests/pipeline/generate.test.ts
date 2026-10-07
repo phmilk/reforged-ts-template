@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { resolveConfig } from "../../scripts/config.ts";
+import { AuthorError } from "../../scripts/errors.ts";
 import {
   GENERATORS,
   envFileContents,
@@ -104,5 +105,16 @@ describe("GENERATORS", () => {
     expect(warnings).toEqual([
       "gg_qst_Main: unknown editor prefix gg_qst_, declared as handle.",
     ]);
+  });
+
+  it("fails with an author error on a map folder without war3map.lua", () => {
+    const root = makeTempDir();
+    fs.mkdirSync(path.join(root, "maps", "m.w3x"), { recursive: true });
+    const run = () => generate(configIn(root), GENERATORS, () => undefined);
+    expect(run).toThrow(AuthorError);
+    expect(run).toThrow(
+      "m.w3x has no war3map.lua: the map was not saved with Lua as the script language. " +
+        "In the World Editor, set Scenario > Map Options > Script Language to Lua and save the map again.",
+    );
   });
 });

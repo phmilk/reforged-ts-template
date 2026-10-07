@@ -1,17 +1,18 @@
 // The global setup of the `lua` vitest project. Before the first run and
-// before every watch rerun it regenerates the generated folder (so the
-// editor-globals stub follows the map folder and a fresh clone needs no
-// build), then compiles src and tests/lua with typescript-to-lua
-// (tests/lua/tsconfig.json) into an emptied dist-test. lua.spec.ts reads the
-// results. A failed compile fails the run with its diagnostics.
+// before every watch rerun it regenerates the generated folder (so the stub
+// of the Editor globals, which reforged-map writes, follows the map folder
+// and a fresh clone needs no build), then compiles src and tests/lua with
+// typescript-to-lua (tests/lua/tsconfig.json) into an emptied dist-test.
+// lua.spec.ts reads the results. A failed compile fails the run with its
+// diagnostics.
 
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { LUA_STUB_FILE } from "reforged-map";
 import { compileLuaProject } from "reforged-test";
 import type { TestProject } from "vitest/node";
 import { CONFIG_FILE, loadConfig } from "../../scripts/config.ts";
-import { LUA_STUB_FILE } from "../../scripts/editor-globals.ts";
 import { generate } from "../../scripts/generate.ts";
 
 declare module "vitest" {
@@ -46,10 +47,10 @@ async function prepare(): Promise<Prepared> {
   } catch (error) {
     return {
       stubs: [],
-      compileErrors: `Generating the editor globals failed: ${error instanceof Error ? error.message : String(error)}`,
+      compileErrors: `Generating the Editor globals failed: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
-  // The editor globals first, so a map-specific stub can give a gg_ global a handle.
+  // The Editor globals first, so a map-specific stub can give a gg_ global a handle.
   const stubs = [generatedStub, ...luaFilesIn(mapStubs)];
   fs.rmSync(outDir, { recursive: true, force: true });
   return { stubs, compileErrors: compileLuaProject(tsconfig) };

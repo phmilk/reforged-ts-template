@@ -12,15 +12,17 @@ export const LOCAL_FOLDER = ".local-packages";
 export const LIST_FILE = "packages.json";
 /**
  * The library packages a Map project installs, each under `packages/<name>` in
- * a reforged-ts checkout: the three the map's code and tests use, and the lint
- * plugin `pnpm lint` loads. `use:local` installs them from a checkout; the
- * sync (scripts/sync.ts) bumps them to each release.
+ * a reforged-ts checkout: the three the map's code and tests use, the lint
+ * plugin `pnpm lint` loads, and the map folder reader the build's generate
+ * step calls. `use:local` installs them from a checkout; the sync
+ * (scripts/sync.ts) bumps them to each release.
  */
 export const LIBRARY_PACKAGES = [
   "reforged-types",
   "reforged-test",
   "reforged-ts",
   "eslint-plugin-reforged",
+  "reforged-map",
 ] as const;
 
 export type LibraryPackage = (typeof LIBRARY_PACKAGES)[number];
@@ -160,7 +162,7 @@ function packInto(
 
 /**
  * Points the Map project at `root` to a reforged-ts `checkout`: installs the
- * checkout's dependencies if it has none, builds the four packages, packs
+ * checkout's dependencies if it has none, builds the five packages, packs
  * them into the ignored local folder with their list, then installs them in
  * place of the registry versions through the pnpm hook. No committed file
  * changes. Returns the tarball file names by package.

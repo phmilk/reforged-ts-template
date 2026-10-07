@@ -211,6 +211,9 @@ importers:
       prettier:
         specifier: ^3.9.9
         version: 3.9.9
+      reforged-map:
+        specifier: ^1.0.0-alpha.0
+        version: 1.0.0-alpha.0(reforged-types@1.0.0-alpha.5)
       reforged-test:
         specifier: ^1.0.0-alpha.4
         version: 1.0.0-alpha.4(typescript-to-lua@1.37.1(typescript@6.0.2))(typescript@6.0.2)(vitest@5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0)))
@@ -1148,6 +1151,12 @@ packages:
   readline-sync@1.4.10:
     resolution: {integrity: sha512-gNva8/6UAe8QYepIQH/jQ2qn91Qj0B9sYjMBBs3QOB8F2CXcKgLxQaJRP76sWVRQt+QU+8fAkCbCvjjMFu7Ycw==}
     engines: {node: '>= 0.8.0'}
+
+  reforged-map@1.0.0-alpha.0:
+    resolution: {integrity: sha512-MPa6p0IhjhQt5dmdWZo8hGfvcvqq4gVws9rJZ7VmJQ+bqEXsukBY5p1Tfo69Leaw/ZVWHEfJDLsQNNGW3kB4mw==}
+    engines: {node: '>=22.13'}
+    peerDependencies:
+      reforged-types: ^1.0.0-alpha.5
 
   reforged-test@1.0.0-alpha.4:
     resolution: {integrity: sha512-1S01sfD4qqDbdEgbMwGH1MmCknjTF65MhR6Gwql2/wzBShQ4MD5KBh7tQ1Pt14byxPC56BuzOTwF3myqYVMwrQ==}
@@ -2179,6 +2188,10 @@ snapshots:
       hookified: 2.2.0
 
   readline-sync@1.4.10: {}
+
+  reforged-map@1.0.0-alpha.0(reforged-types@1.0.0-alpha.5):
+    dependencies:
+      reforged-types: 1.0.0-alpha.5
 
   reforged-test@1.0.0-alpha.4(typescript-to-lua@1.37.1(typescript@6.0.2))(typescript@6.0.2)(vitest@5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))):
     dependencies:

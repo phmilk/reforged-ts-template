@@ -40,6 +40,7 @@ const payload = (): ReleasePayload => ({
     "reforged-types": "1.1.0",
     "reforged-test": "1.0.3",
     "eslint-plugin-reforged": "1.0.0-alpha.4",
+    "reforged-map": "1.0.0-alpha.2",
   },
   contextUrl: CONTEXT_URL,
   matrixUrl: MATRIX_URL,
@@ -50,7 +51,7 @@ const entry = (term: string) =>
   `**${term}**:\nThe library's definition of ${term}.\n_Avoid_: other words for ${term}`;
 
 /**
- * A library CONTEXT.md: its own heading and prose, the eleven map-author
+ * A library CONTEXT.md: its own heading and prose, the fourteen map-author
  * terms in an order unlike the Template's, and library-only terms between.
  */
 const LIBRARY_ORDER = [
@@ -65,6 +66,9 @@ const LIBRARY_ORDER = [
   "Template",
   "Toolchain",
   "Patch",
+  "Rawcode",
+  "Object kind",
+  "Editor global",
 ];
 const libraryContext = (terms: readonly string[] = LIBRARY_ORDER) =>
   [
@@ -111,7 +115,7 @@ function outsideBlocks(text: string): string {
 }
 
 /**
- * The shipped package.json with the four packages on `^0.0.0`, a range no
+ * The shipped package.json with the five packages on `^0.0.0`, a range no
  * release writes, so a test sees each of them change whatever the Template
  * ships: the sync workflow runs the tests after applying the release, when
  * a shipped version may already be the payload's.
@@ -125,7 +129,7 @@ function unreleasedManifest(): string {
 }
 
 describe("the sync's entry point", () => {
-  it("sets the four packages to caret ranges on the released versions, nothing else in package.json", () => {
+  it("sets the five packages to caret ranges on the released versions, nothing else in package.json", () => {
     const before = unreleasedManifest();
     const after = apply({ ...shipped(), "package.json": before }).files[
       "package.json"
@@ -134,6 +138,7 @@ describe("the sync's entry point", () => {
       '"reforged-ts": "^1.2.0",',
       '"reforged-types": "^1.1.0"',
       '"eslint-plugin-reforged": "^1.0.0-alpha.4",',
+      '"reforged-map": "^1.0.0-alpha.2",',
       '"reforged-test": "^1.0.3",',
     ]);
     const manifest = JSON.parse(after) as {
@@ -154,6 +159,7 @@ describe("the sync's entry point", () => {
       },
       devDependencies: {
         "eslint-plugin-reforged": "^1.0.0-alpha.0",
+        "reforged-map": "^1.0.0-alpha.0",
         "reforged-test": "^1.0.0-alpha.0",
         "other-dev": "1.0.0-alpha.0",
       },
@@ -174,13 +180,14 @@ describe("the sync's entry point", () => {
       devDependencies: {
         ...manifest.devDependencies,
         "eslint-plugin-reforged": "^1.0.0-alpha.3",
+        "reforged-map": "^1.0.0-alpha.3",
         "reforged-test": "^1.0.0-alpha.3",
       },
     });
-    expect(changedLines(before, after)).toHaveLength(4);
+    expect(changedLines(before, after)).toHaveLength(5);
   });
 
-  it("ships the four packages with caret ranges", () => {
+  it("ships the five packages with caret ranges", () => {
     const manifest = JSON.parse(shipped()["package.json"]) as {
       dependencies: Record<string, string>;
       devDependencies: Record<string, string>;
@@ -199,7 +206,7 @@ describe("the sync's entry point", () => {
     );
   });
 
-  it("takes the eleven terms whatever order the library lists them in", () => {
+  it("takes the fourteen terms whatever order the library lists them in", () => {
     const reversed = [...LIBRARY_ORDER].reverse();
     const block = markedBlock(
       applyRelease(shipped(), payload(), {
@@ -339,6 +346,11 @@ describe("the release payload", () => {
       "a missing version",
       { versions: { ...payload().versions, "reforged-test": undefined } },
       /reforged-test/,
+    ],
+    [
+      "no version of the map reader",
+      { versions: { ...payload().versions, "reforged-map": undefined } },
+      /reforged-map/,
     ],
     [
       "a version that is not semver",
