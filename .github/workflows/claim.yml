@@ -2,9 +2,9 @@
 # included, when it opens, reopens, is pushed or is edited, and on every
 # assignment and unassignment of an issue, it runs the library's reusable
 # claim-check.yml, which holds the logic, the texts and the reasons for its
-# run shape. The check reports as `claim / check`; until the ruleset on
-# main names it, a red check is advisory. docs/agents/issue-tracker.md,
-# "Claim", holds the protocol.
+# run shape. The check reports as `claim / check`, a required check of the
+# ruleset on main (set by hand with gh api, documented in the library's
+# CONTRIBUTING.md). docs/agents/issue-tracker.md, "Claim", holds the protocol.
 #
 # Template maintenance: a generated Map project deletes this file (see
 # AGENTS.md). The job runs only in phmilk/reforged-ts-template, so a copy
