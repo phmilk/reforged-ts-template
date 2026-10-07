@@ -50,6 +50,18 @@ _Avoid_: build system, pipeline, stack
 A released version of the game, identified by its Build (3.0.0.24268). Typings and library releases are tied to a Patch.
 _Avoid_: version, update, release (a library release is not a game patch)
 
+**Rawcode**:
+The four-character id of one type of object (`hfoo`, `AHbz`), which a map script holds as an integer (`FourCC("hfoo")`).
+_Avoid_: object id, type id, fourcc
+
+**Object kind**:
+Which of the seven families a type of object belongs to: unit (heroes included), item, ability, buff, destructable, doodad or upgrade; each Rawcode names an object of one Object kind.
+_Avoid_: object type, category, rawcode type
+
+**Editor global**:
+A global the World Editor declares in a map folder's `war3map.lua`: a `gg_` one for something placed or created in the editor (`gg_unit_H002_0255`, `gg_trg_Melee_Initialization`), or a `udg_` one for a variable of the Variable Editor (`udg_SpawnType`).
+_Avoid_: GUI global, editor variable
+
 <!-- reforged-ts:terms:end -->
 
 ## Your map's terms

@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { compileLuaProject } from "reforged-test";
 import type { TestProject } from "vitest/node";
 import { CONFIG_FILE, loadConfig } from "../../scripts/config.ts";
-import { LUA_STUB_FILE } from "../../scripts/editor-globals.ts";
+import { LUA_STUB_FILE } from "reforged-map";
 import { generate } from "../../scripts/generate.ts";
 
 declare module "vitest" {

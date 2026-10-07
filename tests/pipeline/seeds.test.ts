@@ -37,6 +37,7 @@ const AGENTS_SECTIONS = [
   "Commands",
   "Layout",
   "Runtime constraints",
+  "Rawcodes",
   "Lint",
   "Testing",
   "Domain docs",

@@ -40,6 +40,7 @@
     "eslint-plugin-reforged": "^1.0.0-alpha.5",
     "mdx-m3-viewer-th": "5.13.4",
     "prettier": "^3.9.9",
+    "reforged-map": "^1.0.0-alpha.0",
     "reforged-test": "^1.0.0-alpha.4",
     "typescript": "6.0.2",
     "typescript-eslint": "^8.70.1",
