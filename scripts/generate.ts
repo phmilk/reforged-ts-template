@@ -1,6 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import { generateEditorGlobals, MapFolderError } from "reforged-map";
+import {
+  generateEditorGlobals,
+  MapFolderError,
+  type EditorGlobalsOutput,
+} from "reforged-map";
 import {
   CONFIG_FILE,
   loadConfig,
@@ -55,7 +59,7 @@ export const generateEnv: Generator = (config) => [
  * with the package's message.
  */
 export const generateEditorGlobalsFiles: Generator = (config, warn) => {
-  let output: ReturnType<typeof generateEditorGlobals>;
+  let output: EditorGlobalsOutput;
   try {
     output = generateEditorGlobals(config.mapFolder);
   } catch (error) {
