@@ -49,3 +49,11 @@ jobs:
     permissions:
       contents: read
     uses: phmilk/reforged-ts/.github/workflows/board-dispatch.yml@master
+    # The App's key, by name and alone: an environment secret reaches a
+    # called job only when its caller passes it, and is empty otherwise. This
+    # job has no environment, so the value it evaluates is not the one used:
+    # the called job receives the value of this repository's environment
+    # `board`. Never `secrets: inherit`, which would hand the library's
+    # workflow every secret of this repository (the library's ADR 0017).
+    secrets:
+      APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}

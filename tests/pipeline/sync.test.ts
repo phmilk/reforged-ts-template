@@ -506,13 +506,27 @@ function jobs(workflow: string): Map<string, string> {
 describe("the sync workflow", () => {
   const workflow = readRepoFile(".github/workflows/sync.yml");
 
-  it("reads the App's key in no job outside the environment board, in any workflow", () => {
+  it("reads the App's key in no job outside the environment board, in any workflow, and passes it by name to the library alone", () => {
     const dir = path.join(ROOT, ".github/workflows");
+    const passers: string[] = [];
     for (const file of fs.readdirSync(dir)) {
-      for (const [id, job] of jobs(readRepoFile(`.github/workflows/${file}`)))
-        if (job.includes("APP_PRIVATE_KEY"))
-          expect(job, `${file}: ${id}`).toMatch(/^ {4}environment: board$/m);
+      for (const [id, job] of jobs(readRepoFile(`.github/workflows/${file}`))) {
+        if (!job.includes("APP_PRIVATE_KEY")) continue;
+        // A job that calls a reusable workflow cannot declare an environment:
+        // it passes the key by name, to the library alone, and the called job
+        // receives the value of this repository's environment board (the
+        // library's ADR 0017). tests/pipeline/board.test.ts holds the map.
+        if (/^ {4}uses: /m.test(job)) {
+          expect(job, `${file}: ${id}`).toMatch(
+            /^ {4}uses: phmilk\/reforged-ts\/\.github\/workflows\/(?:board-dispatch|claim-check)\.yml@master$/m,
+          );
+          passers.push(`${file}: ${id}`);
+          continue;
+        }
+        expect(job, `${file}: ${id}`).toMatch(/^ {4}environment: board$/m);
+      }
     }
+    expect(passers.sort()).toEqual(["board.yml: dispatch", "claim.yml: claim"]);
   });
 
   it("runs the install, build and check in a job without secrets", () => {

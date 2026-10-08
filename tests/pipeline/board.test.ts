@@ -1,8 +1,9 @@
 // The board caller, `.github/workflows/board.yml`: on the Template's issue and
 // pull-request events it calls the library's reusable board-dispatch, so the
-// Claim board reconciles within a minute (the library's ADR 0017). The
+// Claim board reconciles within a minute (the library's ADR 0017); and the
+// App's key, which it and the claim caller pass to the library by name. The
 // Template has no YAML parser, so the test reads the file's text. Template
-// maintenance, deleted with the caller (see AGENTS.md).
+// maintenance, deleted with the callers (see AGENTS.md).
 import { describe, expect, it } from "vitest";
 import { readRepoFile } from "./sync-markers.ts";
 
@@ -42,6 +43,23 @@ function triggers(workflow: string): string[] {
   return [...(on?.[1] ?? "").matchAll(/^ {2}([a-z_]+):/gm)].map(
     ([, key]) => key,
   );
+}
+
+/**
+ * The lines of the `secrets:` map of the workflow's one calling job; fails on
+ * no `secrets:` key, on more than one, and on `secrets: inherit`.
+ */
+function passedSecrets(workflow: string): string[] {
+  expect(
+    workflow.match(/^\s*secrets:/gm) ?? [],
+    "one secrets: key",
+  ).toHaveLength(1);
+  const match = /^ {4}secrets:\n((?: {6}.*\n)*)/m.exec(workflow);
+  expect(match, "secrets: as a map under the job").not.toBeNull();
+  return (match?.[1] ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
 }
 
 describe("the board caller", () => {
@@ -94,7 +112,17 @@ describe("the board caller", () => {
       /^ {4}uses: phmilk\/reforged-ts\/\.github\/workflows\/board-dispatch\.yml@master$/m,
     );
     expect(workflow).not.toMatch(/^\s*concurrency:/m);
-    expect(workflow).not.toMatch(/^\s*secrets:/m);
+  });
+
+  it("passes the library's board-dispatch the App's key by name, and no other secret", () => {
+    // An environment secret reaches a called job only when its caller passes
+    // it, and is empty otherwise; the called job reads the value of this
+    // repository's environment board. Never secrets: inherit, which would
+    // hand the library's workflow every secret of this repository (the
+    // library's ADR 0017).
+    expect(passedSecrets(workflow)).toEqual([
+      "APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}",
+    ]);
   });
 
   it("is listed in AGENTS.md's Template maintenance with its test", () => {
@@ -104,5 +132,20 @@ describe("the board caller", () => {
     );
     expect(maintenance).toContain("`.github/workflows/board.yml`");
     expect(maintenance).toContain("`tests/pipeline/board.test.ts`");
+  });
+});
+
+describe("the claim caller", () => {
+  const workflow = readRepoFile(".github/workflows/claim.yml");
+
+  it("passes the library's claim-check the App's key by name, and no other secret", () => {
+    // claim-check.yml passes it on to board-dispatch.yml, after an assignment
+    // the check makes here: each level of a nested call passes it again.
+    expect(workflow).toMatch(
+      /^ {4}uses: phmilk\/reforged-ts\/\.github\/workflows\/claim-check\.yml@master$/m,
+    );
+    expect(passedSecrets(workflow)).toEqual([
+      "APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}",
+    ]);
   });
 });
