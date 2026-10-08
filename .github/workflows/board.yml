@@ -1,0 +1,47 @@
+# The board caller of this repository: on its issue and pull-request events
+# it runs the library's reusable board-dispatch.yml, which sends the library
+# a repository dispatch, so the Claim board's reconcile follows this
+# repository's events within a minute instead of the hourly run (the
+# library's ADR 0017). The event lists mirror the library's board.yml, the
+# board's single writer; a test on each side holds them (here
+# tests/pipeline/board.test.ts). No concurrency group: each run lasts
+# seconds, and the library's `board` group coalesces the reconciles.
+#
+# Template maintenance: a generated Map project deletes this file (see
+# AGENTS.md). The job runs only in phmilk/reforged-ts-template, so a copy
+# left in a generated project or a fork is skipped, never red. The sync never
+# touches it: the @master ref keeps it current.
+name: board
+
+on:
+  issues:
+    types:
+      [
+        opened,
+        reopened,
+        closed,
+        deleted,
+        transferred,
+        assigned,
+        unassigned,
+        labeled,
+        unlabeled,
+      ]
+  # main's file, whatever the pull request holds, and a fork's pull request
+  # reaches the board: never pull_request.
+  pull_request_target:
+    types:
+      [opened, reopened, closed, edited, converted_to_draft, ready_for_review]
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    name: dispatch
+    if: github.repository == 'phmilk/reforged-ts-template'
+    # The called job's token needs no more: the dispatch uses the App's token,
+    # minted in this repository's environment `board`.
+    permissions:
+      contents: read
+    uses: phmilk/reforged-ts/.github/workflows/board-dispatch.yml@master
