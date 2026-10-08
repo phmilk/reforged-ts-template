@@ -42,3 +42,10 @@ jobs:
       pull-requests: write
       actions: write
     uses: phmilk/reforged-ts/.github/workflows/claim-check.yml@master
+    # The App's key, by name and alone, for the board-dispatch job, which
+    # passes it on to board-dispatch.yml: each level of a nested call passes
+    # it again, and the innermost job receives the value of this
+    # repository's environment `board`. Never `secrets: inherit` (the
+    # library's ADR 0017).
+    secrets:
+      APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
