@@ -1,25 +1,38 @@
 # The sync: when reforged-ts releases, its release workflow dispatches
 # `reforged-ts-release` here with the payload scripts/sync.ts consumes (the
-# released versions, the tag and three URLs). The job applies the release,
-# refreshes the lockfile, builds in release mode, runs `pnpm check` and opens
-# a pull request a maintainer merges. Any red step stops before the pull
-# request opens; there is no auto-merge.
+# released versions, the tag and three URLs). The job sync applies the
+# release, refreshes the lockfile, builds in release mode and runs
+# `pnpm check`; the job pull-request then opens a pull request a maintainer
+# merges. Any red step stops before the pull request opens; there is no
+# auto-merge.
 #
 # Template maintenance: a generated Map project deletes this file (see
-# AGENTS.md). The job runs only in phmilk/reforged-ts-template, so a copy
+# AGENTS.md). The jobs run only in phmilk/reforged-ts-template, so a copy
 # left in a generated project stays inert.
 #
-# Credentials (phmilk/reforged-ts-template, #26), named as in the library:
-# the GitHub App's client ID in the repository variable `APP_CLIENT_ID` and a
-# private key in the secret `APP_PRIVATE_KEY`, or, without the App, a
-# fine-grained personal access token in the secret `SYNC_TOKEN` scoped to this
-# repository with contents and pull requests read/write. The App's token wins
-# when both are set. The default token is never used for the pull request: CI
-# would not run on it. Only the steps that need a secret see it: the install,
-# build and check steps run third-party code.
+# Credentials (phmilk/reforged-ts-template, #26, #79), named as in the
+# library: the GitHub App's client ID in the repository variable
+# `APP_CLIENT_ID` and its private key in the secret `APP_PRIVATE_KEY` of
+# the environment `board`, or, without the App, a fine-grained personal
+# access token in the repository secret `SYNC_TOKEN` scoped to this
+# repository with contents and pull requests read/write. The App's token
+# wins when both are set. The default token is never used for the pull
+# request: CI would not run on it. The environment is the one the board
+# caller's dispatch already mints the App's token in (board.yml, the
+# library's ADR 0017): its deployment branch policy admits `main` alone, so
+# no run from another branch reads the key, and a second environment would
+# hold a second copy of the same key under the same policy. Only the
+# pull-request job declares it, and that job runs no third-party code: the
+# install, build and check run in the job sync, which sees no secret and
+# hands the synced files over as an artifact.
 #
-# Dry run with a fake payload, from a branch:
+# Dry run with a fake payload:
 #   gh workflow run sync.yml --ref <branch> -f payload="$(cat payload.json)"
+# From a branch other than main, the job sync runs in full (sync, lockfile,
+# build, check) and the run stops before the pull request, saying so in a
+# notice: the job pull-request runs on main alone, since the environment
+# refuses any other ref. With --ref main, a dry run opens the pull request
+# as a release would.
 name: sync
 
 on:
@@ -46,25 +59,10 @@ jobs:
     if: github.repository == 'phmilk/reforged-ts-template'
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      branch: ${{ steps.sync.outputs.branch }}
+      title: ${{ steps.sync.outputs.title }}
     steps:
-      - name: Check a pull-request token is configured
-        id: token
-        env:
-          APP_CLIENT_ID: ${{ vars.APP_CLIENT_ID }}
-          APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
-          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
-        run: |
-          if [ -n "$APP_CLIENT_ID" ] && [ -n "$APP_PRIVATE_KEY" ]; then
-            echo "The pull request opens with the GitHub App's token."
-            echo "app=true" >> "$GITHUB_OUTPUT"
-          elif [ -n "$SYNC_TOKEN" ]; then
-            echo "The pull request opens with the SYNC_TOKEN secret."
-            echo "app=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "::error::Set the repository variable APP_CLIENT_ID and the secret APP_PRIVATE_KEY (GitHub App), or the secret SYNC_TOKEN (fine-grained token)."
-            exit 1
-          fi
-
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
@@ -109,6 +107,67 @@ jobs:
       - name: Check
         run: pnpm check
 
+      # Only the synced files, the lockfile and the summary: build outputs
+      # stay out.
+      - name: Collect the synced files
+        run: |
+          mkdir "$RUNNER_TEMP/synced"
+          cp package.json pnpm-lock.yaml CONTEXT.md AGENTS.md README.md "$RUNNER_TEMP/summary.md" "$RUNNER_TEMP/synced/"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: synced
+          path: ${{ runner.temp }}/synced/
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Stop a dry run from a branch before the pull request
+        if: github.ref != 'refs/heads/main'
+        env:
+          REF: ${{ github.ref }}
+        run: echo "::notice title=No pull request::A dry run from $REF stops here, green. The pull request opens on main alone, whose environment board holds the App's key; see the header of sync.yml."
+
+  pull-request:
+    needs: sync
+    if: github.repository == 'phmilk/reforged-ts-template' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The key's home: its deployment branch policy admits main alone.
+    environment: board
+    steps:
+      - name: Check a pull-request token is configured
+        id: token
+        env:
+          APP_CLIENT_ID: ${{ vars.APP_CLIENT_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+        run: |
+          if [ -n "$APP_CLIENT_ID" ] && [ -n "$APP_PRIVATE_KEY" ]; then
+            echo "The pull request opens with the GitHub App's token."
+            echo "app=true" >> "$GITHUB_OUTPUT"
+          elif [ -n "$SYNC_TOKEN" ]; then
+            echo "The pull request opens with the SYNC_TOKEN secret."
+            echo "app=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Set the repository variable APP_CLIENT_ID and the secret APP_PRIVATE_KEY of the environment board (GitHub App), or the repository secret SYNC_TOKEN (fine-grained token)."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: synced
+          path: ${{ runner.temp }}/synced
+
+      - name: Apply the synced files
+        run: |
+          cd "$RUNNER_TEMP/synced"
+          mv summary.md "$RUNNER_TEMP/summary.md"
+          cp package.json pnpm-lock.yaml CONTEXT.md AGENTS.md README.md "$GITHUB_WORKSPACE/"
+
       - name: Create the GitHub App token
         id: app
         if: steps.token.outputs.app == 'true'
@@ -121,14 +180,14 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
 
-      # Only the synced files and the lockfile: build outputs stay out.
+      # Only the synced files and the lockfile.
       - name: Open the pull request
         uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ steps.app.outputs.token || secrets.SYNC_TOKEN }}
-          branch: ${{ steps.sync.outputs.branch }}
-          title: ${{ steps.sync.outputs.title }}
-          commit-message: ${{ steps.sync.outputs.title }}
+          branch: ${{ needs.sync.outputs.branch }}
+          title: ${{ needs.sync.outputs.title }}
+          commit-message: ${{ needs.sync.outputs.title }}
           body-path: ${{ runner.temp }}/summary.md
           add-paths: |
             package.json
