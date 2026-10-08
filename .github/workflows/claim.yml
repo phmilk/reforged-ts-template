@@ -29,10 +29,13 @@ jobs:
     if: github.repository == 'phmilk/reforged-ts-template'
     # The called jobs can only lower these: the checkout, the assignment and
     # the comment on the issue, the comment on the pull request (the check),
-    # and the dispatch of board.yml after an assignment (the dispatch job,
-    # the one that holds actions: write). That job runs in the library only,
-    # but a called workflow may not declare a permission its caller does not
-    # grant: without actions: write here, the run fails at startup.
+    # and the board after an assignment. Here that is the board-dispatch
+    # job, which calls the library's board-dispatch.yml (contents: read; the
+    # dispatch uses the App's token, minted in this repository's environment
+    # `board`). The dispatch job, which holds actions: write for board.yml,
+    # runs in the library only, but a called workflow may not declare a
+    # permission its caller does not grant: without actions: write here, the
+    # run fails at startup.
     permissions:
       contents: read
       issues: write

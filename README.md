@@ -116,6 +116,7 @@ This repository keeps the Template itself up to date with the library. A Map pro
 
 - `.github/workflows/sync.yml`, the workflow that applies a library release to the Template and opens a pull request. It runs only in `phmilk/reforged-ts-template`, so it is inert in your repository.
 - `.github/workflows/claim.yml`, the workflow that runs the library's claim check on every pull request and every assignment (`docs/agents/issue-tracker.md`, "Claim"). It runs only in `phmilk/reforged-ts-template`, so it is inert in your repository.
+- `.github/workflows/board.yml`, the workflow that tells the library's Claim board to reconcile on every issue and pull-request event, and its test `tests/pipeline/board.test.ts`. It runs only in `phmilk/reforged-ts-template`, so it is inert in your repository.
 - The sync script the workflow runs, `scripts/sync.ts`, and its test `tests/pipeline/sync.test.ts`.
 - The tests that hold the Template's files to the sync's shape: `tests/pipeline/seeds.test.ts` (`AGENTS.md` and `CONTEXT.md`), `tests/pipeline/readme.test.ts` (this README) and their helper `tests/pipeline/sync-markers.ts`.
 - The Template's maintenance docs: `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `docs/agents/release-gate.md` and the Template maintenance section of `AGENTS.md`, which lists all of the above.

@@ -490,3 +490,47 @@ describe("the sync command", () => {
     expect(fs.readFileSync(outputs, "utf8")).toBe("");
   });
 });
+
+/** The jobs of a workflow's text, by id: each job's lines up to the next. */
+function jobs(workflow: string): Map<string, string> {
+  const block = workflow.slice(workflow.indexOf("\njobs:\n"));
+  const starts = [...block.matchAll(/^ {2}([a-z-]+):\n/gm)];
+  return new Map(
+    starts.map(({ 1: id, index }, i) => [
+      id,
+      block.slice(index, starts[i + 1]?.index),
+    ]),
+  );
+}
+
+describe("the sync workflow", () => {
+  const workflow = readRepoFile(".github/workflows/sync.yml");
+
+  it("reads the App's key in no job outside the environment board, in any workflow", () => {
+    const dir = path.join(ROOT, ".github/workflows");
+    for (const file of fs.readdirSync(dir)) {
+      for (const [id, job] of jobs(readRepoFile(`.github/workflows/${file}`)))
+        if (job.includes("APP_PRIVATE_KEY"))
+          expect(job, `${file}: ${id}`).toMatch(/^ {4}environment: board$/m);
+    }
+  });
+
+  it("runs the install, build and check in a job without secrets", () => {
+    const sync = jobs(workflow).get("sync") ?? "";
+    expect(sync).toContain("pnpm check");
+    expect(sync).not.toMatch(/secrets\./);
+    expect(sync).not.toMatch(/^ {4}environment:/m);
+  });
+
+  it("opens the pull request on main alone, in the environment board, after the sync", () => {
+    const pullRequest = jobs(workflow).get("pull-request") ?? "";
+    expect(pullRequest).toMatch(/^ {4}needs: sync$/m);
+    expect(pullRequest).toMatch(
+      /^ {4}if: github\.repository == 'phmilk\/reforged-ts-template' && github\.ref == 'refs\/heads\/main'$/m,
+    );
+    expect(pullRequest).toMatch(/^ {4}environment: board$/m);
+    expect(pullRequest).toContain("peter-evans/create-pull-request");
+    // No install: the job holding the key runs no third-party code.
+    expect(pullRequest).not.toMatch(/pnpm\/action-setup|\bpnpm [a-z]/);
+  });
+});
