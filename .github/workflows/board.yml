@@ -28,10 +28,14 @@ on:
         unlabeled,
       ]
   # main's file, whatever the pull request holds, and a fork's pull request
-  # reaches the board: never pull_request.
+  # reaches the board: never pull_request. Pull requests into main alone: a
+  # pull_request_target run is on the base branch's ref, which the
+  # environment board refuses on any other, and a closing keyword closes
+  # nothing outside the default branch.
   pull_request_target:
     types:
       [opened, reopened, closed, edited, converted_to_draft, ready_for_review]
+    branches: [main]
 
 permissions:
   contents: read

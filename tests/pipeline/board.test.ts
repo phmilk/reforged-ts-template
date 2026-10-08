@@ -14,13 +14,21 @@ function section(text: string, heading: string): string {
   return text.slice(start, next === -1 ? undefined : next);
 }
 
-/** The flow list of `types:` under the trigger `event` of the `on:` block. */
-function eventTypes(workflow: string, event: string): string[] {
-  const match = new RegExp(
-    `^  ${event}:\\n(?:    #.*\\n)*    types:\\s*\\[([^\\]]*)\\]`,
-    "m",
-  ).exec(workflow);
-  expect(match, `${event} with a types list`).not.toBeNull();
+/** The lines of the trigger `event` of the `on:` block, under its key. */
+function trigger(workflow: string, event: string): string {
+  const match = new RegExp(`^  ${event}:\\n((?:(?:    .*)?\\n)*)`, "m").exec(
+    workflow,
+  );
+  expect(match, `the trigger ${event}`).not.toBeNull();
+  return match?.[1] ?? "";
+}
+
+/** The flow list of `key:` under the trigger `event` of the `on:` block. */
+function eventList(workflow: string, event: string, key: string): string[] {
+  const match = new RegExp(`^    ${key}:\\s*\\[([^\\]]*)\\]`, "m").exec(
+    trigger(workflow, event),
+  );
+  expect(match, `${event} with a ${key} list`).not.toBeNull();
   return (match?.[1] ?? "")
     .split(",")
     .map((type) => type.trim())
@@ -39,11 +47,11 @@ function triggers(workflow: string): string[] {
 describe("the board caller", () => {
   const workflow = readRepoFile(".github/workflows/board.yml");
 
-  it("runs on exactly the library board workflow's issue and pull_request_target types", () => {
+  it("runs on exactly the library board workflow's issue and pull_request_target types, pull requests into main alone", () => {
     // The other copy of these lists: the library's release/test/board.test.ts,
     // "board.yml". Neither repository reads the other's files in a test.
     expect(triggers(workflow)).toEqual(["issues", "pull_request_target"]);
-    expect(eventTypes(workflow, "issues")).toEqual([
+    expect(eventList(workflow, "issues", "types")).toEqual([
       "opened",
       "reopened",
       "closed",
@@ -56,7 +64,7 @@ describe("the board caller", () => {
     ]);
     // main's file, whatever the pull request holds, and a fork's pull request
     // reaches the board: never pull_request.
-    expect(eventTypes(workflow, "pull_request_target")).toEqual([
+    expect(eventList(workflow, "pull_request_target", "types")).toEqual([
       "opened",
       "reopened",
       "closed",
@@ -64,6 +72,14 @@ describe("the board caller", () => {
       "converted_to_draft",
       "ready_for_review",
     ]);
+    // Into main alone, as the library's into master: a pull_request_target
+    // run is on the base branch's ref, which the environment board refuses on
+    // any other, and a closing keyword closes nothing outside the default
+    // branch.
+    expect(eventList(workflow, "pull_request_target", "branches")).toEqual([
+      "main",
+    ]);
+    expect(trigger(workflow, "issues")).not.toMatch(/^ {4}branches:/m);
   });
 
   it("calls the library's board-dispatch at master in one job, in this repository alone, with no concurrency group", () => {
