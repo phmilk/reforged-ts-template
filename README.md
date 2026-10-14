@@ -40,14 +40,15 @@ On Linux the game runs through Wine: set `winePath` in `reforged.config.ts`.
 
 ## Generated files
 
-Every install, build and watch rewrites `src/generated/`, ignored by git and read-only in the editor:
+Every install, build and watch (`pnpm dev`) rewrites `src/generated/`, ignored by git and read-only in the editor:
 
 - `env.ts`: the build mode, `devMode`, from `--mode` or `mode` in `reforged.config.ts`.
 - `editor-globals.d.ts` and `editor-globals.lua`: the Editor globals, the `gg_` and `udg_` globals the World Editor declares for the map, as TypeScript declarations for the map's code and a Lua stub for the test harness. [`reforged-map`](https://github.com/phmilk/reforged-ts/tree/master/packages/reforged-map) declares them from the map folder's `war3map.lua` and `war3map.wtg`. A GUI variable of an object type is typed by its Object kind, read from its type in the Variable Editor: a Unit-Type `udg_SpawnType` is a `Rawcode<"unit">`, so `CreateUnit(owner, udg_SpawnType, …)` compiles with no cast. To add, rename or retype one, change it in the World Editor and save the map.
+- `map-objects.d.ts` and the constants modules `custom-units.ts`, `custom-items.ts`, `custom-abilities.ts`, `custom-buffs.ts`, `custom-destructables.ts`, `custom-doodads.ts` and `custom-upgrades.ts`: the map's objects, which `reforged-map` reads from the map folder's Object data (`war3map.w3u` to `war3map.w3q` and their `war3mapSkin` counterparts, the names through `war3map.wts`). `map-objects.d.ts` declares a `FourCC` overload per Custom object and per Built-in object the map modifies, so `FourCC("h000")` is a `Rawcode<"unit">` with the object's name on hover. Each constants module names the Custom objects of its Object kind by name and Rawcode: `CustomUnits.Captain_h000`, imported from `./generated/custom-units`; a kind the map has none of gets an empty one. A Custom object that keeps its base's name is named after the base, read from `reforged-builtins`. To add or rename one, change it in the Object Editor and save the map: the constant follows the name, and each use of the old name stops compiling.
 
 ## Compatibility matrix
 
-Which versions of the five library packages, which game Patch and which Toolchain go together. The block is generated at each library release and pasted here by the sync workflow: do not edit it by hand.
+Which versions of the six library packages, which game Patch and which Toolchain go together. The block is generated at each library release and pasted here by the sync workflow: do not edit it by hand.
 
 <!-- reforged-ts:matrix:start -->
 
@@ -92,7 +93,17 @@ The type-aware rules find each file's program through the nearest `tsconfig.json
 
 ## The library packages
 
-The Template depends on five packages of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts): `reforged-ts` and `reforged-types` (the map's code), `reforged-test` (the Lua test harness), `eslint-plugin-reforged` (the lint rules) and `reforged-map` (the map folder reader the build calls to write `src/generated`). `package.json` declares the five the same way, as caret ranges on the latest released versions, which the Template's sync sets on each library release. They are on the `next` channel, each at a caret range on its latest alpha (`^1.0.0-alpha.N`).
+The Template depends on six packages of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts): `reforged-ts` and `reforged-types` (the map's code), `reforged-test` (the Lua test harness), `eslint-plugin-reforged` (the lint rules), `reforged-map` (the map folder reader the build calls to write `src/generated`) and [`reforged-builtins`](https://github.com/phmilk/reforged-ts/tree/master/packages/reforged-builtins) (the Built-in objects of the Patch: their constants, `Units.Footman_hfoo` from `reforged-builtins/units`, and the index `reforged-map` reads for base names). `package.json` declares the six the same way, as caret ranges on the latest released versions, which the Template's sync sets on each library release. They are on the `next` channel, each at a caret range on its latest alpha (`^1.0.0-alpha.N`).
+
+### The Built-in objects' overloads
+
+`reforged-builtins` also declares a `FourCC` overload per Built-in object, which types `FourCC("hfoo")` as a `Rawcode<"unit">` and completes the Built-in Rawcodes inside `FourCC("")`. The Template leaves them off: they cost 6.6 to 7.0 ms of type-check time per literal `FourCC` call (about 7 seconds per thousand calls, in the editor and in `pnpm typecheck`), and nothing at run time. A literal they do not cover stays an `UnknownRawcode`, which every Rawcode parameter accepts, and the constants import either way at no check-time cost. To turn them on, add the entry of the Game version to `types` in `tsconfig.base.json`:
+
+```jsonc
+"types": ["@typescript-to-lua/language-extensions", "reforged-types/3.0.0", "reforged-builtins/3.0.0"]
+```
+
+The map's own overloads in `src/generated/map-objects.d.ts` still win for a Built-in object the map modifies, so its hover gives the map's name.
 
 During the build phase the library publishes its packages as `1.0.0-alpha.N` under npm's `next` dist-tag. The committed lockfile pins the versions a fresh `pnpm install` gets from the registry. To try a library change before it is published, use a local checkout of the library (below).
 
@@ -101,14 +112,14 @@ During the build phase the library publishes its packages as `1.0.0-alpha.N` und
 To try a change to reforged-ts in the game before any package is published, point the project at a local checkout of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts):
 
 ```sh
-pnpm use:local ../reforged-ts   # build, pack and install the five library packages from the checkout
+pnpm use:local ../reforged-ts   # build, pack and install the six library packages from the checkout
 pnpm build                      # or pnpm test, pnpm test:map
 pnpm use:local --reset          # back to the registry versions
 ```
 
-`pnpm use:local <path>` runs the checkout's build for the five packages (`eslint-plugin-reforged` included, so `pnpm lint` runs the checkout's rules), packs them into `.local-packages/` (ignored by git) and installs them in place of the registry versions. It works on a fresh clone with no `node_modules`. Rerun it after changing the library to pick up the change.
+`pnpm use:local <path>` runs the checkout's build for the six packages (`eslint-plugin-reforged` included, so `pnpm lint` runs the checkout's rules), packs them into `.local-packages/` (ignored by git) and installs them in place of the registry versions. It works on a fresh clone with no `node_modules`. Rerun it after changing the library to pick up the change.
 
-Nothing committed changes, in either direction: the committed pnpm hook `.pnpmfile.cjs` swaps the five packages for their tarballs only while `.local-packages/packages.json` exists, and neither command writes the lockfile: `use:local` installs without it (`--no-lockfile`) and `--reset` reinstalls from the committed one (`--frozen-lockfile`). `git status` stays clean after `use:local` and after `--reset`. While the local packages are in use, reinstall with `pnpm use:local` rather than a plain `pnpm install`, which sees no change to the manifests and keeps the tarballs it installed last.
+Nothing committed changes, in either direction: the committed pnpm hook `.pnpmfile.cjs` swaps the six packages for their tarballs only while `.local-packages/packages.json` exists, and neither command writes the lockfile: `use:local` installs without it (`--no-lockfile`) and `--reset` reinstalls from the committed one (`--frozen-lockfile`). `git status` stays clean after `use:local` and after `--reset`. While the local packages are in use, reinstall with `pnpm use:local` rather than a plain `pnpm install`, which sees no change to the manifests and keeps the tarballs it installed last.
 
 ## Deletable in a generated project
 

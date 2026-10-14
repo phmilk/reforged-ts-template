@@ -211,6 +211,9 @@ importers:
       prettier:
         specifier: ^3.9.9
         version: 3.9.9
+      reforged-builtins:
+        specifier: ^1.0.0-alpha.0
+        version: 1.0.0-alpha.0(reforged-types@1.0.0-alpha.5)
       reforged-map:
         specifier: ^1.0.0-alpha.0
         version: 1.0.0-alpha.0(reforged-types@1.0.0-alpha.5)
@@ -1151,6 +1154,12 @@ packages:
   readline-sync@1.4.10:
     resolution: {integrity: sha512-gNva8/6UAe8QYepIQH/jQ2qn91Qj0B9sYjMBBs3QOB8F2CXcKgLxQaJRP76sWVRQt+QU+8fAkCbCvjjMFu7Ycw==}
     engines: {node: '>= 0.8.0'}
+
+  reforged-builtins@1.0.0-alpha.0:
+    resolution: {integrity: sha512-2anIxYQErr4ESs70A5tD7Qx3SFlGuuFmM9beAgfi363+vX+jGEFH1ANfwAuP5jpiJ2XWsSpaNclq3wzBbRJYqw==}
+    engines: {node: '>=22.13'}
+    peerDependencies:
+      reforged-types: ^1.0.0-alpha.5
 
   reforged-map@1.0.0-alpha.0:
     resolution: {integrity: sha512-MPa6p0IhjhQt5dmdWZo8hGfvcvqq4gVws9rJZ7VmJQ+bqEXsukBY5p1Tfo69Leaw/ZVWHEfJDLsQNNGW3kB4mw==}
@@ -2188,6 +2197,10 @@ snapshots:
       hookified: 2.2.0
 
   readline-sync@1.4.10: {}
+
+  reforged-builtins@1.0.0-alpha.0(reforged-types@1.0.0-alpha.5):
+    dependencies:
+      reforged-types: 1.0.0-alpha.5
 
   reforged-map@1.0.0-alpha.0(reforged-types@1.0.0-alpha.5):
     dependencies:
