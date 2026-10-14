@@ -91,8 +91,11 @@ describe("reforged-builtins' overloads, turned on", () => {
     expect(
       program
         .getSourceFiles()
-        .find((file) => file.fileName.endsWith("/reforged-builtins/3.0.0.d.ts"))
-        ?.text,
+        .find(
+          (file) =>
+            file.fileName.split("/").slice(-2).join("/") ===
+            "reforged-builtins/3.0.0.d.ts",
+        )?.text,
     ).toContain('declare function FourCC(id: "hfoo"): Rawcode<"unit">;');
 
     const source = program.getSourceFile(
