@@ -212,11 +212,11 @@ importers:
         specifier: ^3.9.9
         version: 3.9.9
       reforged-builtins:
-        specifier: ^1.0.0-alpha.0
-        version: 1.0.0-alpha.0(reforged-types@1.0.0-alpha.5)
+        specifier: ^1.0.0-alpha.1
+        version: 1.0.0-alpha.1(reforged-types@1.0.0-alpha.5)
       reforged-map:
-        specifier: ^1.0.0-alpha.0
-        version: 1.0.0-alpha.0(reforged-types@1.0.0-alpha.5)
+        specifier: ^1.0.0-alpha.1
+        version: 1.0.0-alpha.1(reforged-builtins@1.0.0-alpha.1(reforged-types@1.0.0-alpha.5))(reforged-types@1.0.0-alpha.5)
       reforged-test:
         specifier: ^1.0.0-alpha.4
         version: 1.0.0-alpha.4(typescript-to-lua@1.37.1(typescript@6.0.2))(typescript@6.0.2)(vitest@5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0)))
@@ -1155,17 +1155,21 @@ packages:
     resolution: {integrity: sha512-gNva8/6UAe8QYepIQH/jQ2qn91Qj0B9sYjMBBs3QOB8F2CXcKgLxQaJRP76sWVRQt+QU+8fAkCbCvjjMFu7Ycw==}
     engines: {node: '>= 0.8.0'}
 
-  reforged-builtins@1.0.0-alpha.0:
-    resolution: {integrity: sha512-2anIxYQErr4ESs70A5tD7Qx3SFlGuuFmM9beAgfi363+vX+jGEFH1ANfwAuP5jpiJ2XWsSpaNclq3wzBbRJYqw==}
+  reforged-builtins@1.0.0-alpha.1:
+    resolution: {integrity: sha512-8LVNWgSRtSUOdaIDQ8o42mdmaY01Zj6D67Jh2Kqq2w3atMQy34141bZ2ah/s5WOe9IYueT2HCNpzKji7X54l2A==}
     engines: {node: '>=22.13'}
     peerDependencies:
       reforged-types: ^1.0.0-alpha.5
 
-  reforged-map@1.0.0-alpha.0:
-    resolution: {integrity: sha512-MPa6p0IhjhQt5dmdWZo8hGfvcvqq4gVws9rJZ7VmJQ+bqEXsukBY5p1Tfo69Leaw/ZVWHEfJDLsQNNGW3kB4mw==}
+  reforged-map@1.0.0-alpha.1:
+    resolution: {integrity: sha512-ih3W1z+LnA6xi/4bYGcZKX7D+cWWJ/CdTNhPqpOEI7jBLw1K5d/aiaHyEGfdR+5lSDvoFul3keaerucCvCM6Eg==}
     engines: {node: '>=22.13'}
     peerDependencies:
+      reforged-builtins: ^1.0.0-alpha.1
       reforged-types: ^1.0.0-alpha.5
+    peerDependenciesMeta:
+      reforged-builtins:
+        optional: true
 
   reforged-test@1.0.0-alpha.4:
     resolution: {integrity: sha512-1S01sfD4qqDbdEgbMwGH1MmCknjTF65MhR6Gwql2/wzBShQ4MD5KBh7tQ1Pt14byxPC56BuzOTwF3myqYVMwrQ==}
@@ -2198,13 +2202,15 @@ snapshots:
 
   readline-sync@1.4.10: {}
 
-  reforged-builtins@1.0.0-alpha.0(reforged-types@1.0.0-alpha.5):
+  reforged-builtins@1.0.0-alpha.1(reforged-types@1.0.0-alpha.5):
     dependencies:
       reforged-types: 1.0.0-alpha.5
 
-  reforged-map@1.0.0-alpha.0(reforged-types@1.0.0-alpha.5):
+  reforged-map@1.0.0-alpha.1(reforged-builtins@1.0.0-alpha.1(reforged-types@1.0.0-alpha.5))(reforged-types@1.0.0-alpha.5):
     dependencies:
       reforged-types: 1.0.0-alpha.5
+    optionalDependencies:
+      reforged-builtins: 1.0.0-alpha.1(reforged-types@1.0.0-alpha.5)
 
   reforged-test@1.0.0-alpha.4(typescript-to-lua@1.37.1(typescript@6.0.2))(typescript@6.0.2)(vitest@5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))):
     dependencies:
