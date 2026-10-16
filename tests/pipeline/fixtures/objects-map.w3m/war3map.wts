@@ -1,0 +1,96 @@
+﻿STRING 1
+{
+Player 1
+}
+
+STRING 2
+{
+Force 1
+}
+
+STRING 3
+{
+reforged-ts-templante
+}
+
+STRING 4
+{
+Any
+}
+
+STRING 5
+{
+Nondescript
+}
+
+STRING 6
+{
+Unknown
+}
+
+STRING 7
+// Units: hfoo (Militia), Name (Name)
+{
+Militia
+}
+
+STRING 8
+// Units: h000 (Captain), Name (Name)
+{
+Captain
+}
+
+STRING 9
+// Units: h001 (Chevalier Élu), Name (Name)
+{
+Chevalier Élu
+}
+
+STRING 10
+// Items: I000 (Captain's Claws), Name (Name)
+{
+Captain's Claws
+}
+
+STRING 11
+// Destructibles: B000 (Gate), Name (Name)
+{
+Gate
+}
+
+STRING 12
+// Doodads: AObr (Skull Brazier), Name (Name)
+{
+Skull Brazier
+}
+
+STRING 13
+// Doodads: D000 (Statue of the Captain), Name (Name)
+{
+Statue of the Captain
+}
+
+STRING 14
+// Abilities: A000 (Arctic Blizzard), Name (Name)
+{
+Arctic Blizzard
+}
+
+STRING 15
+// Buffs/Effects: Binf (), Bufftip (Tooltip)
+{
+Burning Fire
+}
+
+STRING 16
+// Buffs/Effects: B000 (), Bufftip (Tooltip)
+{
+Holy Fire
+}
+
+STRING 17
+// Upgrades: R000 (Sharper Swords), Name (Name)
+{
+Sharper Swords
+}
+

@@ -6,7 +6,14 @@
 // the rest of it (see AGENTS.md).
 import fs from "node:fs";
 import path from "node:path";
+import {
+  CONSTANTS_FILES,
+  DECLARATIONS_FILE,
+  LUA_STUB_FILE,
+  OBJECTS_DECLARATIONS_FILE,
+} from "reforged-map";
 import { describe, expect, it } from "vitest";
+import { ENV_FILE } from "../../scripts/generate.ts";
 import { endMarker, LIBRARY_TERMS } from "../../scripts/sync.ts";
 import { ROOT } from "./helpers.ts";
 import { markedBlock, readRepoFile } from "./sync-markers.ts";
@@ -59,6 +66,27 @@ describe("AGENTS.md", () => {
 
   it("has the sections in order, Your project last", () => {
     expect(headings(agents)).toEqual(AGENTS_SECTIONS);
+  });
+
+  it("lists every generated file in the Layout bullet of src/generated/", () => {
+    const bullet = section(agents, "Layout")
+      .split("\n")
+      .find((line) => line.startsWith("- `src/generated/`"));
+    for (const name of [
+      ENV_FILE,
+      DECLARATIONS_FILE,
+      LUA_STUB_FILE,
+      OBJECTS_DECLARATIONS_FILE,
+      ...Object.values(CONSTANTS_FILES),
+    ])
+      expect(bullet, name).toContain(`\`${name}\``);
+  });
+
+  it("names Custom objects by their generated constants and Built-in objects by reforged-builtins'", () => {
+    const rawcodes = section(agents, "Rawcodes");
+    expect(rawcodes).toContain("`CustomUnits.Captain_h000`");
+    expect(rawcodes).toContain("`Units.Footman_hfoo`");
+    expect(rawcodes).toContain("never cast");
   });
 
   it("fits in the line cap", () => {

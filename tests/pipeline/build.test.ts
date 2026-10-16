@@ -311,6 +311,14 @@ describe("node scripts/generate.ts (the prepare script)", () => {
       "env.ts",
       "editor-globals.d.ts",
       "editor-globals.lua",
+      "map-objects.d.ts",
+      "custom-units.ts",
+      "custom-items.ts",
+      "custom-abilities.ts",
+      "custom-buffs.ts",
+      "custom-destructables.ts",
+      "custom-doodads.ts",
+      "custom-upgrades.ts",
     ].map((name) => path.join("src", "generated", name));
     expect(result.stdout).toContain(
       `Generated ${generated.join(", ")} (mode dev)`,

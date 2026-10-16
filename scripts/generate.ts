@@ -2,8 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   generateEditorGlobals,
+  generateObjects,
   MapFolderError,
   type EditorGlobalsOutput,
+  type ObjectsOutput,
 } from "reforged-map";
 import {
   CONFIG_FILE,
@@ -70,10 +72,31 @@ export const generateEditorGlobalsFiles: Generator = (config, warn) => {
   return output.files;
 };
 
+/**
+ * The map's objects, which `reforged-map` reads from the map folder's Object
+ * data: `map-objects.d.ts`, a `FourCC` overload per Custom object and per
+ * Built-in object the map modifies, and per Object kind a constants module
+ * (`custom-units.ts` exports `CustomUnits`). `reforged-builtins` is resolved
+ * from the Map project, for the base names. Its warnings go to `warn`; a
+ * missing map folder is an AuthorError with the package's message.
+ */
+export const generateObjectsFiles: Generator = (config, warn) => {
+  let output: ObjectsOutput;
+  try {
+    output = generateObjects(config.mapFolder, { projectRoot: config.root });
+  } catch (error) {
+    if (error instanceof MapFolderError) throw new AuthorError(error.message);
+    throw error;
+  }
+  for (const warning of output.warnings) warn(warning);
+  return output.files;
+};
+
 /** Every writer, run in order by install (`prepare`), every build and the watch. */
 export const GENERATORS: readonly Generator[] = [
   generateEnv,
   generateEditorGlobalsFiles,
+  generateObjectsFiles,
 ];
 
 /**

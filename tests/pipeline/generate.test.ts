@@ -8,9 +8,15 @@ import {
   envFileContents,
   generate,
   generateEnv,
+  generateObjectsFiles,
   type Generator,
 } from "../../scripts/generate.ts";
-import { FIXTURE_MAP, makeTempDir } from "./helpers.ts";
+import {
+  FIXTURE_MAP,
+  FIXTURE_OBJECTS_MAP,
+  linkNodeModules,
+  makeTempDir,
+} from "./helpers.ts";
 
 const configIn = (root: string, mode: "dev" | "release" = "dev") =>
   resolveConfig({ mapFolder: "maps/m.w3x", mode }, root);
@@ -78,7 +84,7 @@ describe("generate", () => {
 });
 
 describe("GENERATORS", () => {
-  it("writes the env file and both editor-globals files from the map folder", () => {
+  it("writes the env file, both editor-globals files and the map's objects from the map folder", () => {
     const root = makeTempDir();
     const files = generate(
       resolveConfig({ mapFolder: FIXTURE_MAP }, root),
@@ -86,10 +92,55 @@ describe("GENERATORS", () => {
       () => undefined,
     );
     expect(files.map((file) => path.relative(root, file))).toEqual(
-      ["env.ts", "editor-globals.d.ts", "editor-globals.lua"].map((name) =>
-        path.join("src", "generated", name),
-      ),
+      [
+        "env.ts",
+        "editor-globals.d.ts",
+        "editor-globals.lua",
+        "map-objects.d.ts",
+        "custom-units.ts",
+        "custom-items.ts",
+        "custom-abilities.ts",
+        "custom-buffs.ts",
+        "custom-destructables.ts",
+        "custom-doodads.ts",
+        "custom-upgrades.ts",
+      ].map((name) => path.join("src", "generated", name)),
     );
+  });
+
+  it("writes an overload per Custom object and per modified Built-in object, and the Custom constants", () => {
+    const root = makeTempDir();
+    linkNodeModules(root);
+    const warnings: string[] = [];
+    generate(
+      resolveConfig({ mapFolder: FIXTURE_OBJECTS_MAP }, root),
+      GENERATORS,
+      (message) => warnings.push(message),
+    );
+    expect(warnings).toEqual([]);
+    const read = (name: string) =>
+      fs.readFileSync(path.join(root, "src", "generated", name), "utf8");
+    const overloads = read("map-objects.d.ts");
+    expect(overloads).toContain(
+      'declare function FourCC(id: "h000"): Rawcode<"unit">;',
+    );
+    // A modified Built-in object: its overload names the package's constant.
+    expect(overloads).toContain(
+      'declare function FourCC(id: "hfoo"): Rawcode<"unit">;',
+    );
+    // The base names come from reforged-builtins, resolved from the Map project.
+    expect(overloads).toContain(
+      "Captain (`h000`), a Custom unit of this map, derived from Footman (`hfoo`).",
+    );
+    expect(overloads).toContain("Its constant is `Units.Footman_hfoo`");
+    expect(read("custom-units.ts")).toContain(
+      'Captain_h000: 1747988528 as Rawcode<"unit">,',
+    );
+    expect(read("custom-units.ts")).not.toContain("Footman_hfoo");
+    expect(read("custom-abilities.ts")).toContain("ArcticBlizzard_A000");
+    // The Custom buff and the Custom destructable at B000: a constant each.
+    expect(read("custom-buffs.ts")).toContain("HolyFire_B000");
+    expect(read("custom-destructables.ts")).toContain("Gate_B000");
   });
 
   it("passes the editor-globals warnings to warn", () => {
@@ -105,6 +156,36 @@ describe("GENERATORS", () => {
     expect(warnings).toEqual([
       "gg_qst_Main: unknown editor prefix gg_qst_, declared as handle.",
     ]);
+  });
+
+  it("passes the objects' warnings to warn", () => {
+    const root = makeTempDir();
+    const map = path.join(root, "maps", "m.w3x");
+    fs.mkdirSync(map, { recursive: true });
+    fs.writeFileSync(path.join(map, "war3map.w3u"), "garbage");
+    const warnings: string[] = [];
+    generateObjectsFiles(configIn(root), (message) => warnings.push(message));
+    expect(warnings).toEqual([
+      "war3map.w3u not read (unknown format version 1651663207): its objects are left out. Save the map with the World Editor of 3.0.",
+    ]);
+  });
+
+  it("writes the objects' files empty for a map folder without Object data", () => {
+    const root = makeTempDir();
+    fs.mkdirSync(path.join(root, "maps", "m.w3x"), { recursive: true });
+    const files = generateObjectsFiles(configIn(root), () => undefined);
+    expect(
+      files.find((file) => file.name === "custom-units.ts")?.contents,
+    ).toMatch(/export const CustomUnits = \{\s*\} as const;/);
+  });
+
+  it("fails the objects with an author error on a missing map folder", () => {
+    const run = () =>
+      generateObjectsFiles(configIn(makeTempDir()), () => undefined);
+    expect(run).toThrow(AuthorError);
+    expect(run).toThrow(
+      /^Map folder not found: .*m\.w3x\. Save the map as a folder/,
+    );
   });
 
   it("fails with an author error on a map folder without war3map.lua", () => {

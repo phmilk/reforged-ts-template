@@ -25,6 +25,20 @@ export const FIXTURE_MAP = path.join(
 );
 
 /**
+ * A map folder with Object data, as the 3.0 World Editor saved it: the
+ * Template's map with a Custom object and a modified Built-in object of each
+ * Object kind, copied from reforged-map's `editor-objects.w3m` fixture (its
+ * provenance in `objects-map.md`, next to it). Read only, like `FIXTURE_MAP`.
+ */
+export const FIXTURE_OBJECTS_MAP = path.join(
+  ROOT,
+  "tests",
+  "pipeline",
+  "fixtures",
+  "objects-map.w3m",
+);
+
+/**
  * The entry's module in the bundle, whatever the starter says: typescript-to-lua
  * bundles src/main.ts as the module "main".
  */
@@ -35,6 +49,15 @@ export const sha256 = (bytes: Uint8Array): string =>
 
 export function makeTempDir(prefix = "reforged-template-"): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+}
+
+/** Links the Template's node_modules into `root`, so a package resolves from it as from a Map project. */
+export function linkNodeModules(root: string): void {
+  fs.symlinkSync(
+    path.join(ROOT, "node_modules"),
+    path.join(root, "node_modules"),
+    "junction",
+  );
 }
 
 /** sha256 of every file under `folder`, keyed by relative path with forward slashes. */

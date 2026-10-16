@@ -62,6 +62,18 @@ _Avoid_: object type, category, rawcode type
 A global the World Editor declares in a map folder's `war3map.lua`: a `gg_` one for something placed or created in the editor (`gg_unit_H002_0255`, `gg_trg_Melee_Initialization`), or a `udg_` one for a variable of the Variable Editor (`udg_SpawnType`).
 _Avoid_: GUI global, editor variable
 
+**Game data set**:
+The set of Built-in objects a map plays with, which its Game Data Set (Default, Custom, Melee) and its Game Data Version (Reign of Chaos, The Frozen Throne, Forsaken Kingdom) in its options select together; the sets differ in which objects exist and in their stats.
+_Avoid_: data set (alone), game data, balance
+
+**Built-in object**:
+A type of object the game ships in a Patch, the same in every map that selects the same Game data set (`hfoo`); one a map's Object data modifies keeps its Rawcode and is still a Built-in object.
+_Avoid_: native object (a Native is something else), melee object, standard object
+
+**Custom object**:
+A type of object that exists only in one map's Object data (`h000`), new or derived from a Built-in object.
+_Avoid_: map object, custom unit
+
 <!-- reforged-ts:terms:end -->
 
 ## Your map's terms
