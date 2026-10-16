@@ -10,7 +10,11 @@
     "moduleResolution": "bundler",
     "strict": true,
     "skipLibCheck": true,
-    "types": ["@typescript-to-lua/language-extensions", "reforged-types/3.0.0"]
+    "types": ["@typescript-to-lua/language-extensions", "reforged-types/3.0.0"],
+    // For editors only: the hover and go to definition of a Rawcode literal,
+    // read from the one map folder under maps/. tsc, typescript-to-lua and
+    // ESLint ignore it, so it changes no build, lint or test.
+    "plugins": [{ "name": "reforged-map/typescript-plugin" }]
   },
   "tstl": {
     "luaTarget": "5.3",

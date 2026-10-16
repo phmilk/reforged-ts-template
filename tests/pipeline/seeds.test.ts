@@ -89,6 +89,13 @@ describe("AGENTS.md", () => {
     expect(rawcodes).toContain("never cast");
   });
 
+  it("says the TypeScript plugin is for editors only and stays in place", () => {
+    const rawcodes = section(agents, "Rawcodes");
+    expect(rawcodes).toContain("`reforged-map/typescript-plugin`");
+    expect(rawcodes).toContain("changes no build, lint or test");
+    expect(rawcodes).toContain("stays in place");
+  });
+
   it("fits in the line cap", () => {
     expect(agents.trimEnd().split("\n").length).toBeLessThanOrEqual(
       AGENTS_MAX_LINES,

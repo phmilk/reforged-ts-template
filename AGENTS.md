@@ -47,6 +47,7 @@ A task is finished when `pnpm check` is green.
 - Custom objects are named by their `Custom<Kind>s` constants, generated from the map folder: `import { CustomUnits } from "./generated/custom-units";`, then `CustomUnits.Captain_h000`. Built-in objects are named by `reforged-builtins`' constants: `import { Units } from "reforged-builtins/units";`, then `Units.Footman_hfoo`. A Custom object's literal, `FourCC("h000")`, is typed by its kind through the generated overload.
 - A rename in the World Editor renames the constant and breaks each use: follow the rename to the new name, never cast.
 - To find a Custom object's Rawcode by its name, read the generated constants in `src/generated/` (`custom-<kind>s.ts`); a Built-in object's, search `node_modules/reforged-builtins/3.0.0/index.json`.
+- `tsconfig.base.json` enables `reforged-map/typescript-plugin` for editors only (the hover of a Rawcode literal); it changes no build, lint or test, and stays in place. Find an object by the generated constants and `reforged-builtins`, not by the hover.
 - `as Rawcode<"unit">` is only for a number the compiler cannot know (a save code, a sync message), never to silence a kind error.
 - The rules in full: [Rawcodes](https://phmilk.github.io/reforged-ts/docs/guides/rawcodes).
 

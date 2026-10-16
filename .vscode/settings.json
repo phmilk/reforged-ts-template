@@ -21,7 +21,10 @@
   "files.trimTrailingWhitespace": true,
   "[markdown]": { "files.trimTrailingWhitespace": false },
 
-  // Diagnose with the TypeScript the Toolchain pins, not VS Code's own.
+  // Diagnose with the TypeScript the Toolchain pins, not VS Code's own. It is
+  // also the only one that loads tsconfig.base.json's plugin, the hover and go
+  // to definition of a Rawcode literal: tsserver looks for a project's plugins
+  // only beside itself.
   "js/ts.tsdk.path": "./node_modules/typescript/lib",
   "js/ts.tsdk.promptToUseWorkspaceVersion": true,
 
