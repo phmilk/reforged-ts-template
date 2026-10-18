@@ -19,6 +19,7 @@
     "dev": "node scripts/dev.ts",
     "test:map": "node scripts/launch.ts",
     "use:local": "node scripts/use-local.ts",
+    "template:detach": "node scripts/detach.ts",
     "lint": "eslint --max-warnings 0 .",
     "lint:fix": "eslint --fix .",
     "check": "pnpm run lint && pnpm run typecheck && pnpm run test"
