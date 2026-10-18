@@ -1,0 +1,19 @@
+{
+  "paths": [
+    "docs/agents/issue-tracker.md",
+    "docs/agents/triage-labels.md",
+    "docs/agents/release-gate.md",
+    "tests/pipeline/seeds.test.ts",
+    "tests/pipeline/readme.test.ts",
+    "tests/pipeline/sync-markers.ts",
+    "scripts/sync.ts",
+    "tests/pipeline/sync.test.ts",
+    ".github/workflows/sync.yml",
+    ".github/workflows/claim.yml",
+    ".github/workflows/board.yml",
+    "tests/pipeline/board.test.ts",
+    "scripts/detach.ts",
+    "tests/pipeline/detach.test.ts",
+    "template-maintenance.json"
+  ]
+}

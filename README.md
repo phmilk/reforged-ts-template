@@ -17,7 +17,7 @@ On Linux the game runs through Wine: set `winePath` in `reforged.config.ts`.
 
 1. Create your repository from this one with GitHub's **Use this template**.
 2. Clone it and open a terminal in the clone.
-3. Install: `pnpm install`. It also writes the generated files under `src/generated`. Until the library's first publish, install with `pnpm use:local <checkout>` instead (see [the library packages](#the-library-packages)).
+3. Install: `pnpm install`. It also writes the generated files under `src/generated`. Until the library's first publish, install with `pnpm use:local <checkout>` instead (see [the library packages](#the-library-packages)). Then run `pnpm template:detach` once, and commit what it deletes: the files that serve only the Template's own development ([below](#deletable-in-a-generated-project)).
 4. Open the map folder, `maps/reforged-ts-template.w3m`, in the World Editor and save it. Leave Scenario > Map Options > Script Language on Lua: the build appends the map's code to the script the editor writes. To rename the map, save it under `maps` with the new name and set `mapFolder` in `reforged.config.ts`.
 5. Build: `pnpm build`. It prints the packed archive, `dist/reforged-ts-template.w3m`.
 6. Play: `pnpm test:map` builds, then opens the game on the built map folder, windowed. To pick the map from the game's own map list instead, copy the archive into the game's Maps folder.
@@ -125,7 +125,7 @@ Nothing committed changes, in either direction: the committed pnpm hook `.pnpmfi
 
 ## Deletable in a generated project
 
-This repository keeps the Template itself up to date with the library. A Map project generated from it can delete that machinery; nothing is ever synced into a generated project:
+This repository keeps the Template itself up to date with the library. A Map project generated from it deletes that machinery with `pnpm template:detach`, which removes the files `template-maintenance.json` lists, this section and the Template maintenance section of `AGENTS.md`; nothing is ever synced into a generated project:
 
 - `.github/workflows/sync.yml`, the workflow that applies a library release to the Template and opens a pull request. It runs only in `phmilk/reforged-ts-template`, so it is inert in your repository.
 - `.github/workflows/claim.yml`, the workflow that runs the library's claim check on every pull request and every assignment (`docs/agents/issue-tracker.md`, "Claim"). It runs only in `phmilk/reforged-ts-template`, so it is inert in your repository.
@@ -133,6 +133,7 @@ This repository keeps the Template itself up to date with the library. A Map pro
 - The sync script the workflow runs, `scripts/sync.ts`, and its test `tests/pipeline/sync.test.ts`.
 - The tests that hold the Template's files to the sync's shape: `tests/pipeline/seeds.test.ts` (`AGENTS.md` and `CONTEXT.md`), `tests/pipeline/readme.test.ts` (this README) and their helper `tests/pipeline/sync-markers.ts`.
 - The Template's maintenance docs: `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `docs/agents/release-gate.md` and the Template maintenance section of `AGENTS.md`, which lists all of the above.
+- The detach command, `scripts/detach.ts`, its test `tests/pipeline/detach.test.ts` and its manifest `template-maintenance.json`.
 
 ## Links
 
