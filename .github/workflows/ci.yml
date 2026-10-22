@@ -38,7 +38,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       # scripts/build.ts sets the output `archive`: the packed archive's path,
-      # wherever `outputFolder` and `archiveName` in reforged.config.ts put it.
+      # wherever `outputFolder` and `archiveName` in reforged.config.ts put it,
+      # by default `dist/<map>-<version>.w3m` (the version of package.json).
       - name: Build in release mode
         id: build
         run: pnpm build --mode release

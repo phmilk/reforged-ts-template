@@ -35,7 +35,7 @@ The other way in is GitHub's **Use this template**, which shows your repository 
 Either way, the install wrote the generated files under `src/generated`; after the CLI's `--skip-install`, run `pnpm install` first. Then:
 
 1. Open the map folder, `maps/reforged-ts-template.w3m`, in the World Editor and save it. Leave Scenario > Map Options > Script Language on Lua: the build appends the map's code to the script the editor writes. To rename the map, save it under `maps` with the new name and set `mapFolder` in `reforged.config.ts`.
-2. Build: `pnpm build`. It prints the packed archive, `dist/reforged-ts-template.w3m`.
+2. Build: `pnpm build`. It prints the packed archive, `dist/reforged-ts-template-0.0.0-dev.w3m`: the map folder's name, the `version` of `package.json`, and `-dev` for a dev build. `pnpm build --mode release` packs `dist/reforged-ts-template-0.0.0.w3m`, the archive you ship. `pnpm version patch` (or `minor`, `major`) bumps the version and tags the commit.
 3. Play: `pnpm test:map` builds, then opens the game on the built map folder, windowed. To pick the map from the game's own map list instead, copy the archive into the game's Maps folder.
 4. Iterate: `pnpm dev` rebuilds on every change under `src` or the map folder, until Ctrl+C.
 
@@ -43,14 +43,16 @@ Either way, the install wrote the generated files under `src/generated`; after t
 
 ## Commands
 
-| Command                     | What it does                                                                                              |
-| --------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `pnpm build`                | Builds the map in dev mode, the library's runtime checks on, into `dist`.                                 |
-| `pnpm build --mode release` | Builds the map in release mode, the runtime checks off: the build you ship.                               |
-| `pnpm dev`                  | Watches `src` and the map folder and rebuilds on every change.                                            |
-| `pnpm test:map`             | Builds, then launches the game on the built map folder.                                                   |
-| `pnpm test`                 | Runs the tests without the game: the build scripts' in Node, the map's on the Lua 5.3 harness.            |
-| `pnpm check`                | Runs `lint`, `typecheck` and `test` in that order and stops at the first failure: the definition of done. |
+| Command                     | What it does                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `pnpm build`                | Builds the map in dev mode, the library's runtime checks on, into `dist/<map>-<version>-dev.w3m`.            |
+| `pnpm build --mode release` | Builds the map in release mode, the runtime checks off, into `dist/<map>-<version>.w3m`: the build you ship. |
+| `pnpm dev`                  | Watches `src` and the map folder and rebuilds on every change.                                               |
+| `pnpm test:map`             | Builds, then launches the game on the built map folder.                                                      |
+| `pnpm test`                 | Runs the tests without the game: the build scripts' in Node, the map's on the Lua 5.3 harness.               |
+| `pnpm check`                | Runs `lint`, `typecheck` and `test` in that order and stops at the first failure: the definition of done.    |
+
+The archive's name is the map folder's name without its suffix, then the `version` of `package.json` (left out when there is none), then `-dev` for a dev build, then the map folder's suffix; `archiveName` in `reforged.config.ts` replaces it, used as written. `pnpm test:map` launches the staged map folder, which keeps the map folder's name.
 
 `pnpm lint` and `pnpm lint:fix` run ESLint alone ([Lint](#lint)), `pnpm typecheck` the TypeScript compiler alone, and `pnpm use:local <checkout>` installs the library from a local checkout ([below](#developing-against-a-local-checkout-of-the-library)).
 

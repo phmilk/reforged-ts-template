@@ -34,7 +34,7 @@ describe("resolveConfig", () => {
       root,
       mapFolder: path.join(root, "maps", "my-map.w3x"),
       outputFolder: path.join(root, "dist"),
-      archiveName: "my-map.w3x",
+      archiveName: "my-map-dev.w3x",
       mode: "dev",
       sourceFolder: path.join(root, "src"),
       generatedFolder: path.join(root, "src", "generated"),
@@ -49,6 +49,38 @@ describe("resolveConfig", () => {
     );
     expect(config.outputFolder).toBe(path.join(root, "out"));
     expect(config.archiveName).toBe("b.w3x");
+  });
+
+  it("names the archive after the map folder, the version and -dev in dev mode", () => {
+    const name = (mode: "dev" | "release") =>
+      resolveConfig({ mapFolder: "maps/my-map.w3m" }, root, { mode }, "1.2.0")
+        .archiveName;
+    expect(name("dev")).toBe("my-map-1.2.0-dev.w3m");
+    expect(name("release")).toBe("my-map-1.2.0.w3m");
+  });
+
+  it("drops the version from the archive's name when there is none or it is empty", () => {
+    for (const version of [undefined, ""]) {
+      const name = (mode: "dev" | "release") =>
+        resolveConfig({ mapFolder: "maps/my-map.w3m" }, root, { mode }, version)
+          .archiveName;
+      expect(name("dev"), String(version)).toBe("my-map-dev.w3m");
+      expect(name("release"), String(version)).toBe("my-map.w3m");
+    }
+  });
+
+  it("keeps an explicit archive name verbatim in both modes, adding neither version nor suffix", () => {
+    for (const mode of ["dev", "release"] as const) {
+      expect(
+        resolveConfig(
+          { mapFolder: "maps/a.w3m", archiveName: "packed" },
+          root,
+          { mode },
+          "1.2.0",
+        ).archiveName,
+        mode,
+      ).toBe("packed");
+    }
   });
 
   it("refuses an output folder the clean step would destroy the project with", () => {
@@ -86,12 +118,26 @@ describe("loadConfig", () => {
       root: dir,
       mapFolder: path.join(dir, "maps", "m.w3x"),
       outputFolder: path.join(dir, "dist"),
-      archiveName: "m.w3x",
+      archiveName: "m-dev.w3x",
       mode: "dev",
       sourceFolder: path.join(dir, "src"),
       generatedFolder: path.join(dir, "src", "generated"),
       tsconfig: path.join(dir, "tsconfig.json"),
     });
+  });
+
+  it("names the archive with the version of the package.json beside the file", async () => {
+    const file = writeConfig({ mapFolder: "maps/m.w3x" });
+    const manifest = path.join(path.dirname(file), "package.json");
+    fs.writeFileSync(manifest, JSON.stringify({ version: "1.2.0" }));
+    expect((await loadConfig(file)).archiveName).toBe("m-1.2.0-dev.w3x");
+    expect((await loadConfig(file, ["--mode", "release"])).archiveName).toBe(
+      "m-1.2.0.w3x",
+    );
+    fs.writeFileSync(manifest, JSON.stringify({ name: "m", version: "" }));
+    expect((await loadConfig(file)).archiveName).toBe("m-dev.w3x");
+    fs.writeFileSync(manifest, JSON.stringify({ name: "m" }));
+    expect((await loadConfig(file)).archiveName).toBe("m-dev.w3x");
   });
 
   it("keeps the file's mode without a flag", async () => {

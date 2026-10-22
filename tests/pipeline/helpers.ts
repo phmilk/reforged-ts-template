@@ -74,6 +74,24 @@ export function hashTree(folder: string): Record<string, string> {
   return out;
 }
 
+/** The `version` of a `copyProject()` copy's `package.json`, whatever the project's own says. */
+export const COPY_VERSION = "1.2.0";
+
+/** Sets the `version` of `<project>/package.json`, or removes it when `undefined`. */
+export function setPackageVersion(
+  project: string,
+  version: string | undefined,
+): void {
+  const file = path.join(project, "package.json");
+  const manifest = JSON.parse(fs.readFileSync(file, "utf8")) as Record<
+    string,
+    unknown
+  >;
+  if (version === undefined) delete manifest.version;
+  else manifest.version = version;
+  fs.writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`);
+}
+
 /**
  * A throwaway copy of the Template (manifest, tsconfigs, config, vitest,
  * ESLint and Prettier configs, source, scripts, tests) with the real
@@ -81,6 +99,8 @@ export function hashTree(folder: string): Record<string, string> {
  * repository. Its map folder, the `mapFolder` of its `reforged.config.ts`,
  * holds `FIXTURE_MAP`, not the project's map: what the World Editor saves
  * there never changes a command's output, and a test may edit the copy's map.
+ * Its `package.json` says `version` `COPY_VERSION`, so the archive's name does
+ * not follow the project's version.
  */
 export function copyProject(): string {
   const dir = makeTempDir();
@@ -103,6 +123,7 @@ export function copyProject(): string {
   fs.cpSync(FIXTURE_MAP, resolveConfig(config, dir).mapFolder, {
     recursive: true,
   });
+  setPackageVersion(dir, COPY_VERSION);
   fs.symlinkSync(
     path.join(ROOT, "node_modules"),
     path.join(dir, "node_modules"),
