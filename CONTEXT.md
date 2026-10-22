@@ -62,6 +62,10 @@ _Avoid_: object type, category, rawcode type
 A global the World Editor declares in a map folder's `war3map.lua`: a `gg_` one for something placed or created in the editor (`gg_unit_H002_0255`, `gg_trg_Melee_Initialization`), or a `udg_` one for a variable of the Variable Editor (`udg_SpawnType`).
 _Avoid_: GUI global, editor variable
 
+**Object data**:
+A map's definitions of its types of object (units, items, abilities, buffs, destructables, doodads, upgrades), stored in its `war3map.w3u`, `.w3t`, `.w3a`, `.w3h`, `.w3b`, `.w3d` and `.w3q` files, their `war3mapSkin` counterparts (which hold a Custom object's name), and the strings they reference in `war3map.wts`.
+_Avoid_: object editor data, w3o
+
 **Game data set**:
 The set of Built-in objects a map plays with, which its Game Data Set (Default, Custom, Melee) and its Game Data Version (Reign of Chaos, The Frozen Throne, Forsaken Kingdom) in its options select together; the sets differ in which objects exist and in their stats.
 _Avoid_: data set (alone), game data, balance
@@ -73,6 +77,10 @@ _Avoid_: native object (a Native is something else), melee object, standard obje
 **Custom object**:
 A type of object that exists only in one map's Object data (`h000`), new or derived from a Built-in object.
 _Avoid_: map object, custom unit
+
+**Editor form**:
+Object data as the 3.0 World Editor itself saves it (localizable strings as `TRIGSTR` references into a sorted and commented `war3map.wts`, each field in the file the editor keeps it in, every object in both files, new string numbers above every existing one), which a World Editor save leaves byte for byte.
+_Avoid_: canonical form
 
 <!-- reforged-ts:terms:end -->
 

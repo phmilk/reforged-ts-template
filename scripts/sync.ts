@@ -32,9 +32,11 @@ export const LIBRARY_TERMS = [
   "Rawcode",
   "Object kind",
   "Editor global",
+  "Object data",
   "Game data set",
   "Built-in object",
   "Custom object",
+  "Editor form",
 ] as const;
 
 /** The files the sync rewrites, relative to the repository root. */

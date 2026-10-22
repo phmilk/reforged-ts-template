@@ -52,7 +52,7 @@ const entry = (term: string) =>
   `**${term}**:\nThe library's definition of ${term}.\n_Avoid_: other words for ${term}`;
 
 /**
- * A library CONTEXT.md: its own heading and prose, the seventeen map-author
+ * A library CONTEXT.md: its own heading and prose, the nineteen map-author
  * terms in an order unlike the Template's, and library-only terms between.
  */
 const LIBRARY_ORDER = [
@@ -70,9 +70,11 @@ const LIBRARY_ORDER = [
   "Rawcode",
   "Object kind",
   "Editor global",
+  "Object data",
   "Game data set",
   "Built-in object",
   "Custom object",
+  "Editor form",
 ];
 const libraryContext = (terms: readonly string[] = LIBRARY_ORDER) =>
   [
@@ -213,7 +215,7 @@ describe("the sync's entry point", () => {
     );
   });
 
-  it("takes the seventeen terms whatever order the library lists them in", () => {
+  it("takes the nineteen terms whatever order the library lists them in", () => {
     const reversed = [...LIBRARY_ORDER].reverse();
     const block = markedBlock(
       applyRelease(shipped(), payload(), {
