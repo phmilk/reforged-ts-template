@@ -7,16 +7,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { ESLint } from "eslint";
 import * as ts from "typescript";
-import { describe, expect, it } from "vitest";
-import { MAP_FOLDER, ROOT } from "./helpers.ts";
+import { beforeAll, describe, expect, it } from "vitest";
+import { escapeRegExp, MAP_FOLDERS, ROOT } from "./helpers.ts";
 
-/** A file of the map folder, the Template's and elsewhere, as either suffix. */
-const MAP_FILES = [
-  MAP_FOLDER,
-  "other.w3x",
-  "maps/other.w3m",
-  "nested/x/other.w3m",
-].map((folder) => `${folder}/war3map.lua`);
+/** A file of a map folder, the Template's and elsewhere, as either suffix. */
+const MAP_FILES = MAP_FOLDERS.map((folder) => `${folder}/war3map.lua`);
 
 /** A file outside any map folder, which every config keeps to its rules. */
 const SOURCE_FILE = "src/main.ts";
@@ -31,29 +26,40 @@ const read = (file: string): string =>
  */
 function editorconfigMatches(glob: string, file: string): boolean {
   const pattern = glob
-    .replace(/[.+^$()|[\]\\]/g, "\\$&")
-    .replace(/\*\*|\*|\{([^}]*)\}/g, (token, choices?: string) =>
+    .split(/(\*\*|\*|\{[^}]*\})/)
+    .map((token) =>
       token === "**"
         ? ".*"
         : token === "*"
           ? "[^/]*"
-          : `(${(choices ?? "").split(",").join("|")})`,
-    );
+          : token.startsWith("{")
+            ? `(${token.slice(1, -1).split(",").map(escapeRegExp).join("|")})`
+            : escapeRegExp(token),
+    )
+    .join("");
   const anchored = glob.includes("/") ? `^${pattern}$` : `(^|/)${pattern}$`;
   return new RegExp(anchored).test(file);
 }
 
-/** The globs of `.editorconfig`'s sections that unset `charset`. */
-function unsetSections(): string[] {
-  const globs: string[] = [];
-  let current: string | undefined;
+/**
+ * The `charset` `.editorconfig` gives `file`: that of the last section that
+ * matches it and sets one, since a later section wins over an earlier one.
+ */
+function editorconfigCharset(file: string): string | undefined {
+  let section: string | undefined;
+  let charset: string | undefined;
   for (const line of read(".editorconfig").split("\n")) {
-    const section = /^\[(.+)\]$/.exec(line.trim());
-    if (section !== null) current = section[1];
-    else if (current !== undefined && /^charset\s*=\s*unset$/.test(line.trim()))
-      globs.push(current);
+    const header = /^\[(.+)\]$/.exec(line.trim());
+    if (header !== null) section = header[1];
+    const value = /^charset\s*=\s*(\S+)$/.exec(line.trim());
+    if (
+      value !== null &&
+      section !== undefined &&
+      editorconfigMatches(section, file)
+    )
+      charset = value[1];
   }
-  return globs;
+  return charset;
 }
 
 interface Settings {
@@ -83,13 +89,17 @@ const isLuaIgnored = (file: string): boolean =>
       ),
     );
 
+let eslint: ESLint;
+
+beforeAll(() => {
+  eslint = new ESLint({ cwd: ROOT });
+});
+
 describe("the editor configs", () => {
   it.each(MAP_FILES)(
     ".editorconfig leaves %s as the World Editor wrote it",
     (file) => {
-      expect(
-        unsetSections().some((glob) => editorconfigMatches(glob, file)),
-      ).toBe(true);
+      expect(editorconfigCharset(file)).toBe("unset");
     },
   );
 
@@ -104,18 +114,14 @@ describe("the editor configs", () => {
   it.each(MAP_FILES)(
     "ESLint, and Prettier through it, ignore %s",
     async (file) => {
-      const eslint = new ESLint({ cwd: ROOT });
       expect(await eslint.isPathIgnored(path.join(ROOT, file))).toBe(true);
     },
   );
 
   it("keep a source file outside a map folder to their rules", async () => {
-    expect(
-      unsetSections().some((glob) => editorconfigMatches(glob, SOURCE_FILE)),
-    ).toBe(false);
+    expect(editorconfigCharset(SOURCE_FILE)).toBe("utf-8");
     expect(isReadonly(SOURCE_FILE)).toBe(false);
     expect(isLuaIgnored(SOURCE_FILE)).toBe(false);
-    const eslint = new ESLint({ cwd: ROOT });
     expect(await eslint.isPathIgnored(path.join(ROOT, SOURCE_FILE))).toBe(
       false,
     );

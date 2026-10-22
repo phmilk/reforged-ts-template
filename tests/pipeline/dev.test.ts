@@ -6,19 +6,18 @@ import * as ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
 import { debounce, watchFolders, type Timers } from "../../scripts/dev.ts";
 import {
-  MAP_FOLDER,
   COPY_VERSION,
   copyProject,
+  escapeRegExp,
   ENTRY_MODULE,
   makeTempDir,
+  MAP_FOLDER,
   ROOT,
 } from "./helpers.ts";
 
 /** The line `pnpm dev` prints once it watches, the map folder's path in either separator. */
 const WATCHING = new RegExp(
-  `^Watching src and ${MAP_FOLDER.split("/")
-    .map((segment) => segment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-    .join("[\\\\/]")} for changes`,
+  `^Watching src and ${MAP_FOLDER.split("/").map(escapeRegExp).join("[\\\\/]")} for changes`,
   "m",
 );
 

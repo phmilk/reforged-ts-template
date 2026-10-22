@@ -3,7 +3,7 @@
 // Object data diffs through reforged-map's textconv driver.
 import { describe, expect, it } from "vitest";
 import { DIFF_DRIVER } from "../../scripts/diff-driver.ts";
-import { git, MAP_FOLDER, ROOT } from "./helpers.ts";
+import { git, MAP_FOLDER, MAP_FOLDERS, ROOT } from "./helpers.ts";
 
 /** The fourteen Object data files: each kind's base file and its Skin file. */
 const OBJECT_DATA_FILES = ["w3u", "w3t", "w3a", "w3h", "w3b", "w3d", "w3q"]
@@ -26,12 +26,7 @@ function checkAttr(attribute: string, paths: string[]): Map<string, string> {
 
 describe(".gitattributes", () => {
   // A map folder elsewhere, or saved as a .w3x folder, gets the same attributes.
-  const folders = [
-    MAP_FOLDER,
-    "other.w3x",
-    "maps/other.w3m",
-    "nested/x/other.w3m",
-  ];
+  const folders = MAP_FOLDERS;
 
   it.each(folders)(
     "gives every Object data file of %s the textconv driver",

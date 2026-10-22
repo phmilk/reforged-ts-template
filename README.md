@@ -36,7 +36,7 @@ The other way in is GitHub's **Use this template**, which shows your repository 
 Either way, the install wrote the generated files under `src/generated`; after the CLI's `--skip-install`, run `pnpm install` first. Then:
 
 1. Open the map folder, at the project root beside `src` (`my-map.w3m`; `reforged-ts-template.w3m` in the Template itself), in the World Editor and save it. Leave Scenario > Map Options > Script Language on Lua: the build appends the map's code to the script the editor writes. To rename the map, save it at the root with the new name and set `mapFolder` in `reforged.config.ts`.
-2. Build: `pnpm build`. It prints the packed archive, `dist/reforged-ts-template-0.0.0-dev.w3m`: the map folder's name, the `version` of `package.json`, and `-dev` for a dev build. `pnpm build --mode release` packs `dist/reforged-ts-template-0.0.0.w3m`, the archive you ship. `pnpm version patch` (or `minor`, `major`) bumps the version and tags the commit.
+2. Build: `pnpm build`. It prints the packed archive, `dist/my-map-0.0.0-dev.w3m` (`dist/reforged-ts-template-0.0.0-dev.w3m` in the Template itself): the map folder's name without its suffix, the `version` of `package.json`, and `-dev` for a dev build. `pnpm build --mode release` packs `dist/my-map-0.0.0.w3m`, the archive you ship. `pnpm version patch` (or `minor`, `major`) bumps the version and tags the commit.
 3. Play: `pnpm test:map` builds, then opens the game on the built map folder, windowed. To pick the map from the game's own map list instead, copy the archive into the game's Maps folder.
 4. Iterate: `pnpm dev` rebuilds on every change under `src` or the map folder, until Ctrl+C.
 

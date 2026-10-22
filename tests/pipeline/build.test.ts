@@ -3,18 +3,17 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { openArchive } from "../../scripts/pack.ts";
 import {
-  MAP_FOLDER,
   COPY_VERSION,
   copyProject,
   ENTRY_MODULE,
   hashTree,
   makeTempDir,
+  MAP_FOLDER,
   runScript,
   setPackageVersion,
   sha256,
 } from "./helpers.ts";
 
-const MAP = MAP_FOLDER;
 /** The archive a dev build packs: the map folder's name, the version, `-dev`. */
 const ARCHIVE = path.join(
   "dist",
@@ -64,7 +63,7 @@ function entryModule(script: string): string {
 describe("node scripts/build.ts (pnpm build)", () => {
   it("packs the map folder and the entry into an archive named after the map folder, the version and -dev", () => {
     const project = copyProject();
-    const mapBefore = hashTree(path.join(project, MAP));
+    const mapBefore = hashTree(path.join(project, MAP_FOLDER));
     const tsconfigBefore = sha256(
       fs.readFileSync(path.join(project, "tsconfig.json")),
     );
@@ -82,7 +81,7 @@ describe("node scripts/build.ts (pnpm build)", () => {
 
     // The archive's script is the editor's script, one newline, then the bundle.
     const editorScript = fs.readFileSync(
-      path.join(project, MAP, "war3map.lua"),
+      path.join(project, MAP_FOLDER, "war3map.lua"),
     );
     const bundle = fs.readFileSync(path.join(project, "dist", "bundle.lua"));
     expect(scriptOf(archive)).toEqual(
@@ -91,7 +90,7 @@ describe("node scripts/build.ts (pnpm build)", () => {
     expect(bundle.toString("utf8")).toContain(ENTRY_MODULE);
 
     // Nothing written into the map folder (so no percent character introduced there); tsconfig untouched.
-    expect(hashTree(path.join(project, MAP))).toEqual(mapBefore);
+    expect(hashTree(path.join(project, MAP_FOLDER))).toEqual(mapBefore);
     expect(sha256(fs.readFileSync(path.join(project, "tsconfig.json")))).toBe(
       tsconfigBefore,
     );
@@ -265,7 +264,7 @@ describe("node scripts/build.ts (pnpm build)", () => {
 
   it("fails with a clear message and exit 1 when the map folder has no war3map.lua, before touching the output folder", () => {
     const project = copyProject();
-    fs.rmSync(path.join(project, MAP, "war3map.lua"));
+    fs.rmSync(path.join(project, MAP_FOLDER, "war3map.lua"));
     fs.mkdirSync(path.join(project, "dist"));
     fs.writeFileSync(path.join(project, "dist", "keep.txt"), "previous build");
 
@@ -398,7 +397,7 @@ describe("node scripts/generate.ts (the prepare script)", () => {
 
   it("prints the editor-globals warnings to stderr", () => {
     const project = copyProject();
-    const script = path.join(project, MAP, "war3map.lua");
+    const script = path.join(project, MAP_FOLDER, "war3map.lua");
     fs.writeFileSync(
       script,
       "gg_qst_Main = nil\r\n" + fs.readFileSync(script, "utf8"),
@@ -414,7 +413,7 @@ describe("node scripts/generate.ts (the prepare script)", () => {
 
   it("fails with exit 1 when the map folder has no editor script", () => {
     const project = copyProject();
-    fs.rmSync(path.join(project, MAP, "war3map.lua"));
+    fs.rmSync(path.join(project, MAP_FOLDER, "war3map.lua"));
 
     const result = runScript(project, "scripts/generate.ts");
 

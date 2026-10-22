@@ -131,7 +131,9 @@ describe("the plugin under the Template's TypeScript", () => {
     server.close();
   });
 
-  it('names the Footman on the hover of FourCC("hfoo")', async () => {
+  // The hover needs a map folder: it finds the one at the project root, which
+  // copyProject() fills, with no mapFolder option.
+  it('names the Footman on the hover of FourCC("hfoo"), from the map folder at the root', async () => {
     const opened = await server.request("open", {
       file: SOURCE,
       fileContent: CONTENT,
