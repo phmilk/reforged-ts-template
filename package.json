@@ -25,7 +25,7 @@
     "check": "pnpm run lint && pnpm run typecheck && pnpm run test"
   },
   "dependencies": {
-    "reforged-ts": "^1.0.0-alpha.20",
+    "reforged-ts": "^1.0.0-alpha.21",
     "reforged-types": "^1.0.0-alpha.6"
   },
   "devDependencies": {
@@ -38,11 +38,11 @@
     "eslint-import-resolver-typescript": "^4.4.5",
     "eslint-plugin-import-x": "^4.17.1",
     "eslint-plugin-prettier": "^5.5.6",
-    "eslint-plugin-reforged": "^1.0.0-alpha.7",
+    "eslint-plugin-reforged": "^1.0.0-alpha.8",
     "mdx-m3-viewer-th": "5.13.4",
     "prettier": "^3.9.9",
     "reforged-builtins": "^1.0.0-alpha.5",
-    "reforged-map": "^1.0.0-alpha.4",
+    "reforged-map": "^1.0.0-alpha.5",
     "reforged-test": "^1.0.0-alpha.5",
     "typescript": "6.0.2",
     "typescript-eslint": "^8.70.1",
