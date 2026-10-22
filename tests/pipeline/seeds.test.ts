@@ -103,7 +103,7 @@ describe("AGENTS.md", () => {
     expect(bullet).toContain("Never edit the bytes of its files by hand");
     expect(bullet).toContain("`git diff`");
     expect(bullet).toContain("`TRIGSTR_nnn`");
-    // Object sync's spec changes it, not this one.
+    // Kept as is (#97) until Object sync's spec changes it.
     expect(agents).toContain(
       "Files in the map folder change only through the World Editor.",
     );

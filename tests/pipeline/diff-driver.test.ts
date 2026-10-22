@@ -17,6 +17,8 @@ import {
 
 const TEXTCONV = `diff.${DIFF_DRIVER}.textconv`;
 const CACHE = `diff.${DIFF_DRIVER}.cachetextconv`;
+/** The driver's command for a Map project at the top of its work tree. */
+const COMMAND = "node node_modules/reforged-map/dist/cli.js textconv";
 const SCRIPT = path.join(ROOT, "scripts", "diff-driver.ts");
 
 /** A new, empty git repository. */
@@ -44,9 +46,7 @@ describe("configureDiffDriver (the install step)", () => {
 
     expect(warnings).toEqual([]);
     expect(written).toEqual([TEXTCONV, CACHE]);
-    expect(localConfig(dir, TEXTCONV)).toBe(
-      "node node_modules/reforged-map/dist/cli.js textconv",
-    );
+    expect(localConfig(dir, TEXTCONV)).toBe(COMMAND);
     expect(localConfig(dir, CACHE)).toBe("true");
   });
 
@@ -68,9 +68,7 @@ describe("configureDiffDriver (the install step)", () => {
     git(dir, "config", TEXTCONV, "cat");
 
     expect(configureDiffDriver(dir)).toEqual([TEXTCONV]);
-    expect(localConfig(dir, TEXTCONV)).toBe(
-      "node node_modules/reforged-map/dist/cli.js textconv",
-    );
+    expect(localConfig(dir, TEXTCONV)).toBe(COMMAND);
   });
 
   it("runs the installation of a Map project in a subfolder of the work tree", () => {

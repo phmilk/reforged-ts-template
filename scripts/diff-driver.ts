@@ -1,10 +1,10 @@
-// The git diff driver of Object data, set on install (`prepare`): the map
+// The git diff driver of Object data (#97), set on install (`prepare`): the map
 // folder's Object data files are binary, and `.gitattributes` gives them
 // `diff=reforged-object-data`, whose command lives in each clone's local git
 // configuration, since git never takes a command from a repository's files.
 // The command is reforged-map's textconv driver, which prints the file as
 // text, one line per object and per modification.
-import { spawnSync } from "node:child_process";
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import path from "node:path";
 import { runAsEntry } from "./cli.ts";
 import { printWarning, type Warn } from "./generate.ts";
@@ -25,12 +25,12 @@ const shellWord = (word: string): string =>
  * It runs the project's own installation with Node, without a package
  * manager's start-up for each file.
  */
-export function textconvCommand(prefix: string): string {
+function textconvCommand(prefix: string): string {
   return `node ${shellWord(`${prefix}${CLI}`)} textconv`;
 }
 
 /** Runs git in `cwd`; `error` is set when git could not start. */
-function runGit(cwd: string, args: string[]) {
+function runGit(cwd: string, args: string[]): SpawnSyncReturns<string> {
   return spawnSync("git", args, { cwd, encoding: "utf8" });
 }
 
