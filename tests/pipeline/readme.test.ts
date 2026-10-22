@@ -8,6 +8,12 @@ import { markedBlock, readRepoFile } from "./sync-markers.ts";
 describe("README.md", () => {
   const readme = readRepoFile("README.md");
 
+  // create-reforged-map writes the project name over the first `# ` line and
+  // the map's description in a paragraph under it; it stops when it is gone.
+  it("opens with the first-level title the Creation CLI prepares", () => {
+    expect(readme).toMatch(/^# \S.*\n\n\S/);
+  });
+
   it("holds the compatibility matrix between the matrix markers", () => {
     expect(markedBlock(readme, "matrix").trim()).not.toBe("");
   });

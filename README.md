@@ -10,18 +10,34 @@ A Map project template: a Warcraft III 3.0.0 map whose code is TypeScript compil
 - **The World Editor**, which ships with the game. The map is saved as a folder, with Lua as its script language.
 - **Node 24** (`.node-version`).
 - **pnpm 12** (`packageManager` in `package.json`): install it with `npm install --global pnpm@12`. pnpm 11 or later switches to the pinned version by itself; pnpm 10 cannot start pnpm 12 on Windows. Its settings live in `pnpm-workspace.yaml`.
+- **Git**, which the Creation CLI uses to make the project a repository with a first commit.
 
 On Linux the game runs through Wine: set `winePath` in `reforged.config.ts`.
 
 ## First run
 
-1. Create your repository from this one with GitHub's **Use this template**.
+The Creation CLI, [`create-reforged-map`](https://github.com/phmilk/reforged-ts/tree/master/packages/create-reforged-map), makes a Map project from the Template in one command. Run it from the folder to create the project in; it makes the project's own folder, `my-map` here:
+
+```sh
+npx create-reforged-map@next my-map   # or: pnpm create reforged-map@next my-map
+cd my-map
+```
+
+In a terminal it asks for the project name, the folder's name when left blank, and a one-line description of the map. Then it downloads the Template into `my-map`, writes the name and the description into `package.json` and this README, and the description into `AGENTS.md`'s "Your project", initialises git, installs the packages, runs `pnpm template:detach` to remove the files that serve only the Template's own development ([below](#deletable-in-a-generated-project)) and makes a first commit. It needs pnpm, and git unless `--skip-git`; [its README](https://github.com/phmilk/reforged-ts/tree/master/packages/create-reforged-map#usage) lists the other options. Write `@next` until 1.0.0: npm keeps `latest` on the first alpha, so a bare `npx create-reforged-map` runs that one.
+
+The other way in is GitHub's **Use this template**, which keeps your repository linked to the Template on GitHub:
+
+1. Create your repository from this one with **Use this template**.
 2. Clone it and open a terminal in the clone.
-3. Install: `pnpm install`. It also writes the generated files under `src/generated`. Until the library's first publish, install with `pnpm use:local <checkout>` instead (see [the library packages](#the-library-packages)). Then run `pnpm template:detach` once, and commit what it deletes: the files that serve only the Template's own development ([below](#deletable-in-a-generated-project)).
-4. Open the map folder, `maps/reforged-ts-template.w3m`, in the World Editor and save it. Leave Scenario > Map Options > Script Language on Lua: the build appends the map's code to the script the editor writes. To rename the map, save it under `maps` with the new name and set `mapFolder` in `reforged.config.ts`.
-5. Build: `pnpm build`. It prints the packed archive, `dist/reforged-ts-template.w3m`.
-6. Play: `pnpm test:map` builds, then opens the game on the built map folder, windowed. To pick the map from the game's own map list instead, copy the archive into the game's Maps folder.
-7. Iterate: `pnpm dev` rebuilds on every change under `src` or the map folder, until Ctrl+C.
+3. Install: `pnpm install`. To build against a local checkout of the library instead, run `pnpm use:local <checkout>` ([below](#developing-against-a-local-checkout-of-the-library)).
+4. Detach: run `pnpm template:detach` once, and commit what it deletes: the files that serve only the Template's own development ([below](#deletable-in-a-generated-project)).
+
+Either way, the install wrote the generated files under `src/generated`; after the CLI's `--skip-install`, run `pnpm install` first. Then:
+
+1. Open the map folder, `maps/reforged-ts-template.w3m`, in the World Editor and save it. Leave Scenario > Map Options > Script Language on Lua: the build appends the map's code to the script the editor writes. To rename the map, save it under `maps` with the new name and set `mapFolder` in `reforged.config.ts`.
+2. Build: `pnpm build`. It prints the packed archive, `dist/reforged-ts-template.w3m`.
+3. Play: `pnpm test:map` builds, then opens the game on the built map folder, windowed. To pick the map from the game's own map list instead, copy the archive into the game's Maps folder.
+4. Iterate: `pnpm dev` rebuilds on every change under `src` or the map folder, until Ctrl+C.
 
 `pnpm test:map` finds the game in the Battle.net install locations. When the game lives elsewhere, set the `WC3_EXECUTABLE` environment variable to its executable (and `WINEPREFIX` for a Wine prefix) rather than writing the path into `gameExecutable`: `reforged.config.ts` is committed, so it holds only what every machine shares. `pnpm test` fails when a committed file holds an absolute path (`tests/pipeline/absolute-paths.test.ts`), because such a path works on one machine only. The check reads the files as committed in `HEAD`, so a local setting you do not commit never fails it.
 
@@ -125,7 +141,7 @@ Nothing committed changes, in either direction: the committed pnpm hook `.pnpmfi
 
 ## Deletable in a generated project
 
-This repository keeps the Template itself up to date with the library. A Map project generated from it deletes that machinery with `pnpm template:detach`, which removes the files `template-maintenance.json` lists, this section and the Template maintenance section of `AGENTS.md`; nothing is ever synced into a generated project:
+This repository keeps the Template itself up to date with the library. A Map project generated from it deletes that machinery with `pnpm template:detach`, which the Creation CLI runs for it and which removes the files `template-maintenance.json` lists, this section and the Template maintenance section of `AGENTS.md`; nothing is ever synced into a generated project:
 
 - `.github/workflows/sync.yml`, the workflow that applies a library release to the Template and opens a pull request. It runs only in `phmilk/reforged-ts-template`, so it is inert in your repository.
 - `.github/workflows/claim.yml`, the workflow that runs the library's claim check on every pull request and every assignment (`docs/agents/issue-tracker.md`, "Claim"). It runs only in `phmilk/reforged-ts-template`, so it is inert in your repository.
