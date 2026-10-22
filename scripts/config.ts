@@ -132,7 +132,8 @@ function defaultArchiveName(
 ): string {
   const suffix = path.extname(mapFolder);
   const parts = [path.basename(mapFolder, suffix)];
-  if (version) parts.push(version);
+  // A blank version is no version: it would put spaces in the name.
+  if (version?.trim()) parts.push(version.trim());
   if (mode === "dev") parts.push("dev");
   return parts.join("-") + suffix;
 }
