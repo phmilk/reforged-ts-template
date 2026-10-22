@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { openArchive } from "../../scripts/pack.ts";
 import {
+  MAP_FOLDER,
   COPY_VERSION,
   copyProject,
   ENTRY_MODULE,
@@ -13,7 +14,7 @@ import {
   sha256,
 } from "./helpers.ts";
 
-const MAP = path.join("maps", "reforged-ts-template.w3m");
+const MAP = MAP_FOLDER;
 /** The archive a dev build packs: the map folder's name, the version, `-dev`. */
 const ARCHIVE = path.join(
   "dist",

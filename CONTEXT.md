@@ -58,6 +58,10 @@ _Avoid_: object id, type id, fourcc
 Which of the seven families a type of object belongs to: unit (heroes included), item, ability, buff, destructable, doodad or upgrade; each Rawcode names an object of one Object kind.
 _Avoid_: object type, category, rawcode type
 
+**Map folder**:
+The folder the World Editor saves a map into, named after the map with its `.w3m` or `.w3x` suffix; it holds the map's data (terrain, Object data, placed units, its `war3map.lua`). A Map project has exactly one.
+_Avoid_: map directory, map project (a Map project is the repository), w3x (the packed archive)
+
 **Editor global**:
 A global the World Editor declares in a map folder's `war3map.lua`: a `gg_` one for something placed or created in the editor (`gg_unit_H002_0255`, `gg_trg_Melee_Initialization`), or a `udg_` one for a variable of the Variable Editor (`udg_SpawnType`).
 _Avoid_: GUI global, editor variable

@@ -6,12 +6,21 @@ import * as ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
 import { debounce, watchFolders, type Timers } from "../../scripts/dev.ts";
 import {
+  MAP_FOLDER,
   COPY_VERSION,
   copyProject,
   ENTRY_MODULE,
   makeTempDir,
   ROOT,
 } from "./helpers.ts";
+
+/** The line `pnpm dev` prints once it watches, the map folder's path in either separator. */
+const WATCHING = new RegExp(
+  `^Watching src and ${MAP_FOLDER.split("/")
+    .map((segment) => segment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("[\\\\/]")} for changes`,
+  "m",
+);
 
 /** A manual clock: timers fire only when the test advances time. */
 function fakeTimers(): Timers & { advance(ms: number): void } {
@@ -250,10 +259,7 @@ describe("node scripts/dev.ts (pnpm dev)", () => {
       force: true,
     });
     dev = new DevProcess(project);
-    await dev.waitFor(
-      /^Watching src and maps[\\/]reforged-ts-template\.w3m for changes/m,
-      1,
-    );
+    await dev.waitFor(WATCHING, 1);
     expect(dev.count(BUILT)).toBe(1);
 
     // The build's own writes (output folder) and generated files do not retrigger: no loop.
@@ -281,7 +287,7 @@ describe("node scripts/dev.ts (pnpm dev)", () => {
 
     // A change in the map folder (as an editor save would make): a rebuild.
     fs.appendFileSync(
-      path.join(project, "maps", "reforged-ts-template.w3m", "war3map.lua"),
+      path.join(project, MAP_FOLDER, "war3map.lua"),
       "\n-- saved again\n",
     );
     await dev.waitFor(BUILT, 3);
@@ -302,7 +308,7 @@ describe("node scripts/dev.ts (pnpm dev)", () => {
 
   it("rebuilds after the map folder is deleted and created again, and keeps watching the new one", async () => {
     const project = copyProject();
-    const mapFolder = path.join(project, "maps", "reforged-ts-template.w3m");
+    const mapFolder = path.join(project, MAP_FOLDER);
     const saved = makeTempDir();
     fs.cpSync(mapFolder, saved, { recursive: true });
     dev = new DevProcess(project);

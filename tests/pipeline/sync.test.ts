@@ -69,6 +69,7 @@ const LIBRARY_ORDER = [
   "Patch",
   "Rawcode",
   "Object kind",
+  "Map folder",
   "Editor global",
   "Object data",
   "Game data set",

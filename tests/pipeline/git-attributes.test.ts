@@ -1,23 +1,14 @@
 // The attributes `.gitattributes` gives the map folder, as git reads them
 // (`git check-attr`): no checkout or commit changes a byte of it, and its
 // Object data diffs through reforged-map's textconv driver.
-import path from "node:path";
 import { describe, expect, it } from "vitest";
-import config from "../../reforged.config.ts";
-import { resolveConfig } from "../../scripts/config.ts";
 import { DIFF_DRIVER } from "../../scripts/diff-driver.ts";
-import { git, ROOT } from "./helpers.ts";
+import { git, MAP_FOLDER, ROOT } from "./helpers.ts";
 
 /** The fourteen Object data files: each kind's base file and its Skin file. */
 const OBJECT_DATA_FILES = ["w3u", "w3t", "w3a", "w3h", "w3b", "w3d", "w3q"]
   .flatMap((ext) => [`war3map.${ext}`, `war3mapSkin.${ext}`])
   .sort();
-
-/** The map folder, relative to the repository root, with forward slashes. */
-const MAP_FOLDER = path
-  .relative(ROOT, resolveConfig(config, ROOT).mapFolder)
-  .split(path.sep)
-  .join("/");
 
 /** The value of `attribute` for each path, as `git check-attr` reports it (`set`, `unset`, `unspecified` or a value). */
 function checkAttr(attribute: string, paths: string[]): Map<string, string> {
@@ -35,7 +26,12 @@ function checkAttr(attribute: string, paths: string[]): Map<string, string> {
 
 describe(".gitattributes", () => {
   // A map folder elsewhere, or saved as a .w3x folder, gets the same attributes.
-  const folders = [MAP_FOLDER, "maps/other.w3x", "nested/maps/other.w3m"];
+  const folders = [
+    MAP_FOLDER,
+    "other.w3x",
+    "maps/other.w3m",
+    "nested/x/other.w3m",
+  ];
 
   it.each(folders)(
     "gives every Object data file of %s the textconv driver",

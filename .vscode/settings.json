@@ -29,10 +29,12 @@
   "js/ts.tsdk.promptToUseWorkspaceVersion": true,
 
   // Read-only: what install, build and watch generate (the env file, the
-  // editor-globals typings) and the map folder, which the World Editor owns.
+  // editor-globals typings) and the map folder, which the World Editor owns
+  // (a folder named *.w3m or *.w3x, anywhere).
   "files.readonlyInclude": {
     "src/generated/**": true,
-    "maps/**": true
+    "**/*.w3m/**": true,
+    "**/*.w3x/**": true
   },
 
   // The Lua language server (sumneko.lua) reads Lua 5.3, the game's Lua. The
@@ -43,7 +45,7 @@
   // The map's stubs in tests/stubs call __stub_record, which reforged-test's
   // stubs/base.lua defines and the harness loads first.
   "Lua.diagnostics.globals": ["__stub_record"],
-  "Lua.workspace.ignoreDir": [".vscode", "maps"],
+  "Lua.workspace.ignoreDir": [".vscode", "*.w3m", "*.w3x"],
   "Lua.diagnostics.ignoredFiles": "Disable",
   "[lua]": { "editor.formatOnSave": false }
 }

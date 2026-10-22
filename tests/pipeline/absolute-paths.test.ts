@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { git, makeTempDir, ROOT } from "./helpers.ts";
+import { git, makeTempDir, MAP_FOLDER, ROOT } from "./helpers.ts";
 
 /**
  * Absolute paths as they would leak from one machine into the repository:
@@ -104,7 +104,7 @@ describe("findAbsolutePaths", () => {
       'env["ProgramFiles(x86)"] ?? "C:\\\\Program Files (x86)"',
       'return ["/Applications/Warcraft III/_retail_/x86_64/Warcraft III.app/Contents/MacOS/Warcraft III"];',
       '// gameExecutable: "<path to Warcraft III.exe>",',
-      'mapFolder: "maps/reforged-ts-template.w3m"',
+      'mapFolder: "reforged-ts-template.w3m"',
       "the Windows side's (`C:\\...`) path",
       'args: ["-loadfile", `Z:${folder}`]',
       "See https://example.com/a/b and the `/domain-modeling` skill; // a comment",
@@ -167,7 +167,7 @@ describe("committed files", () => {
     // Not a git checkout (an unpacked archive), or nothing committed yet: nothing to say about committed files.
     if (committed === null) return context.skip();
     const files = committed.filter(
-      ({ file }) => !file.startsWith("maps/") && file !== SELF,
+      ({ file }) => !file.startsWith(`${MAP_FOLDER}/`) && file !== SELF,
     );
     expect(files.length).toBeGreaterThan(10);
     const hits = files.flatMap(({ file, text }) =>

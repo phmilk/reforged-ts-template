@@ -9,6 +9,15 @@ import { resolveConfig } from "../../scripts/config.ts";
 
 export const ROOT = path.resolve(fileURLToPath(import.meta.url), "../../..");
 /**
+ * The map folder `reforged.config.ts` names, relative to the project root,
+ * with forward slashes: the same in the repository and in a `copyProject()`
+ * copy, whatever a Map project names its map folder.
+ */
+export const MAP_FOLDER = path
+  .relative(ROOT, resolveConfig(config, ROOT).mapFolder)
+  .split(path.sep)
+  .join("/");
+/**
  * The pipeline tests' fixture map: a copy of the Template's blank map folder
  * as the 3.0 World Editor saved it (17 files, war3map.w3i version 39),
  * committed with the tests. Every pipeline test reads it, directly or as the
