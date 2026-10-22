@@ -63,6 +63,19 @@ describe("the ESLint config", () => {
     expect(await lint("clean.ts")).toEqual([]);
   }, 120_000);
 
+  it("finds the map folder at the project root for no-unknown-rawcodes, with no option", async () => {
+    // The rule looks for the map folder in the directory ESLint runs in, the
+    // repository's root here, not the copy's. Without one it only warns and
+    // reports nothing: a report on an unknown Rawcode shows it read the
+    // Template's map folder at the root.
+    const file = path.join(project, "src", "lint-unknown-rawcode.ts");
+    fs.writeFileSync(file, 'export const nothing = FourCC("zz99");\n');
+    const [result] = await eslint.lintFiles([file]);
+    expect(result.messages.map(({ ruleId }) => ruleId)).toEqual([
+      "reforged/no-unknown-rawcodes",
+    ]);
+  }, 120_000);
+
   it("turns on every recommended rule of eslint-plugin-reforged, at its severity, in the source folder", async () => {
     const config = (await eslint.calculateConfigForFile(
       path.join(project, "src", "main.ts"),

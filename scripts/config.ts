@@ -6,7 +6,7 @@ import { AuthorError } from "./errors.ts";
 
 /** What the root configuration file default-exports. Paths are relative to the repository root. */
 export interface Config {
-  /** The map folder saved by the World Editor, extension included (`maps/my-map.w3x`). */
+  /** The map folder saved by the World Editor, extension included, at the project root (`my-map.w3x`). */
   mapFolder: string;
   /** Holds the staged map folder, the Lua bundle and the archive. Cleaned on every build. Default `dist`. */
   outputFolder?: string;
@@ -78,7 +78,7 @@ export function resolveConfig(
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a config file without a default export gives undefined, whatever the type says
   if (typeof config?.mapFolder !== "string" || config.mapFolder === "") {
     throw new AuthorError(
-      `${CONFIG_FILE}: \`mapFolder\` is required (the map folder saved by the World Editor, e.g. "maps/my-map.w3x").`,
+      `${CONFIG_FILE}: \`mapFolder\` is required (the map folder saved by the World Editor, e.g. "my-map.w3x").`,
     );
   }
   const mapFolder = path.resolve(root, config.mapFolder);

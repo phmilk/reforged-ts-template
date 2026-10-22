@@ -1,7 +1,7 @@
 import type { Config } from "./scripts/config.ts";
 
 export default {
-  mapFolder: "maps/reforged-ts-template.w3m",
+  mapFolder: "reforged-ts-template.w3m",
   outputFolder: "dist",
   // `dev`: the library's runtime checks run. `pnpm build --mode release` overrides it for one build.
   mode: "dev",

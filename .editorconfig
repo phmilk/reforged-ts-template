@@ -13,8 +13,9 @@ trim_trailing_whitespace = true
 [*.md]
 trim_trailing_whitespace = false
 
-# The World Editor owns the map folder and writes its files its own way.
-[maps/**]
+# The World Editor owns the map folder (a folder named *.w3m or *.w3x,
+# anywhere) and writes its files its own way.
+[**.{w3m,w3x}/**]
 charset = unset
 end_of_line = unset
 indent_style = unset

@@ -11,7 +11,14 @@ import {
   SCRIPT_NAME,
   SECTIONS,
 } from "../../scripts/detach.ts";
-import { git, makeTempDir, ROOT, runScript } from "./helpers.ts";
+import {
+  git,
+  hashTree,
+  makeTempDir,
+  MAP_FOLDER,
+  ROOT,
+  runScript,
+} from "./helpers.ts";
 
 const MANIFEST = readManifest(ROOT);
 
@@ -144,6 +151,24 @@ describe("pnpm template:detach", () => {
     expect(result.stdout).toContain("- scripts/sync.ts\n");
     expect(result.stdout).toContain(
       `- AGENTS.md, section "Template maintenance"\n`,
+    );
+  });
+
+  it("renames nothing: the map folder and the mapFolder that names it stay as they were", () => {
+    const dir = generatedProject("git@github.com:someone/my-map.git");
+    for (const rel of [MAP_FOLDER, "reforged.config.ts"]) {
+      fs.cpSync(path.join(ROOT, rel), path.join(dir, rel), { recursive: true });
+    }
+    const map = hashTree(path.join(dir, MAP_FOLDER));
+    const config = fs.readFileSync(
+      path.join(dir, "reforged.config.ts"),
+      "utf8",
+    );
+
+    expect(runScript(dir, "scripts/detach.ts").status).toBe(0);
+    expect(hashTree(path.join(dir, MAP_FOLDER))).toEqual(map);
+    expect(fs.readFileSync(path.join(dir, "reforged.config.ts"), "utf8")).toBe(
+      config,
     );
   });
 

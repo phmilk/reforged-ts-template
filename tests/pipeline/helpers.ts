@@ -9,6 +9,31 @@ import { resolveConfig } from "../../scripts/config.ts";
 
 export const ROOT = path.resolve(fileURLToPath(import.meta.url), "../../..");
 /**
+ * The map folder `reforged.config.ts` names, relative to the project root,
+ * with forward slashes: the same in the repository and in a `copyProject()`
+ * copy, whatever a Map project names its map folder.
+ */
+export const MAP_FOLDER = path
+  .relative(ROOT, resolveConfig(config, ROOT).mapFolder)
+  .split(path.sep)
+  .join("/");
+/**
+ * Map folders the configs that leave a map folder to the World Editor
+ * (`.gitattributes`, the editor configs) must match: the project's, and one
+ * of either suffix at the root, under `maps/` and deeper.
+ */
+export const MAP_FOLDERS = [
+  MAP_FOLDER,
+  "other.w3x",
+  "maps/other.w3m",
+  "nested/x/other.w3m",
+];
+
+/** `text` as a regular expression that matches it literally. */
+export const escapeRegExp = (text: string): string =>
+  text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
  * The pipeline tests' fixture map: a copy of the Template's blank map folder
  * as the 3.0 World Editor saved it (17 files, war3map.w3i version 39),
  * committed with the tests. Every pipeline test reads it, directly or as the

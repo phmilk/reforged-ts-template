@@ -2,9 +2,9 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { copyProject } from "./helpers.ts";
+import { copyProject, MAP_FOLDER } from "./helpers.ts";
 
-const MAP_SCRIPT = path.join("maps", "reforged-ts-template.w3m", "war3map.lua");
+const MAP_SCRIPT = path.join(MAP_FOLDER, "war3map.lua");
 
 interface AssertionResult {
   fullName: string;
