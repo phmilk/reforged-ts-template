@@ -56,6 +56,11 @@ describe("the manifest of the Template maintenance", () => {
     expect(MANIFEST).toContain("scripts/detach.ts");
   });
 
+  it("leaves the diff driver of Object data to the Map project", () => {
+    expect(MANIFEST).not.toContain("scripts/diff-driver.ts");
+    expect(MANIFEST).not.toContain(".gitattributes");
+  });
+
   it("is what AGENTS.md's Template maintenance names in its first paragraph", () => {
     const [, intro] = section("AGENTS.md", SECTIONS["AGENTS.md"]).split("\n\n");
     expect(namedFiles(intro)).toEqual(MANIFEST.toSorted());

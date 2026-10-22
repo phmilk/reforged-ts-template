@@ -2,8 +2,19 @@
 # says: Prettier (run through ESLint) formats with LF.
 * text=auto eol=lf
 
-# The World Editor owns every file under maps/; git stores them byte for byte.
-maps/** -text -diff
+# The World Editor owns every file of a map folder (a folder named *.w3m or
+# *.w3x, anywhere); git stores them byte for byte, whatever core.autocrlf says.
+**/*.w3m/** -text
+**/*.w3x/** -text
+
+# Its Object data files are binary: reforged-map's textconv driver shows them
+# to git diff as text, one line per object and per modification. pnpm install
+# sets the driver's command in the clone's git configuration
+# (scripts/diff-driver.ts). war3map.wts and war3map.lua diff as text already.
+**/*.w3m/war3map.w3[utahbdq] diff=reforged-object-data
+**/*.w3m/war3mapSkin.w3[utahbdq] diff=reforged-object-data
+**/*.w3x/war3map.w3[utahbdq] diff=reforged-object-data
+**/*.w3x/war3mapSkin.w3[utahbdq] diff=reforged-object-data
 
 # The pipeline tests' fixture map is a copy of those editor-saved files: its
 # bytes (the war3map.w3i hash, the war3map.lua text) are what the tests pin.

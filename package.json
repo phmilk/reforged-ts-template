@@ -10,7 +10,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "prepare": "node scripts/generate.ts",
+    "prepare": "node scripts/generate.ts && node scripts/diff-driver.ts",
     "build": "node scripts/build.ts",
     "test": "vitest run",
     "test:pipeline": "vitest run --project pipeline",

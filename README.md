@@ -62,6 +62,24 @@ Every install, build and watch (`pnpm dev`) rewrites `src/generated/`, ignored b
 - `editor-globals.d.ts` and `editor-globals.lua`: the Editor globals, the `gg_` and `udg_` globals the World Editor declares for the map, as TypeScript declarations for the map's code and a Lua stub for the test harness. [`reforged-map`](https://github.com/phmilk/reforged-ts/tree/master/packages/reforged-map) declares them from the map folder's `war3map.lua` and `war3map.wtg`. A GUI variable of an object type is typed by its Object kind, read from its type in the Variable Editor: a Unit-Type `udg_SpawnType` is a `Rawcode<"unit">`, so `CreateUnit(owner, udg_SpawnType, …)` compiles with no cast. To add, rename or retype one, change it in the World Editor and save the map.
 - `map-objects.d.ts` and the constants modules `custom-units.ts`, `custom-items.ts`, `custom-abilities.ts`, `custom-buffs.ts`, `custom-destructables.ts`, `custom-doodads.ts` and `custom-upgrades.ts`: the map's objects, which `reforged-map` reads from the map folder's Object data (`war3map.w3u` to `war3map.w3q` and their `war3mapSkin` counterparts, the names through `war3map.wts`). `map-objects.d.ts` declares a `FourCC` overload per Custom object and per Built-in object the map modifies, so `FourCC("h000")` is a `Rawcode<"unit">` with the object's name on hover. Each constants module names the Custom objects of its Object kind by name and Rawcode: `CustomUnits.Captain_h000`, imported from `./generated/custom-units`; a kind the map has none of gets an empty one. A Custom object that keeps its base's name is named after the base, read from `reforged-builtins`. To add or rename one, change it in the Object Editor and save the map: the constant follows the name, and each use of the old name stops compiling.
 
+## Object data in `git diff`
+
+The map folder's Object data files (`war3map.w3u` to `war3map.w3q` and their `war3mapSkin` counterparts) are binary, yet `git diff` of a change made in the Object Editor shows which object and which field it changed, with the old and the new value:
+
+```diff
+@@ -6,5 +6,5 @@ custom h000 from hfoo
+   uhpm int = 800
+   umpm int = 100
+   udef int = 4
+-  umvs int = 300
++  umvs int = 320
+   usid int = 1200
+```
+
+Each file is shown as text by [`reforged-map`](https://github.com/phmilk/reforged-ts/tree/master/packages/reforged-map#object-data-in-git-diff)'s `textconv` driver. One line per object names its table and its Rawcode, `builtin hfoo` for a Built-in object the map modifies or `custom h000 from hfoo` for a Custom object and its base; under it, indented, one line per modification gives the field id, its value type, its level and data pointer for abilities, doodads and upgrades, then `=` and the value. git's hunk header names the object above the change. A `TRIGSTR_nnn` value is a string of `war3map.wts`, which is text: its own diff shows the string whose text changed.
+
+`.gitattributes` names the driver on the Object data files and keeps every byte of the map folder as the World Editor wrote it, whatever `core.autocrlf` says. The driver's command is local to each clone, since git never takes a command from a repository's files: `pnpm install` sets it (`scripts/diff-driver.ts`, run by `prepare`) in the clone's `.git/config`, with `diff.reforged-object-data.cachetextconv` so each version of a file is converted once. Without git, or outside a git work tree, the install warns and goes on, and `git diff` says "Binary files differ" until the next `pnpm install`.
+
 ## Compatibility matrix
 
 Which versions of the six library packages, which game Patch and which Toolchain go together. The block is generated at each library release and pasted here by the sync workflow: do not edit it by hand.

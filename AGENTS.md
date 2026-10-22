@@ -18,7 +18,8 @@ A task is finished when `pnpm check` is green.
 ## Layout
 
 - `src/`: the map's code; `src/main.ts` is the entry point. New code goes here.
-- The map folder (`mapFolder` in `reforged.config.ts`): owned by the World Editor, read-only here.
+- The map folder (`mapFolder` in `reforged.config.ts`): owned by the World Editor, read-only here. Never edit the bytes of its files by hand.
+  - Read a change to its Object data with `git diff`, which shows each file as text: an object's line names its table and Rawcode (`custom h000 from hfoo`), and each line under it a field and its value (`umvs int = 320`). A `TRIGSTR_nnn` value is a string of `war3map.wts`, whose own diff shows its text. `pnpm install` sets the driver in the clone's git configuration.
 - `reforged.config.ts`: the typed build configuration. It is committed, so it holds only what every machine shares.
 - `pnpm-workspace.yaml`: pnpm's settings. The project runs on pnpm 12 (`packageManager` in `package.json`; `npm install --global pnpm@12` installs it), which reads its settings nowhere else. A new dependency with an install script fails the install until `allowBuilds` lists it.
 - `src/generated/`: `env.ts` (the build mode); the Editor globals (`editor-globals.d.ts`, `editor-globals.lua` for the harness), the `gg_` and `udg_` globals of the map folder, which `reforged-map` declares from `war3map.lua` and `war3map.wtg`; and the map's objects, which it reads from the map folder's Object data: `map-objects.d.ts` (a `FourCC` overload per Custom object and per Built-in object the map modifies) and a constants module per Object kind (`custom-units.ts`, `custom-items.ts`, `custom-abilities.ts`, `custom-buffs.ts`, `custom-destructables.ts`, `custom-doodads.ts`, `custom-upgrades.ts`). Rewritten by every install and build. Read-only: change the config or the map instead.

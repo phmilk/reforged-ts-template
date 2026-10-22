@@ -96,6 +96,19 @@ describe("AGENTS.md", () => {
     expect(rawcodes).toContain("stays in place");
   });
 
+  it("reads Object data with git diff and never edits the map folder's bytes by hand", () => {
+    const bullet = section(agents, "Layout")
+      .split("\n- ")
+      .find((item) => item.startsWith("The map folder"));
+    expect(bullet).toContain("Never edit the bytes of its files by hand");
+    expect(bullet).toContain("`git diff`");
+    expect(bullet).toContain("`TRIGSTR_nnn`");
+    // Object sync's spec changes it, not this one.
+    expect(agents).toContain(
+      "Files in the map folder change only through the World Editor.",
+    );
+  });
+
   it("fits in the line cap", () => {
     expect(agents.trimEnd().split("\n").length).toBeLessThanOrEqual(
       AGENTS_MAX_LINES,
