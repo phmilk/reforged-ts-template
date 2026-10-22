@@ -59,8 +59,8 @@ describe("resolveConfig", () => {
     expect(name("release")).toBe("my-map-1.2.0.w3m");
   });
 
-  it("drops the version from the archive's name when there is none or it is empty", () => {
-    for (const version of [undefined, ""]) {
+  it("drops the version from the archive's name when there is none or it is blank", () => {
+    for (const version of [undefined, "", "  "]) {
       const name = (mode: "dev" | "release") =>
         resolveConfig({ mapFolder: "maps/my-map.w3m" }, root, { mode }, version)
           .archiveName;

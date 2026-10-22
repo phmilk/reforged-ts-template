@@ -43,14 +43,14 @@ Either way, the install wrote the generated files under `src/generated`; after t
 
 ## Commands
 
-| Command                     | What it does                                                                                                 |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `pnpm build`                | Builds the map in dev mode, the library's runtime checks on, into `dist/<map>-<version>-dev.w3m`.            |
-| `pnpm build --mode release` | Builds the map in release mode, the runtime checks off, into `dist/<map>-<version>.w3m`: the build you ship. |
-| `pnpm dev`                  | Watches `src` and the map folder and rebuilds on every change.                                               |
-| `pnpm test:map`             | Builds, then launches the game on the built map folder.                                                      |
-| `pnpm test`                 | Runs the tests without the game: the build scripts' in Node, the map's on the Lua 5.3 harness.               |
-| `pnpm check`                | Runs `lint`, `typecheck` and `test` in that order and stops at the first failure: the definition of done.    |
+| Command                     | What it does                                                                                                      |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `pnpm build`                | Builds the map in dev mode, the library's runtime checks on, into `dist/<map>-<version>-dev.<suffix>`.            |
+| `pnpm build --mode release` | Builds the map in release mode, the runtime checks off, into `dist/<map>-<version>.<suffix>`: the build you ship. |
+| `pnpm dev`                  | Watches `src` and the map folder and rebuilds on every change.                                                    |
+| `pnpm test:map`             | Builds, then launches the game on the built map folder.                                                           |
+| `pnpm test`                 | Runs the tests without the game: the build scripts' in Node, the map's on the Lua 5.3 harness.                    |
+| `pnpm check`                | Runs `lint`, `typecheck` and `test` in that order and stops at the first failure: the definition of done.         |
 
 The archive's name is the map folder's name without its suffix, then the `version` of `package.json` (left out when there is none), then `-dev` for a dev build, then the map folder's suffix; `archiveName` in `reforged.config.ts` replaces it, used as written. `pnpm test:map` launches the staged map folder, which keeps the map folder's name.
 

@@ -6,8 +6,8 @@ This repository is a Map project: a Warcraft III 3.0.0 map whose code is TypeScr
 
 ## Commands
 
-- `pnpm build`: compiles `src` in dev mode (the `mode` `reforged.config.ts` ships with), with the library's runtime checks on, stages the map folder and packs the archive into `dist/`, named `<map folder's name>-<version>-dev.<suffix>` from the `version` of `package.json`.
-- `pnpm build --mode release`: the same build with the runtime checks off, as players get it: `<map folder's name>-<version>.<suffix>`.
+- `pnpm build`: compiles `src` in dev mode (the `mode` `reforged.config.ts` ships with), with the library's runtime checks on, stages the map folder and packs the archive into `dist/`, named `<map folder's name without its suffix>-<version>-dev.<suffix>` from the `version` of `package.json`, without `-<version>` when it has none.
+- `pnpm build --mode release`: the same build with the runtime checks off, as players get it: `<map folder's name without its suffix>-<version>.<suffix>`.
 - `pnpm dev`: rebuilds on every change to `src` or the map folder, until stopped.
 - `pnpm test:map`: builds (dev mode unless `--mode release`), then launches the game on the staged map folder.
 - `pnpm test`: runs the map's tests and the Template's pipeline tests, without the game (see Testing).

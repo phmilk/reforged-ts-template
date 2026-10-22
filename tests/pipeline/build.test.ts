@@ -121,6 +121,7 @@ describe("node scripts/build.ts (pnpm build)", () => {
     setPackageVersion(project, undefined);
 
     const dev = runScript(project, "scripts/build.ts");
+    expect(dev.status).toBe(0);
     expect(dev.stderr).toBe("");
     expect(dev.stdout).toMatch(
       /^Built dist[\\/]reforged-ts-template-dev\.w3m \(\d+ bytes, mode dev\)$/m,
@@ -129,6 +130,7 @@ describe("node scripts/build.ts (pnpm build)", () => {
       "--mode",
       "release",
     ]);
+    expect(release.status).toBe(0);
     expect(release.stderr).toBe("");
     expect(release.stdout).toMatch(
       /^Built dist[\\/]reforged-ts-template\.w3m \(\d+ bytes, mode release\)$/m,
