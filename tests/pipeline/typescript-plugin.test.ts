@@ -145,8 +145,10 @@ describe("the plugin under the Template's TypeScript", () => {
       offset,
     });
     expect(hover.success).toBe(true);
+    // Any Patch: which one the hover names is reforged-builtins' data, tested
+    // in the library, and it moves with every Patch the library adopts (#101).
     expect((hover.body as { documentation: string }).documentation).toMatch(
-      /^\*\*Footman\*\* \(`hfoo`\), a Built-in unit of Patch 3\.0\.0/,
+      /^\*\*Footman\*\* \(`hfoo`\), a Built-in unit of Patch \d+\.\d+\.\d+/,
     );
   });
 });
