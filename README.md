@@ -10,7 +10,7 @@ A Map project template: a Warcraft III 3.0.0 map whose code is TypeScript compil
 - **The World Editor**, which ships with the game. The map is saved as a folder, with Lua as its script language.
 - **Node 24** (`.node-version`).
 - **pnpm 12** (`packageManager` in `package.json`): install it with `npm install --global pnpm@12`. pnpm 11 or later switches to the pinned version by itself; pnpm 10 cannot start pnpm 12 on Windows. Its settings live in `pnpm-workspace.yaml`.
-- **Git**, which the Creation CLI uses to make the project a repository with a first commit.
+- **Git**, to clone the repository, or for the Creation CLI's first commit.
 
 On Linux the game runs through Wine: set `winePath` in `reforged.config.ts`.
 
@@ -23,9 +23,9 @@ npx create-reforged-map@next my-map   # or: pnpm create reforged-map@next my-map
 cd my-map
 ```
 
-In a terminal it asks for the project name, the folder's name when left blank, and a one-line description of the map. Then it downloads the Template into `my-map`, writes the name and the description into `package.json` and this README, and the description into `AGENTS.md`'s "Your project", initialises git, installs the packages, runs `pnpm template:detach` to remove the files that serve only the Template's own development ([below](#deletable-in-a-generated-project)) and makes a first commit. It needs pnpm, and git unless `--skip-git`; [its README](https://github.com/phmilk/reforged-ts/tree/master/packages/create-reforged-map#usage) lists the other options. Write `@next` until 1.0.0: npm keeps `latest` on the first alpha, so a bare `npx create-reforged-map` runs that one.
+In a terminal it asks for the project name, the folder's name when left blank, and a one-line description of the map. Then it downloads the Template into `my-map`, writes the name into `package.json` and this README, and the description, when given, there and into `AGENTS.md`'s "Your project", makes the folder a git repository, installs the packages, runs `pnpm template:detach` to remove the files that serve only the Template's own development, and makes a first commit. It needs pnpm, and git unless `--skip-git`; [its README](https://github.com/phmilk/reforged-ts/tree/master/packages/create-reforged-map#usage) lists the other options. Write `@next` until 1.0.0: npm keeps `latest` on the first alpha, so a bare `npx create-reforged-map` runs that one.
 
-The other way in is GitHub's **Use this template**, which keeps your repository linked to the Template on GitHub:
+The other way in is GitHub's **Use this template**, which shows your repository as generated from the Template:
 
 1. Create your repository from this one with **Use this template**.
 2. Clone it and open a terminal in the clone.
@@ -141,7 +141,7 @@ Nothing committed changes, in either direction: the committed pnpm hook `.pnpmfi
 
 ## Deletable in a generated project
 
-This repository keeps the Template itself up to date with the library. A Map project generated from it deletes that machinery with `pnpm template:detach`, which the Creation CLI runs for it and which removes the files `template-maintenance.json` lists, this section and the Template maintenance section of `AGENTS.md`; nothing is ever synced into a generated project:
+This repository keeps the Template itself up to date with the library. A Map project generated from it deletes that machinery with `pnpm template:detach`, which the Creation CLI runs for it. The command removes the files `template-maintenance.json` lists, this section and the Template maintenance section of `AGENTS.md`; nothing is ever synced into a generated project:
 
 - `.github/workflows/sync.yml`, the workflow that applies a library release to the Template and opens a pull request. It runs only in `phmilk/reforged-ts-template`, so it is inert in your repository.
 - `.github/workflows/claim.yml`, the workflow that runs the library's claim check on every pull request and every assignment (`docs/agents/issue-tracker.md`, "Claim"). It runs only in `phmilk/reforged-ts-template`, so it is inert in your repository.
