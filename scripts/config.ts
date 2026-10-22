@@ -10,7 +10,13 @@ export interface Config {
   mapFolder: string;
   /** Holds the staged map folder, the Lua bundle and the archive. Cleaned on every build. Default `dist`. */
   outputFolder?: string;
-  /** File name of the packed archive. Default: the map folder's name. */
+  /**
+   * File name of the packed archive, used as written: neither the version nor
+   * the suffix is added to it. Default: the map folder's name without its
+   * suffix, then `-<version>` (the `version` of `package.json`, left out when
+   * missing or empty), then `-dev` in dev mode, then the suffix:
+   * `my-map-1.2.0-dev.w3m` in dev mode, `my-map-1.2.0.w3m` in release mode.
+   */
   archiveName?: string;
   /** `dev` turns the library's runtime checks on, `release` turns them off. Default `dev`; `--mode` overrides it. */
   mode?: Mode;
@@ -58,11 +64,16 @@ export interface ResolvedConfig {
 
 export const CONFIG_FILE = "reforged.config.ts";
 
-/** Applies the defaults and resolves every path against `root`. */
+/**
+ * Applies the defaults and resolves every path against `root`. `version` is the
+ * map's version, the `version` of `package.json`, which the default archive
+ * name carries.
+ */
 export function resolveConfig(
   config: Config,
   root: string,
   overrides: CommandLineOptions = {},
+  version?: string,
 ): ResolvedConfig {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a config file without a default export gives undefined, whatever the type says
   if (typeof config?.mapFolder !== "string" || config.mapFolder === "") {
@@ -72,7 +83,6 @@ export function resolveConfig(
   }
   const mapFolder = path.resolve(root, config.mapFolder);
   const outputFolder = path.resolve(root, config.outputFolder ?? "dist");
-  const archiveName = config.archiveName ?? path.basename(mapFolder);
   const sourceFolder = path.join(root, "src");
   // The output folder is deleted on every build: never let it cover the repository or the map folder.
   if (
@@ -85,17 +95,19 @@ export function resolveConfig(
       `${CONFIG_FILE}: \`outputFolder\` must be a folder of its own, not the repository root, the source folder, or inside or around the map folder.`,
     );
   }
-  if (archiveName !== path.basename(archiveName) || archiveName === "") {
-    throw new AuthorError(
-      `${CONFIG_FILE}: \`archiveName\` must be a file name, not a path.`,
-    );
-  }
   if (config.mode !== undefined && !isMode(config.mode)) {
     throw new AuthorError(
       `${CONFIG_FILE}: \`mode\` must be ${MODES.map((m) => `"${m}"`).join(" or ")}, got ${JSON.stringify(config.mode)}.`,
     );
   }
   const mode = overrides.mode ?? config.mode ?? "dev";
+  const archiveName =
+    config.archiveName ?? defaultArchiveName(mapFolder, version, mode);
+  if (archiveName !== path.basename(archiveName) || archiveName === "") {
+    throw new AuthorError(
+      `${CONFIG_FILE}: \`archiveName\` must be a file name, not a path.`,
+    );
+  }
   return {
     root,
     mapFolder,
@@ -106,6 +118,23 @@ export function resolveConfig(
     generatedFolder: path.join(sourceFolder, "generated"),
     tsconfig: path.join(root, "tsconfig.json"),
   };
+}
+
+/**
+ * The archive's name when `archiveName` is not set:
+ * `<map folder's name without its suffix>-<version>[-dev].<suffix>`, without
+ * `-<version>` when `version` is missing or empty.
+ */
+function defaultArchiveName(
+  mapFolder: string,
+  version: string | undefined,
+  mode: Mode,
+): string {
+  const suffix = path.extname(mapFolder);
+  const parts = [path.basename(mapFolder, suffix)];
+  if (version) parts.push(version);
+  if (mode === "dev") parts.push("dev");
+  return parts.join("-") + suffix;
 }
 
 /** Whether `file` is `folder` itself or somewhere under it (both absolute). */
@@ -153,18 +182,39 @@ export async function loadConfig(
   argv: readonly string[] = [],
 ): Promise<ResolvedConfig> {
   const overrides = parseCommandLine(argv);
-  const { config, root } = await importConfigFile(configPath);
-  return resolveConfig(config, root, overrides);
+  const { config, root, version } = await importConfigFile(configPath);
+  return resolveConfig(config, root, overrides, version);
 }
 
+/** The configuration file's default export, its folder and the `version` of the `package.json` beside it. */
 async function importConfigFile(
   configPath: string,
-): Promise<{ config: Config; root: string }> {
+): Promise<{ config: Config; root: string; version?: string }> {
   const file = path.resolve(configPath);
   const module = (await import(pathToFileURL(file).href)) as {
     default: Config;
   };
-  return { config: module.default, root: path.dirname(file) };
+  const root = path.dirname(file);
+  const version = readPackageVersion(root);
+  return {
+    config: module.default,
+    root,
+    ...(version !== undefined && { version }),
+  };
+}
+
+/** The `version` of `<root>/package.json`; undefined when the file or the field is missing or the field is not a string. */
+function readPackageVersion(root: string): string | undefined {
+  let manifest: unknown;
+  try {
+    manifest = JSON.parse(
+      fs.readFileSync(path.join(root, "package.json"), "utf8"),
+    );
+  } catch {
+    return undefined;
+  }
+  const version = (manifest as { version?: unknown } | null)?.version;
+  return typeof version === "string" ? version : undefined;
 }
 
 /**
@@ -325,9 +375,9 @@ export async function loadLaunchConfig(
   probe: ExecutableProbe = systemProbe,
 ): Promise<LaunchConfig> {
   const overrides = parseCommandLine(argv);
-  const { config, root } = await importConfigFile(configPath);
+  const { config, root, version } = await importConfigFile(configPath);
   return {
-    ...resolveConfig(config, root, overrides),
+    ...resolveConfig(config, root, overrides, version),
     game: resolveGameLaunch(config, root, probe),
   };
 }

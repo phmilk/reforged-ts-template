@@ -3,16 +3,27 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { openArchive } from "../../scripts/pack.ts";
 import {
+  COPY_VERSION,
   copyProject,
   ENTRY_MODULE,
   hashTree,
   makeTempDir,
   runScript,
+  setPackageVersion,
   sha256,
 } from "./helpers.ts";
 
 const MAP = path.join("maps", "reforged-ts-template.w3m");
-const ARCHIVE = path.join("dist", "reforged-ts-template.w3m");
+/** The archive a dev build packs: the map folder's name, the version, `-dev`. */
+const ARCHIVE = path.join(
+  "dist",
+  `reforged-ts-template-${COPY_VERSION}-dev.w3m`,
+);
+/** The archive a release build packs: no `-dev`. */
+const RELEASE_ARCHIVE = path.join(
+  "dist",
+  `reforged-ts-template-${COPY_VERSION}.w3m`,
+);
 const ENV = path.join("src", "generated", "env.ts");
 
 /** The map script inside `archive`; fails the test when it has none. */
@@ -22,10 +33,10 @@ function scriptOf(archive: Uint8Array): Uint8Array {
   return new Uint8Array(script.bytes());
 }
 
-/** The map script inside the built archive, as text. */
-const archivedScript = (project: string): string =>
+/** The map script inside the built archive (`ARCHIVE` unless given), as text. */
+const archivedScript = (project: string, archive = ARCHIVE): string =>
   Buffer.from(
-    scriptOf(new Uint8Array(fs.readFileSync(path.join(project, ARCHIVE)))),
+    scriptOf(new Uint8Array(fs.readFileSync(path.join(project, archive)))),
   ).toString("utf8");
 
 /** Points the copy's tsconfig `tstl.luaBundle` at `file` (relative to the tsconfig). */
@@ -50,7 +61,7 @@ function entryModule(script: string): string {
 }
 
 describe("node scripts/build.ts (pnpm build)", () => {
-  it("packs the map folder and the entry into an archive named after the map folder", () => {
+  it("packs the map folder and the entry into an archive named after the map folder, the version and -dev", () => {
     const project = copyProject();
     const mapBefore = hashTree(path.join(project, MAP));
     const tsconfigBefore = sha256(
@@ -82,6 +93,48 @@ describe("node scripts/build.ts (pnpm build)", () => {
     expect(hashTree(path.join(project, MAP))).toEqual(mapBefore);
     expect(sha256(fs.readFileSync(path.join(project, "tsconfig.json")))).toBe(
       tsconfigBefore,
+    );
+  });
+
+  it("in GitHub Actions, sets the step output `archive` to the versioned archive's path", () => {
+    const project = copyProject();
+    const outputs = path.join(makeTempDir(), "github-output");
+
+    const result = runScript(
+      project,
+      "scripts/build.ts",
+      ["--mode", "release"],
+      {
+        GITHUB_OUTPUT: outputs,
+      },
+    );
+
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    expect(fs.readFileSync(outputs, "utf8")).toBe(
+      `archive=${RELEASE_ARCHIVE.split(path.sep).join("/")}\n`,
+    );
+  });
+
+  it("names the archive without a version when package.json has none", () => {
+    const project = copyProject();
+    setPackageVersion(project, undefined);
+
+    const dev = runScript(project, "scripts/build.ts");
+    expect(dev.stderr).toBe("");
+    expect(dev.stdout).toMatch(
+      /^Built dist[\\/]reforged-ts-template-dev\.w3m \(\d+ bytes, mode dev\)$/m,
+    );
+    const release = runScript(project, "scripts/build.ts", [
+      "--mode",
+      "release",
+    ]);
+    expect(release.stderr).toBe("");
+    expect(release.stdout).toMatch(
+      /^Built dist[\\/]reforged-ts-template\.w3m \(\d+ bytes, mode release\)$/m,
+    );
+    expect(fs.readdirSync(path.join(project, "dist"))).toContain(
+      "reforged-ts-template.w3m",
     );
   });
 
@@ -173,11 +226,14 @@ describe("node scripts/build.ts (pnpm build)", () => {
 
     expect(result.stderr).toBe("");
     expect(result.status).toBe(0);
+    expect(result.stdout).toContain(`Built ${RELEASE_ARCHIVE} (`);
     expect(result.stdout).toContain("mode release");
+    // The build cleans the output folder: the dev archive is gone.
+    expect(fs.existsSync(path.join(project, ARCHIVE))).toBe(false);
     expect(fs.readFileSync(path.join(project, ENV), "utf8")).toContain(
       "export const devMode: boolean = false;",
     );
-    const releaseScript = archivedScript(project);
+    const releaseScript = archivedScript(project, RELEASE_ARCHIVE);
     expect(releaseScript).toMatch(
       /\["generated\.env"\][^]*?____exports\.devMode = false\n/,
     );

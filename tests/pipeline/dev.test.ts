@@ -5,7 +5,13 @@ import { setTimeout as sleep } from "node:timers/promises";
 import * as ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
 import { debounce, watchFolders, type Timers } from "../../scripts/dev.ts";
-import { copyProject, ENTRY_MODULE, makeTempDir, ROOT } from "./helpers.ts";
+import {
+  COPY_VERSION,
+  copyProject,
+  ENTRY_MODULE,
+  makeTempDir,
+  ROOT,
+} from "./helpers.ts";
 
 /** A manual clock: timers fire only when the test advances time. */
 function fakeTimers(): Timers & { advance(ms: number): void } {
@@ -223,8 +229,13 @@ class DevProcess {
   }
 }
 
-const BUILT =
-  /^Built dist[\\/]reforged-ts-template\.w3m \(\d+ bytes, mode dev\)$/m;
+/** `Built <archive> (<n> bytes, mode <mode>)` for the copy's archive in `mode`. */
+const built = (mode: "dev" | "release"): RegExp =>
+  new RegExp(
+    `^Built dist[\\\\/]reforged-ts-template-${COPY_VERSION.replaceAll(".", "\\.")}${mode === "dev" ? "-dev" : ""}\\.w3m \\(\\d+ bytes, mode ${mode}\\)$`,
+    "m",
+  );
+const BUILT = built("dev");
 const FAILED = /^Build failed: /m;
 
 describe("node scripts/dev.ts (pnpm dev)", () => {
@@ -330,10 +341,7 @@ describe("node scripts/dev.ts (pnpm dev)", () => {
   it("takes --mode from the command line like pnpm build", async () => {
     const project = copyProject();
     dev = new DevProcess(project, ["--mode", "release"]);
-    await dev.waitFor(
-      /^Built dist[\\/]reforged-ts-template\.w3m \(\d+ bytes, mode release\)$/m,
-      1,
-    );
+    await dev.waitFor(built("release"), 1);
     expect(
       fs.readFileSync(path.join(project, "src", "generated", "env.ts"), "utf8"),
     ).toContain("devMode: boolean = false");
