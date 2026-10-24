@@ -26,6 +26,9 @@ export default defineConfig(
     "src/generated/**",
     // pnpm use:local's tarballs.
     ".local-packages/**",
+    // The session-start hook, copied from the library with its bytes
+    // (.claude/shared.lock.json): a fix goes to the library.
+    ".claude/hooks/shadowed-skills.mjs",
     // The lint fixtures break the rules on purpose; the configuration test
     // (tests/pipeline/eslint-config.test.ts) lints them with ignores off.
     "tests/lint/**",

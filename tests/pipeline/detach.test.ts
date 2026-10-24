@@ -1,13 +1,16 @@
 // `pnpm template:detach` (#93): the manifest of the Template maintenance
 // files, which the prose lists of AGENTS.md and the README follow, and the
-// command that removes them from a generated Map project, run on a copy.
+// command that removes them from a generated Map project, run on a copy: the
+// copy of what the library shares goes with its record, the Seeds stay.
 // Template maintenance, deleted with the rest of it (see AGENTS.md).
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   MANIFEST_FILE,
+  readCopies,
   readManifest,
+  readRecord,
   SCRIPT_NAME,
   SECTIONS,
 } from "../../scripts/detach.ts";
@@ -21,6 +24,10 @@ import {
 } from "./helpers.ts";
 
 const MANIFEST = readManifest(ROOT);
+/** The files of the copies the manifest lists, which the command removes with their record. */
+const COPIED = readCopies(ROOT).flatMap((record) =>
+  Object.keys(readRecord(ROOT, record).files),
+);
 
 /** The text of the `## <heading>` section of `file`, up to the next `## ` heading. */
 function section(file: string, heading: string): string {
@@ -31,17 +38,29 @@ function section(file: string, heading: string): string {
   return text.slice(start, next === -1 ? undefined : next);
 }
 
-/** The documents the lists name without deleting them: the Seeds and the README. */
-const KEPT = new Set(["AGENTS.md", "GLOSSARY.md", "README.md"]);
+/** What the lists name without deleting it: the Seeds (the documents and the Agent skills) and the README. */
+const KEPT = new Set([
+  "AGENTS.md",
+  "GLOSSARY.md",
+  "README.md",
+  ".claude/skills/map-feature",
+  ".claude/skills/run-in-game",
+]);
 
-/** The code spans of `text` that name a file of the repository, but the `KEPT` ones. */
+/**
+ * The code spans of `text` that name a file of the repository, but the
+ * `KEPT` ones and the copied files, which the record of their copy names.
+ */
 function namedFiles(text: string): string[] {
   return [
     ...new Set(
       [...text.matchAll(/`([^`\s]+)`/g)]
         .map((match) => match[1])
         .filter(
-          (name) => !KEPT.has(name) && fs.existsSync(path.join(ROOT, name)),
+          (name) =>
+            !KEPT.has(name) &&
+            !COPIED.includes(name) &&
+            fs.existsSync(path.join(ROOT, name)),
         ),
     ),
   ].sort();
@@ -61,6 +80,19 @@ describe("the manifest of the Template maintenance", () => {
     ).toEqual([]);
     expect(MANIFEST).toContain(MANIFEST_FILE);
     expect(MANIFEST).toContain("scripts/detach.ts");
+  });
+
+  it("lists the record of the copy of what the library shares among its paths", () => {
+    expect(readCopies(ROOT)).toEqual([".claude/shared.lock.json"]);
+    expect(MANIFEST).toEqual(expect.arrayContaining(readCopies(ROOT)));
+    expect(COPIED).toEqual(
+      expect.arrayContaining([
+        "skills-lock.json",
+        ".claude/hooks/shadowed-skills.mjs",
+        ".claude/settings.json",
+        ".claude/skills/write-spec/SKILL.md",
+      ]),
+    );
   });
 
   it("leaves the diff driver of Object data to the Map project", () => {
@@ -96,13 +128,15 @@ describe("the manifest of the Template maintenance", () => {
 
 /**
  * A Map project reduced to what the command touches: the listed files, the
- * two documents it cuts a section from, the package manifest and the
- * scripts the command imports. With `origin`, a git checkout with that remote.
+ * copied ones, the Seeds, the two documents it cuts a section from, the
+ * package manifest and the scripts the command imports. With `origin`, a git
+ * checkout with that remote.
  */
 function generatedProject(origin?: string): string {
   const dir = makeTempDir();
   for (const rel of [
     ...MANIFEST,
+    ...COPIED,
     ...KEPT,
     "package.json",
     "scripts/cli.ts",
@@ -119,7 +153,7 @@ function generatedProject(origin?: string): string {
 }
 
 describe("pnpm template:detach", () => {
-  it("removes the listed files, the two sections and its package script, and keeps the Seeds and the README", () => {
+  it("removes the listed files, the copy, the two sections and its package script, and keeps the Seeds and the README", () => {
     const dir = generatedProject("git@github.com:someone/my-map.git");
     const before = JSON.parse(
       fs.readFileSync(path.join(dir, "package.json"), "utf8"),
@@ -132,13 +166,24 @@ describe("pnpm template:detach", () => {
     expect(
       MANIFEST.filter((rel) => fs.existsSync(path.join(dir, rel))),
     ).toEqual([]);
+    expect(COPIED.filter((rel) => fs.existsSync(path.join(dir, rel)))).toEqual(
+      [],
+    );
     expect(
       [...KEPT].filter((rel) => !fs.existsSync(path.join(dir, rel))),
     ).toEqual([]);
+    // The folders the copy emptied go with it: the Seeds alone stay.
+    expect(fs.readdirSync(path.join(dir, ".claude"))).toEqual(["skills"]);
+    expect(fs.readdirSync(path.join(dir, ".claude/skills")).sort()).toEqual([
+      "map-feature",
+      "run-in-game",
+    ]);
     const agents = fs.readFileSync(path.join(dir, "AGENTS.md"), "utf8");
     expect(agents).not.toContain("\n## Template maintenance\n");
     expect(agents).toContain("\n## Your project\n");
     expect(agents).toContain("\n## Agent skills\n");
+    expect(agents).toContain("`.claude/skills/map-feature/SKILL.md`");
+    expect(agents).not.toContain(".claude/shared.lock.json");
     const readme = fs.readFileSync(path.join(dir, "README.md"), "utf8");
     expect(readme).not.toContain("\n## Deletable in a generated project\n");
     expect(readme).toContain("\n## Links\n");
@@ -151,6 +196,9 @@ describe("pnpm template:detach", () => {
       ),
     );
     expect(result.stdout).toContain("- scripts/sync.ts\n");
+    expect(result.stdout).toContain(
+      `- the ${String(COPIED.length)} files .claude/shared.lock.json records\n`,
+    );
     expect(result.stdout).toContain(
       `- AGENTS.md, section "Template maintenance"\n`,
     );

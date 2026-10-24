@@ -12,8 +12,13 @@
     ".github/workflows/claim.yml",
     ".github/workflows/board.yml",
     "tests/pipeline/board.test.ts",
+    ".claude/shared.lock.json",
+    ".claude/.gitattributes",
+    ".prettierignore",
+    "tests/pipeline/shared-skills.test.ts",
     "scripts/detach.ts",
     "tests/pipeline/detach.test.ts",
     "template-maintenance.json"
-  ]
+  ],
+  "copies": [".claude/shared.lock.json"]
 }

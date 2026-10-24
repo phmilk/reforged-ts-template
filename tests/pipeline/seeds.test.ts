@@ -1,5 +1,5 @@
 // AGENTS.md, GLOSSARY.md and the Agent skills as the Template ships them: the
-// sections of AGENTS.md, the skills it lists, and the sync markers of both
+// sections of AGENTS.md, the Seeds it lists, and the sync markers of both
 // files, which the library's release sync targets. The sync rewrites only the
 // text between a start and an end marker. In a generated Map project these
 // files are the author's own: this test is Template maintenance, deleted with
@@ -13,7 +13,7 @@ import {
   OBJECTS_DECLARATIONS_FILE,
 } from "reforged-map";
 import { describe, expect, it } from "vitest";
-import { readManifest } from "../../scripts/detach.ts";
+import { readCopies, readManifest, readRecord } from "../../scripts/detach.ts";
 import { ENV_FILE } from "../../scripts/generate.ts";
 import { endMarker, LIBRARY_TERMS } from "../../scripts/sync.ts";
 import { ROOT } from "./helpers.ts";
@@ -123,10 +123,23 @@ describe("AGENTS.md", () => {
   });
 });
 
-/** Every Agent skill under Claude Code's skills folder, one folder each. */
+/**
+ * The skills of the copy of what the library shares: each folder of Claude
+ * Code's skills folder that a copy's record names a file of
+ * (tests/pipeline/shared-skills.test.ts checks the copy).
+ */
+const SHARED_SKILLS = new Set(
+  readCopies(ROOT).flatMap((record) =>
+    Object.keys(readRecord(ROOT, record).files).flatMap((rel) =>
+      rel.startsWith(".claude/skills/") ? [rel.split("/")[2]] : [],
+    ),
+  ),
+);
+
+/** The Seeds: every other Agent skill under Claude Code's skills folder, one folder each. */
 const SKILLS = fs
   .readdirSync(path.join(ROOT, ".claude", "skills"), { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
+  .filter((entry) => entry.isDirectory() && !SHARED_SKILLS.has(entry.name))
   .map((entry) => entry.name);
 
 describe("the Agent skills", () => {
@@ -155,6 +168,17 @@ describe("the Agent skills", () => {
     expect(section(agents, "Agent skills")).toContain(
       `.claude/skills/${name}/SKILL.md`,
     );
+  });
+
+  it("are listed in AGENTS.md without the shared ones, for which it points at the copy's record", () => {
+    const list = section(agents, "Agent skills");
+    expect(
+      [...SHARED_SKILLS].filter((name) =>
+        list.includes(`.claude/skills/${name}/`),
+      ),
+    ).toEqual([]);
+    for (const record of readCopies(ROOT))
+      expect(list).toContain(`\`${record}\``);
   });
 });
 
