@@ -1,4 +1,4 @@
-// AGENTS.md, CONTEXT.md and the Agent skills as the Template ships them: the
+// AGENTS.md, GLOSSARY.md and the Agent skills as the Template ships them: the
 // sections of AGENTS.md, the skills it lists, and the sync markers of both
 // files, which the library's release sync targets. The sync rewrites only the
 // text between a start and an end marker. In a generated Map project these
@@ -13,6 +13,7 @@ import {
   OBJECTS_DECLARATIONS_FILE,
 } from "reforged-map";
 import { describe, expect, it } from "vitest";
+import { readManifest } from "../../scripts/detach.ts";
 import { ENV_FILE } from "../../scripts/generate.ts";
 import { endMarker, LIBRARY_TERMS } from "../../scripts/sync.ts";
 import { ROOT } from "./helpers.ts";
@@ -157,16 +158,26 @@ describe("the Agent skills", () => {
   });
 });
 
-describe("CONTEXT.md", () => {
-  const context = readRepoFile("CONTEXT.md");
+describe("GLOSSARY.md", () => {
+  const glossary = readRepoFile("GLOSSARY.md");
+
+  it("is a Seed: a generated Map project keeps it at the root, where the Domain docs point", () => {
+    expect(readManifest(ROOT)).not.toContain("GLOSSARY.md");
+    expect(section(readRepoFile("AGENTS.md"), "Domain docs")).toContain(
+      "`GLOSSARY.md` at the repo root",
+    );
+    expect(readRepoFile("docs/agents/domain.md")).toContain(
+      "**`GLOSSARY.md`** at the repo root",
+    );
+  });
 
   it("holds the library terms between the terms markers, then Your map's terms", () => {
-    const block = markedBlock(context, "terms");
+    const block = markedBlock(glossary, "terms");
     // The sync writes them in the library file's order, which may change.
     expect(
       [...block.matchAll(/^\*\*(.+?)\*\*:$/gm)].map(([, term]) => term).sort(),
     ).toEqual([...LIBRARY_TERMS].sort());
-    const afterBlock = context.slice(context.indexOf(endMarker("terms")));
+    const afterBlock = glossary.slice(glossary.indexOf(endMarker("terms")));
     expect(headings(afterBlock)).toEqual(["Your map's terms"]);
   });
 });

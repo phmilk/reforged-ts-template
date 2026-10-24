@@ -105,7 +105,7 @@ No stable release yet. During the build phase the packages are published as `1.0
 
 ## Agents and editor
 
-`AGENTS.md` tells any coding agent how this project is worked on: the commands, the layout, the runtime constraints of the game's Lua, lint and testing; `CLAUDE.md` imports it for Claude Code. `CONTEXT.md` is the project's glossary: the library's terms first, then a section for your map's own. The Agent skills under `.claude/skills` walk an agent through adding a feature (`map-feature`) and running the map in the game (`run-in-game`); `AGENTS.md` lists them, so an agent without skills reads them as documents.
+`AGENTS.md` tells any coding agent how this project is worked on: the commands, the layout, the runtime constraints of the game's Lua, lint and testing; `CLAUDE.md` imports it for Claude Code. `GLOSSARY.md` is the project's glossary: the library's terms first, then a section for your map's own. The Agent skills under `.claude/skills` walk an agent through adding a feature (`map-feature`) and running the map in the game (`run-in-game`); `AGENTS.md` lists them, so an agent without skills reads them as documents.
 
 A green `pnpm check` is the definition of done, for an author and for an agent.
 
@@ -168,7 +168,7 @@ This repository keeps the Template itself up to date with the library. A Map pro
 - `.github/workflows/claim.yml`, the workflow that runs the library's claim check on every pull request and every assignment (`docs/agents/issue-tracker.md`, "Claim"). It runs only in `phmilk/reforged-ts-template`, so it is inert in your repository.
 - `.github/workflows/board.yml`, the workflow that tells the library's Claim board to reconcile on every issue and pull-request event, and its test `tests/pipeline/board.test.ts`. It runs only in `phmilk/reforged-ts-template`, so it is inert in your repository.
 - The sync script the workflow runs, `scripts/sync.ts`, and its test `tests/pipeline/sync.test.ts`.
-- The tests that hold the Template's files to the sync's shape: `tests/pipeline/seeds.test.ts` (`AGENTS.md` and `CONTEXT.md`), `tests/pipeline/readme.test.ts` (this README) and their helper `tests/pipeline/sync-markers.ts`.
+- The tests that hold the Template's files to the sync's shape: `tests/pipeline/seeds.test.ts` (`AGENTS.md` and `GLOSSARY.md`), `tests/pipeline/readme.test.ts` (this README) and their helper `tests/pipeline/sync-markers.ts`.
 - The Template's maintenance docs: `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `docs/agents/release-gate.md` and the Template maintenance section of `AGENTS.md`, which lists all of the above.
 - The detach command, `scripts/detach.ts`, its test `tests/pipeline/detach.test.ts` and its manifest `template-maintenance.json`.
 

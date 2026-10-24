@@ -32,7 +32,7 @@ function section(file: string, heading: string): string {
 }
 
 /** The documents the lists name without deleting them: the Seeds and the README. */
-const KEPT = new Set(["AGENTS.md", "CONTEXT.md", "README.md"]);
+const KEPT = new Set(["AGENTS.md", "GLOSSARY.md", "README.md"]);
 
 /** The code spans of `text` that name a file of the repository, but the `KEPT` ones. */
 function namedFiles(text: string): string[] {
