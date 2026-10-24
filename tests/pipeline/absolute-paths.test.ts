@@ -162,42 +162,27 @@ describe("readCommittedFiles", () => {
 });
 
 /**
- * The files of the copies the Template maintenance lists (the `copies` of
- * `template-maintenance.json`, each a record that names its files): another
- * repository's text, checked there. None once `pnpm template:detach` ran.
+ * The files `.gitattributes` marks `-text`, which git stores byte for byte
+ * as another tool or repository wrote them: the map folder, the fixture
+ * maps, a copy of the library's files. Their text is not this project's.
  */
-function copiedFiles(root: string): Set<string> {
-  const manifest = path.join(root, "template-maintenance.json");
-  if (!fs.existsSync(manifest)) return new Set();
-  const { copies = [] } = JSON.parse(fs.readFileSync(manifest, "utf8")) as {
-    copies?: string[];
-  };
+function byteForByteFiles(root: string): Set<string> {
   return new Set(
-    copies
-      .filter((record) => fs.existsSync(path.join(root, record)))
-      .flatMap((record) =>
-        Object.keys(
-          (
-            JSON.parse(fs.readFileSync(path.join(root, record), "utf8")) as {
-              files: Record<string, string>;
-            }
-          ).files,
-        ),
-      ),
+    git(root, "ls-files", "-z", "--", ":(attr:-text)")
+      .split("\0")
+      .filter(Boolean),
   );
 }
 
 describe("committed files", () => {
-  it("contain no absolute path outside the map folder and the copies, except the game's well-known locations", (context) => {
+  it("contain no absolute path outside the map folder and the files git stores byte for byte, except the game's well-known locations", (context) => {
     const committed = readCommittedFiles(ROOT);
     // Not a git checkout (an unpacked archive), or nothing committed yet: nothing to say about committed files.
     if (committed === null) return context.skip();
-    const copied = copiedFiles(ROOT);
+    const kept = byteForByteFiles(ROOT);
     const files = committed.filter(
       ({ file }) =>
-        !file.startsWith(`${MAP_FOLDER}/`) &&
-        file !== SELF &&
-        !copied.has(file),
+        !file.startsWith(`${MAP_FOLDER}/`) && file !== SELF && !kept.has(file),
     );
     expect(files.length).toBeGreaterThan(10);
     const hits = files.flatMap(({ file, text }) =>

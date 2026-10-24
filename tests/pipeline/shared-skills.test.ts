@@ -12,15 +12,18 @@ import path from "node:path";
 import { ESLint } from "eslint";
 import { getFileInfo } from "prettier";
 import { describe, expect, it } from "vitest";
-import { readCopies, readRecord } from "../../scripts/detach.ts";
+import {
+  copiedSkills,
+  readCopies,
+  readRecord,
+  SKILLS_FOLDER,
+} from "../../scripts/detach.ts";
 import { git, ROOT, sha256 } from "./helpers.ts";
 
 /** The record of the copy, the one copy `template-maintenance.json` lists. */
 const RECORD_FILE = ".claude/shared.lock.json";
 const record = readRecord(ROOT, RECORD_FILE);
 const COPIED = Object.keys(record.files).sort();
-
-const SKILLS_FOLDER = ".claude/skills";
 
 /** What a failure tells the one who edited the copy. */
 const FIX_IN_LIBRARY = `a shared file is never edited in the Template: undo the edit and make the fix in ${record.repository}, whose .claude/shared.json names what is shared; the copy follows it (AGENTS.md, Template maintenance)`;
@@ -30,9 +33,10 @@ const skillOf = (rel: string): string | undefined =>
   rel.startsWith(`${SKILLS_FOLDER}/`) ? rel.split("/")[2] : undefined;
 
 /** The shared skills: the folders of the skills folder the record names a file of. */
-const SHARED_SKILLS = [
-  ...new Set(COPIED.flatMap((rel) => skillOf(rel) ?? [])),
-].sort();
+const SHARED_SKILLS = copiedSkills(ROOT);
+
+/** A file a second shared hook would add, which the folder rules cover already. */
+const NEXT_HOOK = ".claude/hooks/next-hook.mjs";
 
 /** The Seeds: every other folder of the skills folder. */
 const SEEDS = fs
@@ -87,8 +91,9 @@ describe("the record of the copy", () => {
         ".claude/settings.json",
       ]),
     );
+    // The library's list may name more Skill variants: write-spec is the first.
     expect(SHARED_SKILLS).toEqual(
-      [...Object.keys(lock.skills), "write-spec"].sort(),
+      expect.arrayContaining([...Object.keys(lock.skills), "write-spec"]),
     );
     for (const name of SHARED_SKILLS)
       expect(COPIED).toContain(`${SKILLS_FOLDER}/${name}/SKILL.md`);
@@ -146,9 +151,9 @@ describe("the copy", () => {
 describe("the formatters, linters and git", () => {
   const seedFiles = SEEDS.map((name) => `${SKILLS_FOLDER}/${name}/SKILL.md`);
 
-  it("keep every byte of the copy, and the Seeds as text", () => {
+  it("keep every byte of the copy and of any file of its hooks folder, and the Seeds as text", () => {
     const attributes = new Map(
-      git(ROOT, "check-attr", "text", "--", ...COPIED, ...seedFiles)
+      git(ROOT, "check-attr", "text", "--", ...COPIED, NEXT_HOOK, ...seedFiles)
         .trimEnd()
         .split("\n")
         .map((line) => {
@@ -156,21 +161,24 @@ describe("the formatters, linters and git", () => {
           return [file, value];
         }),
     );
-    for (const rel of COPIED) expect(attributes.get(rel), rel).toBe("unset");
+    for (const rel of [...COPIED, NEXT_HOOK])
+      expect(attributes.get(rel), rel).toBe("unset");
     for (const rel of seedFiles) expect(attributes.get(rel), rel).toBe("auto");
   });
 
-  it("leave the copy unformatted, and format the Seeds", async () => {
+  it("leave the copy and its hooks folder unformatted, and format the Seeds", async () => {
     const ignorePath = path.join(ROOT, ".prettierignore");
     const ignored = async (rel: string) =>
       (await getFileInfo(path.join(ROOT, rel), { ignorePath })).ignored;
-    for (const rel of COPIED) expect(await ignored(rel), rel).toBe(true);
+    for (const rel of [...COPIED, NEXT_HOOK])
+      expect(await ignored(rel), rel).toBe(true);
     for (const rel of seedFiles) expect(await ignored(rel), rel).toBe(false);
   });
 
-  it("leave the copy's scripts unlinted", async () => {
+  it("leave the copy's scripts and its hooks folder unlinted", async () => {
     const eslint = new ESLint({ cwd: ROOT });
-    for (const rel of COPIED.filter((file) => /\.[cm]?[jt]s$/.test(file)))
+    const scripts = COPIED.filter((file) => /\.[cm]?[jt]s$/.test(file));
+    for (const rel of [...scripts, NEXT_HOOK])
       expect(await eslint.isPathIgnored(path.join(ROOT, rel)), rel).toBe(true);
   });
 });

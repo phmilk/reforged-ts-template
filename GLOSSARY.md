@@ -42,6 +42,10 @@ _Avoid_: consumer, user code, game project
 The starter repository a Map project is generated from.
 _Avoid_: boilerplate, starter kit, example map
 
+**Seed**:
+A file the Template ships that becomes the Map project author's own after generation (`AGENTS.md`, `GLOSSARY.md`, the Agent skills); the Template refreshes its copy on each library release, a generated Map project never does.
+_Avoid_: template file, scaffold, boilerplate file
+
 **Toolchain**:
 The tools that turn a Map project's TypeScript into a Lua map script: TypeScript, typescript-to-lua, lint and build.
 _Avoid_: build system, pipeline, stack
@@ -85,6 +89,14 @@ _Avoid_: map object, custom unit
 **Editor form**:
 Object data as the 3.0 World Editor itself saves it (localizable strings as `TRIGSTR` references into a sorted and commented `war3map.wts`, each field in the file the editor keeps it in, every object in both files, new string numbers above every existing one), which a World Editor save leaves byte for byte.
 _Avoid_: canonical form
+
+**Upstream skill**:
+An Agent skill installed unmodified from `mattpocock/skills`, at the version its lock names.
+_Avoid_: global skill, vendored skill, external skill
+
+**Skill variant**:
+An Agent skill of this repository built from an Upstream skill's steps, under its own name, recording the Upstream skill's version it was built from.
+_Avoid_: wrapper (a library class over a Handle), fork, override
 
 <!-- reforged-ts:terms:end -->
 

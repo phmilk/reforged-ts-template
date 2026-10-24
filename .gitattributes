@@ -20,7 +20,10 @@
 # bytes (the war3map.w3i hash, the war3map.lua text) are what the tests pin.
 tests/pipeline/fixtures/** -text -diff
 
+# template-maintenance:start
 # The lock of the Upstream skills, part of the copy of what the library
 # shares: git stores it byte for byte, as .claude/.gitattributes does the
 # rest of the copy (.claude/shared.lock.json records each file's sha256).
+# Template maintenance: pnpm template:detach removes this block.
 skills-lock.json -text
+# template-maintenance:end

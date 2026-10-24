@@ -4,8 +4,10 @@
 // lists names (the copy of what the library shares, ADR 0024 of
 // phmilk/reforged-ts); the sections are AGENTS.md's "Template maintenance"
 // and the README's "Deletable in a generated project", and the lines of both
-// that name a copy's record (the pointer of AGENTS.md's Agent skills). It
-// removes itself, its package script and the manifest too, so it runs once.
+// that name a copy's record (the pointer of AGENTS.md's Agent skills); the
+// blocks are those between the template-maintenance markers of .gitattributes
+// and eslint.config.mjs (the copy's attributes and ignores). It removes
+// itself, its package script and the manifest too, so it runs once.
 //
 // Template maintenance: a generated Map project deletes it (see AGENTS.md).
 import { spawnSync } from "node:child_process";
@@ -25,6 +27,15 @@ export const SECTIONS: Readonly<Record<string, string>> = {
   "AGENTS.md": "Template maintenance",
   "README.md": "Deletable in a generated project",
 };
+/** The files with a block of Template maintenance between `MARKER` lines. */
+export const MARKED_FILES: readonly string[] = [
+  ".gitattributes",
+  "eslint.config.mjs",
+];
+/** A block of Template maintenance runs from a line holding `<MARKER>:start` to one holding `<MARKER>:end`. */
+export const MARKER = "template-maintenance";
+/** Claude Code's skills folder, from the project root. */
+export const SKILLS_FOLDER = ".claude/skills";
 
 const USAGE = "Usage: node scripts/detach.ts [--force]";
 
@@ -70,6 +81,21 @@ export function readRecord(root: string, rel: string): CopyRecord {
   ) as CopyRecord;
 }
 
+/** Every file the records of the copies the manifest at `root` lists name. */
+export function copiedFiles(root: string): string[] {
+  return readCopies(root)
+    .filter((record) => fs.existsSync(path.join(root, record)))
+    .flatMap((record) => Object.keys(readRecord(root, record).files));
+}
+
+/** The folders of the skills folder a copy holds files of, sorted: the shared skills. */
+export function copiedSkills(root: string): string[] {
+  const skills = copiedFiles(root).flatMap((rel) =>
+    rel.startsWith(`${SKILLS_FOLDER}/`) ? [rel.split("/")[2]] : [],
+  );
+  return [...new Set(skills)].sort();
+}
+
 /** Removes `rel` from `root`, then each folder above it that it leaves empty. */
 function remove(root: string, rel: string): void {
   fs.rmSync(path.join(root, rel), { recursive: true });
@@ -102,6 +128,23 @@ export function withoutLinesNaming(
     .join("\n");
 }
 
+/**
+ * `text` without its blocks between a `<MARKER>:start` line and a
+ * `<MARKER>:end` line, both included, and the blank line before a block.
+ */
+export function withoutMarkedBlocks(text: string): string {
+  const kept: string[] = [];
+  let inside = false;
+  for (const line of text.split("\n")) {
+    if (!inside && line.includes(`${MARKER}:start`)) {
+      inside = true;
+      if (kept.at(-1)?.trim() === "") kept.pop();
+    } else if (inside && line.includes(`${MARKER}:end`)) inside = false;
+    else if (!inside) kept.push(line);
+  }
+  return kept.join("\n");
+}
+
 /** Whether the `origin` remote of the git checkout at `root` is the Template's own. */
 function isTemplateCheckout(root: string): boolean {
   const result = spawnSync("git", ["remote", "get-url", "origin"], {
@@ -117,8 +160,8 @@ function isTemplateCheckout(root: string): boolean {
 /**
  * Removes the Template maintenance from the project at `root` and returns
  * what it removed: the files of each listed copy, each listed path that
- * exists, each section and the lines naming a copy's record, the package
- * script. A folder a removal leaves empty goes with it. A second run removes
+ * exists, each section and the lines naming a copy's record, each marked
+ * block, the package script. A folder a removal leaves empty goes with it. A second run removes
  * nothing. Refuses in the Template's own checkout unless `force`.
  */
 export function detach(root: string, force = false): string[] {
@@ -157,6 +200,15 @@ export function detach(root: string, force = false): string[] {
     if (next !== cut)
       removed.push(`${name}, the lines naming ${copies.join(", ")}`);
     if (next !== text) fs.writeFileSync(file, next);
+  }
+  for (const name of MARKED_FILES) {
+    const file = path.join(root, name);
+    if (!fs.existsSync(file)) continue;
+    const text = fs.readFileSync(file, "utf8");
+    const next = withoutMarkedBlocks(text);
+    if (next === text) continue;
+    fs.writeFileSync(file, next);
+    removed.push(`${name}, the Template maintenance between its markers`);
   }
   const manifest = path.join(root, "package.json");
   if (fs.existsSync(manifest)) {

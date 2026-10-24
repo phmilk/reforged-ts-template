@@ -3,7 +3,7 @@
 # are formatted. Template maintenance: a generated Map project deletes this
 # file (see AGENTS.md).
 skills-lock.json
-.claude/hooks/shadowed-skills.mjs
+.claude/hooks/
 .claude/settings.json
 .claude/skills/*
 !.claude/skills/map-feature/

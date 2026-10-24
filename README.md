@@ -170,7 +170,7 @@ This repository keeps the Template itself up to date with the library. A Map pro
 - The sync script the workflow runs, `scripts/sync.ts`, and its test `tests/pipeline/sync.test.ts`.
 - The tests that hold the Template's files to the sync's shape: `tests/pipeline/seeds.test.ts` (`AGENTS.md` and `GLOSSARY.md`), `tests/pipeline/readme.test.ts` (this README) and their helper `tests/pipeline/sync-markers.ts`.
 - The Template's maintenance docs: `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `docs/agents/release-gate.md` and the Template maintenance section of `AGENTS.md`, which lists all of the above.
-- The copy of the Agent skills the Template shares with the library: every file its record `.claude/shared.lock.json` names (the Upstream skills and their lock, `write-spec`, the session-start hook and its registration in `.claude/settings.json`), the git attributes `.claude/.gitattributes` and the Prettier ignores `.prettierignore` that keep its bytes, and its test `tests/pipeline/shared-skills.test.ts`. The Seeds `map-feature` and `run-in-game` stay.
+- The copy of the Agent skills the Template shares with the library: every file its record `.claude/shared.lock.json` names (the Upstream skills and their lock, `write-spec`, the session-start hook and its registration in `.claude/settings.json`), the git attributes `.claude/.gitattributes` and the Prettier ignores `.prettierignore` that keep its bytes, its test `tests/pipeline/shared-skills.test.ts`, and the blocks of `.gitattributes` and `eslint.config.mjs` between the `template-maintenance` markers. The Seeds `map-feature` and `run-in-game` stay.
 - The detach command, `scripts/detach.ts`, its test `tests/pipeline/detach.test.ts` and its manifest `template-maintenance.json`.
 
 ## Links

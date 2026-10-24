@@ -13,7 +13,11 @@ import {
   OBJECTS_DECLARATIONS_FILE,
 } from "reforged-map";
 import { describe, expect, it } from "vitest";
-import { readCopies, readManifest, readRecord } from "../../scripts/detach.ts";
+import {
+  copiedSkills,
+  readCopies,
+  readManifest,
+} from "../../scripts/detach.ts";
 import { ENV_FILE } from "../../scripts/generate.ts";
 import { endMarker, LIBRARY_TERMS } from "../../scripts/sync.ts";
 import { ROOT } from "./helpers.ts";
@@ -123,18 +127,8 @@ describe("AGENTS.md", () => {
   });
 });
 
-/**
- * The skills of the copy of what the library shares: each folder of Claude
- * Code's skills folder that a copy's record names a file of
- * (tests/pipeline/shared-skills.test.ts checks the copy).
- */
-const SHARED_SKILLS = new Set(
-  readCopies(ROOT).flatMap((record) =>
-    Object.keys(readRecord(ROOT, record).files).flatMap((rel) =>
-      rel.startsWith(".claude/skills/") ? [rel.split("/")[2]] : [],
-    ),
-  ),
-);
+/** The skills of the copy of what the library shares (tests/pipeline/shared-skills.test.ts checks the copy). */
+const SHARED_SKILLS = new Set(copiedSkills(ROOT));
 
 /** The Seeds: every other Agent skill under Claude Code's skills folder, one folder each. */
 const SKILLS = fs

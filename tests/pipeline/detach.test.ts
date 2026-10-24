@@ -7,10 +7,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  copiedFiles,
   MANIFEST_FILE,
+  MARKED_FILES,
+  MARKER,
   readCopies,
   readManifest,
-  readRecord,
   SCRIPT_NAME,
   SECTIONS,
 } from "../../scripts/detach.ts";
@@ -25,9 +27,7 @@ import {
 
 const MANIFEST = readManifest(ROOT);
 /** The files of the copies the manifest lists, which the command removes with their record. */
-const COPIED = readCopies(ROOT).flatMap((record) =>
-  Object.keys(readRecord(ROOT, record).files),
-);
+const COPIED = copiedFiles(ROOT);
 
 /** The text of the `## <heading>` section of `file`, up to the next `## ` heading. */
 function section(file: string, heading: string): string {
@@ -49,7 +49,8 @@ const KEPT = new Set([
 
 /**
  * The code spans of `text` that name a file of the repository, but the
- * `KEPT` ones and the copied files, which the record of their copy names.
+ * `KEPT` ones, the copied files, which the record of their copy names, and
+ * the files the command cuts a marked block from.
  */
 function namedFiles(text: string): string[] {
   return [
@@ -60,6 +61,7 @@ function namedFiles(text: string): string[] {
           (name) =>
             !KEPT.has(name) &&
             !COPIED.includes(name) &&
+            !MARKED_FILES.includes(name) &&
             fs.existsSync(path.join(ROOT, name)),
         ),
     ),
@@ -82,8 +84,7 @@ describe("the manifest of the Template maintenance", () => {
     expect(MANIFEST).toContain("scripts/detach.ts");
   });
 
-  it("lists the record of the copy of what the library shares among its paths", () => {
-    expect(readCopies(ROOT)).toEqual([".claude/shared.lock.json"]);
+  it("lists the record of each copy among its paths", () => {
     expect(MANIFEST).toEqual(expect.arrayContaining(readCopies(ROOT)));
     expect(COPIED).toEqual(
       expect.arrayContaining([
@@ -129,8 +130,8 @@ describe("the manifest of the Template maintenance", () => {
 /**
  * A Map project reduced to what the command touches: the listed files, the
  * copied ones, the Seeds, the two documents it cuts a section from, the
- * package manifest and the scripts the command imports. With `origin`, a git
- * checkout with that remote.
+ * files it cuts a marked block from, the package manifest and the scripts
+ * the command imports. With `origin`, a git checkout with that remote.
  */
 function generatedProject(origin?: string): string {
   const dir = makeTempDir();
@@ -138,6 +139,7 @@ function generatedProject(origin?: string): string {
     ...MANIFEST,
     ...COPIED,
     ...KEPT,
+    ...MARKED_FILES,
     "package.json",
     "scripts/cli.ts",
     "scripts/errors.ts",
@@ -187,6 +189,36 @@ describe("pnpm template:detach", () => {
     const readme = fs.readFileSync(path.join(dir, "README.md"), "utf8");
     expect(readme).not.toContain("\n## Deletable in a generated project\n");
     expect(readme).toContain("\n## Links\n");
+    // The marked blocks go, the rest of each file stays as it was.
+    for (const name of MARKED_FILES) {
+      const original = fs.readFileSync(path.join(ROOT, name), "utf8");
+      const text = fs.readFileSync(path.join(dir, name), "utf8");
+      expect(text, name).not.toContain(MARKER);
+      expect(text, name).toMatch(/\S\n$/);
+      expect(
+        text.split("\n").filter((line) => !original.split("\n").includes(line)),
+        name,
+      ).toEqual([]);
+    }
+    expect(fs.readFileSync(path.join(dir, ".gitattributes"), "utf8")).toContain(
+      "**/*.w3m/** -text\n",
+    );
+    expect(
+      fs.readFileSync(path.join(dir, "eslint.config.mjs"), "utf8"),
+    ).toContain('"tests/lint/**",');
+    // Nothing that stays names what the command removed.
+    for (const rel of [...KEPT, ...MARKED_FILES, "package.json"].filter(
+      (name) => fs.statSync(path.join(dir, name)).isFile(),
+    )) {
+      const text = fs.readFileSync(path.join(dir, rel), "utf8");
+      for (const gone of [
+        ".claude/shared.lock.json",
+        "skills-lock.json",
+        ".claude/hooks",
+        ".claude/settings.json",
+      ])
+        expect(text, `${rel} names ${gone}`).not.toContain(gone);
+    }
     const after = JSON.parse(
       fs.readFileSync(path.join(dir, "package.json"), "utf8"),
     ) as { scripts: Record<string, string> };
@@ -201,6 +233,9 @@ describe("pnpm template:detach", () => {
     );
     expect(result.stdout).toContain(
       `- AGENTS.md, section "Template maintenance"\n`,
+    );
+    expect(result.stdout).toContain(
+      "- .gitattributes, the Template maintenance between its markers\n",
     );
   });
 

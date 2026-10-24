@@ -5,5 +5,5 @@
 skills/** -text
 skills/map-feature/** text=auto eol=lf
 skills/run-in-game/** text=auto eol=lf
-hooks/shadowed-skills.mjs -text
+hooks/** -text
 settings.json -text
