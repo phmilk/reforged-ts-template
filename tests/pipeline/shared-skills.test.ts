@@ -100,7 +100,9 @@ describe("the record of the copy", () => {
       "utf8",
     );
     expect(settings).toContain('"SessionStart"');
-    expect(settings).toContain("/.claude/hooks/shadowed-skills.mjs");
+    expect(settings).toContain(
+      "${CLAUDE_PROJECT_DIR}/.claude/hooks/shadowed-skills.mjs",
+    );
   });
 });
 
