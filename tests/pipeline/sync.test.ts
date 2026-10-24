@@ -27,8 +27,8 @@ const shipped = (): SyncFiles =>
     SYNCED_FILES.map((file) => [file, readRepoFile(file)]),
   ) as SyncFiles;
 
-const CONTEXT_URL =
-  "https://raw.githubusercontent.com/phmilk/reforged-ts/reforged-ts@1.2.0/CONTEXT.md";
+const GLOSSARY_URL =
+  "https://raw.githubusercontent.com/phmilk/reforged-ts/reforged-ts@1.2.0/GLOSSARY.md";
 const MATRIX_URL =
   "https://raw.githubusercontent.com/phmilk/reforged-ts/master/release/compatibility/matrix.md";
 const LLMS_URL = "https://phmilk.github.io/reforged-ts/1.2/llms.txt";
@@ -43,7 +43,7 @@ const payload = (): ReleasePayload => ({
     "reforged-map": "1.0.0-alpha.2",
     "reforged-builtins": "1.0.0-alpha.1",
   },
-  contextUrl: CONTEXT_URL,
+  contextUrl: GLOSSARY_URL,
   matrixUrl: MATRIX_URL,
   llmsUrl: LLMS_URL,
 });
@@ -52,7 +52,7 @@ const entry = (term: string) =>
   `**${term}**:\nThe library's definition of ${term}.\n_Avoid_: other words for ${term}`;
 
 /**
- * A library CONTEXT.md: its own heading and prose, the nineteen map-author
+ * A library glossary: its own heading and prose, the nineteen map-author
  * terms in an order unlike the Template's, and library-only terms between.
  */
 const LIBRARY_ORDER = [
@@ -77,10 +77,10 @@ const LIBRARY_ORDER = [
   "Custom object",
   "Editor form",
 ];
-const libraryContext = (terms: readonly string[] = LIBRARY_ORDER) =>
+const libraryGlossary = (terms: readonly string[] = LIBRARY_ORDER) =>
   [
     "# reforged-ts",
-    "The library's context.",
+    "The library's glossary.",
     "## Language",
     ...terms.slice(0, 2).map(entry),
     entry("Typings"),
@@ -101,7 +101,7 @@ const MATRIX = [
   "",
 ].join("\n");
 
-const sources = () => ({ context: libraryContext(), matrix: MATRIX });
+const sources = () => ({ glossary: libraryGlossary(), matrix: MATRIX });
 
 const apply = (files = shipped(), release = payload(), fetched = sources()) =>
   applyRelease(files, release, fetched);
@@ -206,9 +206,9 @@ describe("the sync's entry point", () => {
     for (const name of LIBRARY_PACKAGES) expect(ranges[name]).toMatch(/^\^\d/);
   });
 
-  it("replaces only the library terms between the CONTEXT.md markers, in the library file's order", () => {
-    const before = shipped()["CONTEXT.md"];
-    const after = apply().files["CONTEXT.md"];
+  it("replaces only the library terms between the GLOSSARY.md markers, in the library file's order", () => {
+    const before = shipped()["GLOSSARY.md"];
+    const after = apply().files["GLOSSARY.md"];
     expect(outsideBlocks(after)).toBe(outsideBlocks(before));
     const block = markedBlock(after, "terms");
     expect(block).toBe(
@@ -221,8 +221,8 @@ describe("the sync's entry point", () => {
     const block = markedBlock(
       applyRelease(shipped(), payload(), {
         ...sources(),
-        context: libraryContext(reversed),
-      }).files["CONTEXT.md"],
+        glossary: libraryGlossary(reversed),
+      }).files["GLOSSARY.md"],
       "terms",
     );
     expect(
@@ -231,12 +231,12 @@ describe("the sync's entry point", () => {
     expect([...LIBRARY_TERMS].sort()).toEqual([...LIBRARY_ORDER].sort());
   });
 
-  it("fails, naming the term, when the library's CONTEXT.md lacks one", () => {
-    const context = libraryContext(
+  it("fails, naming the term, when the library's glossary lacks one", () => {
+    const glossary = libraryGlossary(
       LIBRARY_ORDER.filter((term) => term !== "Event descriptor"),
     );
     expect(() =>
-      applyRelease(shipped(), payload(), { ...sources(), context }),
+      applyRelease(shipped(), payload(), { ...sources(), glossary }),
     ).toThrow(/Event descriptor/);
   });
 
@@ -264,10 +264,10 @@ describe("the sync's entry point", () => {
 
   it("keeps a CRLF file's line endings", () => {
     const files = shipped();
-    files["CONTEXT.md"] = files["CONTEXT.md"].replaceAll("\n", "\r\n");
-    const after = apply(files).files["CONTEXT.md"];
+    files["GLOSSARY.md"] = files["GLOSSARY.md"].replaceAll("\n", "\r\n");
+    const after = apply(files).files["GLOSSARY.md"];
     expect(after.replaceAll("\r\n", "")).not.toContain("\n");
-    expect(after.replaceAll("\r\n", "\n")).toBe(apply().files["CONTEXT.md"]);
+    expect(after.replaceAll("\r\n", "\n")).toBe(apply().files["GLOSSARY.md"]);
   });
 
   it("returns a file with a missing marker unchanged and names it in the summary", () => {
@@ -280,14 +280,14 @@ describe("the sync's entry point", () => {
       "<!-- reforged-ts:docs:start -->\n",
       "",
     );
-    files["CONTEXT.md"] = files["CONTEXT.md"].replace(
+    files["GLOSSARY.md"] = files["GLOSSARY.md"].replace(
       "<!-- reforged-ts:terms:end -->",
       "<!-- reforged-ts:terms:end --> and more",
     );
     const result = apply(files);
     expect(result.files["README.md"]).toBe(files["README.md"]);
     expect(result.files["AGENTS.md"]).toBe(files["AGENTS.md"]);
-    expect(result.files["CONTEXT.md"]).toBe(files["CONTEXT.md"]);
+    expect(result.files["GLOSSARY.md"]).toBe(files["GLOSSARY.md"]);
     expect(result.changed).toEqual(["package.json"]);
     expect(result.summary).toMatch(
       /`README\.md`.*`<!-- reforged-ts:matrix:end -->`/,
@@ -296,7 +296,7 @@ describe("the sync's entry point", () => {
       /`AGENTS\.md`.*`<!-- reforged-ts:docs:start -->`/,
     );
     expect(result.summary).toMatch(
-      /`CONTEXT\.md`.*`<!-- reforged-ts:terms:end -->` is not on a line of its own/,
+      /`GLOSSARY\.md`.*`<!-- reforged-ts:terms:end -->` is not on a line of its own/,
     );
   });
 
@@ -338,7 +338,7 @@ describe("the sync's entry point", () => {
     for (const file of SYNCED_FILES) expect(summary).toContain(`\`${file}\``);
     expect(summary).toContain("`reforged-ts` ^1.2.0");
     expect(summary).toContain(LLMS_URL);
-    expect(summary).toContain(CONTEXT_URL);
+    expect(summary).toContain(GLOSSARY_URL);
     expect(summary).toContain(MATRIX_URL);
   });
 });
@@ -374,7 +374,7 @@ describe("the release payload", () => {
     ],
     [
       "a URL that is not https",
-      { contextUrl: "http://x/CONTEXT.md" },
+      { contextUrl: "http://x/GLOSSARY.md" },
       /contextUrl/,
     ],
     [
@@ -448,15 +448,33 @@ describe("the sync on a repository", () => {
     const fetched: string[] = [];
     const fetchText: FetchText = (url) => {
       fetched.push(url);
-      return Promise.resolve(url === CONTEXT_URL ? libraryContext() : MATRIX);
+      return Promise.resolve(url === GLOSSARY_URL ? libraryGlossary() : MATRIX);
     };
     const result = await syncRepository(root, payload(), fetchText);
-    expect(fetched.sort()).toEqual([CONTEXT_URL, MATRIX_URL].sort());
+    expect(fetched.sort()).toEqual([GLOSSARY_URL, MATRIX_URL].sort());
     for (const file of SYNCED_FILES)
       expect(fs.readFileSync(path.join(root, file), "utf8")).toBe(
         result.files[file],
       );
     expect(result).toEqual(apply());
+  });
+
+  it("fetches the library's glossary from the payload's URL, whatever the file is named", async () => {
+    // The sync never reads the URL's file name, so a release from before the
+    // library renamed its glossary syncs as a later one does.
+    const contextUrl =
+      "https://raw.githubusercontent.com/phmilk/reforged-ts/reforged-ts@1.0.0/TERMS.md";
+    const fetched: string[] = [];
+    const result = await syncRepository(
+      checkout(),
+      { ...payload(), contextUrl },
+      (url) => {
+        fetched.push(url);
+        return Promise.resolve(url === contextUrl ? libraryGlossary() : MATRIX);
+      },
+    );
+    expect(fetched).toContain(contextUrl);
+    expect(result.files["GLOSSARY.md"]).toBe(apply().files["GLOSSARY.md"]);
   });
 
   it("writes nothing when a fetch fails", async () => {

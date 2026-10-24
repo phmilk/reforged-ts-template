@@ -14,7 +14,7 @@ import { LIBRARY_PACKAGES, type LibraryPackage } from "./use-local.ts";
 export type ReleasedVersions = Record<LibraryPackage, string>;
 
 /**
- * The map-author terms of the library's glossary the Template's CONTEXT.md
+ * The map-author terms of the library's glossary the Template's GLOSSARY.md
  * carries (phmilk/reforged-ts#21); the others are the library's own.
  */
 export const LIBRARY_TERMS = [
@@ -43,7 +43,7 @@ export const LIBRARY_TERMS = [
 /** The files the sync rewrites, relative to the repository root. */
 export const SYNCED_FILES = [
   "package.json",
-  "CONTEXT.md",
+  "GLOSSARY.md",
   "AGENTS.md",
   "README.md",
 ] as const;
@@ -58,7 +58,11 @@ export interface ReleasePayload {
   /** The release's git tag in the library repository. */
   tag: string;
   versions: ReleasedVersions;
-  /** The raw URL of the library's CONTEXT.md at the tag. */
+  /**
+   * The raw URL of the library's glossary at the tag, read whatever the file
+   * is named: the field kept its name across the library's rename of the
+   * glossary to `GLOSSARY.md`.
+   */
   contextUrl: string;
   /** The raw URL of the generated compatibility-matrix Markdown block. */
   matrixUrl: string;
@@ -68,8 +72,8 @@ export interface ReleasePayload {
 
 /** The content of the payload's two raw URLs. */
 export interface FetchedSources {
-  /** The library's CONTEXT.md. */
-  context: string;
+  /** The library's glossary. */
+  glossary: string;
   /** The compatibility-matrix block. */
   matrix: string;
 }
@@ -86,7 +90,7 @@ export interface SyncResult {
 /** Fetches a URL's body as text; throws when it cannot. */
 export type FetchText = (url: string) => Promise<string>;
 
-/** The heading the library terms sit under, inside the CONTEXT.md block. */
+/** The heading the library terms sit under, inside the GLOSSARY.md block. */
 const TERMS_HEADING = "## Library terms";
 
 const SEMVER = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
@@ -253,14 +257,14 @@ function replaceBlock(
 }
 
 /**
- * The entries of the library's CONTEXT.md for the `LIBRARY_TERMS`, in the
+ * The entries of the library's glossary for the `LIBRARY_TERMS`, in the
  * library file's order. An entry is a paragraph whose first line is
  * `**<term>**:`. A term the file lacks is an AuthorError naming it: the sync
  * never drops a term silently.
  */
-function libraryTerms(context: string): string[] {
+function libraryTerms(glossary: string): string[] {
   const entries = new Map<string, string>();
-  for (const paragraph of context.split(/\n[ \t]*\n/)) {
+  for (const paragraph of glossary.split(/\n[ \t]*\n/)) {
     const entry = paragraph.trim();
     const term = /^\*\*(.+?)\*\*:\n/.exec(entry)?.[1];
     if (term !== undefined && !entries.has(term)) entries.set(term, entry);
@@ -269,7 +273,7 @@ function libraryTerms(context: string): string[] {
   const missing = LIBRARY_TERMS.filter((term) => !entries.has(term));
   if (missing.length > 0)
     throw new AuthorError(
-      `the library's CONTEXT.md defines no ${missing.map((term) => `**${term}**`).join(", ")}, which the Template's CONTEXT.md carries (LIBRARY_TERMS in scripts/sync.ts).`,
+      `the library's glossary defines no ${missing.map((term) => `**${term}**`).join(", ")}, which the Template's GLOSSARY.md carries (LIBRARY_TERMS in scripts/sync.ts).`,
     );
   return [...entries]
     .filter(([term]) => wanted.has(term))
@@ -325,7 +329,7 @@ function replaceLlmsLink(text: string, llmsUrl: string): string {
  * The sync's entry point: the synced files' current content, the payload
  * and the fetched sources in; the new content and a change summary out.
  * `package.json` gets caret ranges on the six released versions; between
- * their markers, CONTEXT.md gets the library terms, AGENTS.md and the README
+ * their markers, GLOSSARY.md gets the library terms, AGENTS.md and the README
  * the llms.txt link, the README the compatibility matrix. Nothing else
  * changes. A file whose markers are missing or broken comes back unchanged
  * and is named in the summary. Applying the result again with the same
@@ -336,7 +340,7 @@ export function applyRelease(
   payload: ReleasePayload,
   sources: FetchedSources,
 ): SyncResult {
-  const terms = libraryTerms(toLf(sources.context));
+  const terms = libraryTerms(toLf(sources.glossary));
   const matrix = toLf(sources.matrix).trim();
   if (matrix === "")
     throw new AuthorError(`the matrix block at ${payload.matrixUrl} is empty.`);
@@ -352,7 +356,7 @@ export function applyRelease(
         (name) => `\`${name}\` ^${payload.versions[name]}`,
       ).join(", "),
     },
-    "CONTEXT.md": {
+    "GLOSSARY.md": {
       edit: (text) =>
         replaceBlock(text, "terms", () =>
           [TERMS_HEADING, ...terms].join("\n\n"),
@@ -424,7 +428,7 @@ const fetchOverHttp: FetchText = async (url) => {
 
 /**
  * Applies the release to the repository at `root`: reads the synced files,
- * fetches the payload's CONTEXT.md and matrix URLs with `fetchText`, and
+ * fetches the payload's glossary and matrix URLs with `fetchText`, and
  * writes the files that changed. A failed fetch writes nothing.
  */
 export async function syncRepository(
@@ -438,11 +442,11 @@ export async function syncRepository(
       fs.readFileSync(path.join(root, file), "utf8"),
     ]),
   ) as SyncFiles;
-  const [context, matrix] = await Promise.all([
+  const [glossary, matrix] = await Promise.all([
     fetchText(payload.contextUrl),
     fetchText(payload.matrixUrl),
   ]);
-  const result = applyRelease(files, payload, { context, matrix });
+  const result = applyRelease(files, payload, { glossary, matrix });
   for (const file of result.changed)
     fs.writeFileSync(path.join(root, file), result.files[file]);
   return result;

@@ -1,4 +1,4 @@
-// The sync markers of the Template's Markdown files (AGENTS.md, CONTEXT.md,
+// The sync markers of the Template's Markdown files (AGENTS.md, GLOSSARY.md,
 // README.md): the library's release sync rewrites the text between
 // `<!-- reforged-ts:<name>:start -->` and its end marker, and nothing else.
 // Template maintenance, like the tests that use it (see AGENTS.md).

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository is a Map project: a Warcraft III 3.0.0 map whose code is TypeScript compiled to Lua with typescript-to-lua and [reforged-ts](https://github.com/phmilk/reforged-ts). The World Editor owns the map data (terrain, object data, placed units); this repository owns the code. Files in the map folder change only through the World Editor. The project vocabulary lives in `CONTEXT.md`; use its terms.
+This repository is a Map project: a Warcraft III 3.0.0 map whose code is TypeScript compiled to Lua with typescript-to-lua and [reforged-ts](https://github.com/phmilk/reforged-ts). The World Editor owns the map data (terrain, object data, placed units); this repository owns the code. Files in the map folder change only through the World Editor. The project vocabulary lives in `GLOSSARY.md`; use its terms.
 
 ## Commands
 
@@ -68,7 +68,7 @@ The map's tests live in `tests/lua` and run on the `reforged-test` harness (`pnp
 
 ## Domain docs
 
-Single-context: `CONTEXT.md` at the repo root and ADRs under `docs/adr/` (none yet). See `docs/agents/domain.md`.
+Single-context: `GLOSSARY.md` at the repo root and ADRs under `docs/adr/` (none yet). See `docs/agents/domain.md`.
 
 ## Library docs
 
@@ -93,7 +93,7 @@ This section, `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `d
 
 - **Issue tracker**: the Template's issues live in `phmilk/reforged-ts-template`'s GitHub Issues and are driven with the `gh` CLI; the library's live in `phmilk/reforged-ts`. Specs carry the `spec` label and their tickets are sub-issues with native "blocked by" dependencies. See `docs/agents/issue-tracker.md`. Before working on an issue, claim it: `gh issue edit <n> --add-assignee @me`, your first write; an issue assigned to another login is theirs (`docs/agents/issue-tracker.md`, "Claim").
 - **Triage labels**: the five canonical triage labels are used as-is: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. Two kind labels sit next to them: `spec` on an issue created with `to-spec`, `ticket` on one created with `to-tickets`. See `docs/agents/triage-labels.md`.
-- **Sync markers**: on each library release, the Template's sync sets the six library packages' ranges in `package.json` and rewrites the text between the `reforged-ts:<name>:start` and `reforged-ts:<name>:end` marker comments of `AGENTS.md`, `CONTEXT.md` and the README, and nothing else. Edit around the markers, never between them.
+- **Sync markers**: on each library release, the Template's sync sets the six library packages' ranges in `package.json` and rewrites the text between the `reforged-ts:<name>:start` and `reforged-ts:<name>:end` marker comments of `AGENTS.md`, `GLOSSARY.md` and the README, and nothing else. Edit around the markers, never between them.
 - **Sync workflow**: `.github/workflows/sync.yml` runs on the library's `reforged-ts-release` dispatch (or by hand, `gh workflow run sync.yml --ref <branch> -f payload="$(cat payload.json)"`, for a dry run). Its job `sync` syncs, refreshes the lockfile, builds in release mode and runs `pnpm check`, with no secret; its job `pull-request`, on `main` alone, then opens a pull request named after the tag, and a maintainer merges it. That job runs in the environment `board`, the one the board caller mints the GitHub App's token in, whose deployment branch policy admits `main` alone: it opens the pull request with the App's token when the repository variable `APP_CLIENT_ID` and the environment's secret `APP_PRIVATE_KEY` are set (the names the library uses), and otherwise with the fine-grained token in the repository secret `SYNC_TOKEN` (contents and pull requests read/write on this repository); with neither, it fails before opening the pull request. A dry run from a branch other than `main` runs the job `sync` in full and stops, green, before the pull request, with a notice saying why; `--ref main` opens it as a release would.
 - **Claim workflow**: `.github/workflows/claim.yml` calls the library's reusable `claim-check.yml` on every pull request and on every assignment, guarded by `if: github.repository == 'phmilk/reforged-ts-template'`. It assigns the author to the unclaimed issues a pull request closes and fails on one claimed by another login; the ruleset on `main` requires it, set by hand. It passes the App's key by name, `APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}` and no other secret, which `claim-check.yml` passes on to `board-dispatch.yml`. It is not synced: the `@master` ref keeps it current.
 - **Board caller**: `.github/workflows/board.yml` calls the library's reusable `board-dispatch.yml` on the issue and pull-request events of the library's `board.yml`, guarded by `if: github.repository == 'phmilk/reforged-ts-template'`, so the Claim board reconciles this repository's cards within a minute. The dispatch mints the GitHub App's token from the environment `board` of this repository, whose key the caller passes by name, `APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}`, and no other secret: an environment secret reaches a called job only when its caller passes it, and is empty otherwise. It is not synced: the `@master` ref keeps it current.

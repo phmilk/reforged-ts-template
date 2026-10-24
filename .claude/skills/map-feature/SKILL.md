@@ -7,7 +7,7 @@ description: Add a feature to the map's code the Map project's way, from idea to
 
 A feature lands as one module under `src`, started from an Init stage, tested on the harness and green on `pnpm check`. `AGENTS.md` holds the rules these steps apply: Runtime constraints, Lint and Testing.
 
-1. **Read the context.** Read `CONTEXT.md` and the Your project section of `AGENTS.md`, then name the feature's concept in those terms. A concept new to the map goes under "Your map's terms" in `CONTEXT.md`.
+1. **Read the glossary.** Read `GLOSSARY.md` and the Your project section of `AGENTS.md`, then name the feature's concept in those terms. A concept new to the map goes under "Your map's terms" in `GLOSSARY.md`.
 2. **Place the module.** One module per concept under `src`, named after it (`src/respawn.ts`, `src/shop/`); extend the concept's module when it already has one. Import it from `src/main.ts`, or from a module `src/main.ts` imports: the bundle runs from `src/main.ts`, so a module nothing imports never runs.
 3. **Start it from an Init stage.** Module top level only registers callbacks; every Handle is created inside one. `Init.onGameStart(() => { ... }, "respawn")` suits gameplay. The earlier stages, `onGlobals`, `onTriggers` and `onInitTriggers` (each after the Blizzard function of that name), are for work that must be ready before the game starts.
 4. **Subscribe through Event descriptors.** React to the game with `on(UnitEvents.death, handler)` and the other `*Events` descriptors. `on()` returns a Subscription: keep it where the feature ends (a round, a unit's life) and call `destroy()` on it there.

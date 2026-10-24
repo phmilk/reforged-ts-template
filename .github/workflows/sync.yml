@@ -112,7 +112,7 @@ jobs:
       - name: Collect the synced files
         run: |
           mkdir "$RUNNER_TEMP/synced"
-          cp package.json pnpm-lock.yaml CONTEXT.md AGENTS.md README.md "$RUNNER_TEMP/summary.md" "$RUNNER_TEMP/synced/"
+          cp package.json pnpm-lock.yaml GLOSSARY.md AGENTS.md README.md "$RUNNER_TEMP/summary.md" "$RUNNER_TEMP/synced/"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -166,7 +166,7 @@ jobs:
         run: |
           cd "$RUNNER_TEMP/synced"
           mv summary.md "$RUNNER_TEMP/summary.md"
-          cp package.json pnpm-lock.yaml CONTEXT.md AGENTS.md README.md "$GITHUB_WORKSPACE/"
+          cp package.json pnpm-lock.yaml GLOSSARY.md AGENTS.md README.md "$GITHUB_WORKSPACE/"
 
       - name: Create the GitHub App token
         id: app
@@ -192,7 +192,7 @@ jobs:
           add-paths: |
             package.json
             pnpm-lock.yaml
-            CONTEXT.md
+            GLOSSARY.md
             AGENTS.md
             README.md
           delete-branch: true
