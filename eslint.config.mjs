@@ -26,6 +26,12 @@ export default defineConfig(
     "src/generated/**",
     // pnpm use:local's tarballs.
     ".local-packages/**",
+    // template-maintenance:start
+    // The hooks, copied from the library with their bytes
+    // (.claude/shared.lock.json): a fix goes to the library. Template
+    // maintenance: pnpm template:detach removes this block.
+    ".claude/hooks/**",
+    // template-maintenance:end
     // The lint fixtures break the rules on purpose; the configuration test
     // (tests/pipeline/eslint-config.test.ts) lints them with ignores off.
     "tests/lint/**",

@@ -27,6 +27,7 @@ export const LIBRARY_TERMS = [
   "Subscription",
   "Map project",
   "Template",
+  "Seed",
   "Toolchain",
   "Patch",
   "Rawcode",
@@ -38,6 +39,8 @@ export const LIBRARY_TERMS = [
   "Built-in object",
   "Custom object",
   "Editor form",
+  "Upstream skill",
+  "Skill variant",
 ] as const;
 
 /** The files the sync rewrites, relative to the repository root. */
