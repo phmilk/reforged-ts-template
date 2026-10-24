@@ -103,8 +103,7 @@ function generatedProject(origin?: string): string {
   const dir = makeTempDir();
   for (const rel of [
     ...MANIFEST,
-    "AGENTS.md",
-    "README.md",
+    ...KEPT,
     "package.json",
     "scripts/cli.ts",
     "scripts/errors.ts",
@@ -120,7 +119,7 @@ function generatedProject(origin?: string): string {
 }
 
 describe("pnpm template:detach", () => {
-  it("removes the listed files, the two sections and its package script", () => {
+  it("removes the listed files, the two sections and its package script, and keeps the Seeds and the README", () => {
     const dir = generatedProject("git@github.com:someone/my-map.git");
     const before = JSON.parse(
       fs.readFileSync(path.join(dir, "package.json"), "utf8"),
@@ -132,6 +131,9 @@ describe("pnpm template:detach", () => {
     expect(result.status).toBe(0);
     expect(
       MANIFEST.filter((rel) => fs.existsSync(path.join(dir, rel))),
+    ).toEqual([]);
+    expect(
+      [...KEPT].filter((rel) => !fs.existsSync(path.join(dir, rel))),
     ).toEqual([]);
     const agents = fs.readFileSync(path.join(dir, "AGENTS.md"), "utf8");
     expect(agents).not.toContain("\n## Template maintenance\n");
