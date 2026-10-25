@@ -1,0 +1,9 @@
+# The copy of what the library shares (.claude/shared.lock.json records it):
+# git stores it byte for byte, so the sha256 the record holds for each file
+# holds on every checkout. The Seeds are text, as every file. Template
+# maintenance: a generated Map project deletes this file (see AGENTS.md).
+skills/** -text
+skills/map-feature/** text=auto eol=lf
+skills/run-in-game/** text=auto eol=lf
+hooks/** -text
+settings.json -text

@@ -42,6 +42,10 @@ _Avoid_: consumer, user code, game project
 The starter repository a Map project is generated from.
 _Avoid_: boilerplate, starter kit, example map
 
+**Seed**:
+A file the Template ships that becomes the Map project author's own after generation (`AGENTS.md`, `GLOSSARY.md`, the Agent skills); the Template refreshes its copy on each library release, a generated Map project never does.
+_Avoid_: template file, scaffold, boilerplate file
+
 **Toolchain**:
 The tools that turn a Map project's TypeScript into a Lua map script: TypeScript, typescript-to-lua, lint and build.
 _Avoid_: build system, pipeline, stack

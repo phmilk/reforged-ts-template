@@ -1,0 +1,10 @@
+# The copy of what the library shares (.claude/shared.lock.json records it)
+# keeps the library's bytes: a fix goes to the library, never here. The Seeds
+# are formatted. Template maintenance: a generated Map project deletes this
+# file (see AGENTS.md).
+skills-lock.json
+.claude/hooks/
+.claude/settings.json
+.claude/skills/*
+!.claude/skills/map-feature/
+!.claude/skills/run-in-game/

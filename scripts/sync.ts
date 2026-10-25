@@ -27,6 +27,7 @@ export const LIBRARY_TERMS = [
   "Subscription",
   "Map project",
   "Template",
+  "Seed",
   "Toolchain",
   "Patch",
   "Rawcode",

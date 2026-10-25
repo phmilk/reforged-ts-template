@@ -52,7 +52,7 @@ const entry = (term: string) =>
   `**${term}**:\nThe library's definition of ${term}.\n_Avoid_: other words for ${term}`;
 
 /**
- * A library glossary: its own heading and prose, the nineteen map-author
+ * A library glossary: its own heading and prose, the map-author
  * terms in an order unlike the Template's, and library-only terms between.
  */
 const LIBRARY_ORDER = [
@@ -65,6 +65,7 @@ const LIBRARY_ORDER = [
   "Init stage",
   "Map project",
   "Template",
+  "Seed",
   "Toolchain",
   "Patch",
   "Rawcode",
@@ -216,7 +217,7 @@ describe("the sync's entry point", () => {
     );
   });
 
-  it("takes the nineteen terms whatever order the library lists them in", () => {
+  it("takes the terms whatever order the library lists them in", () => {
     const reversed = [...LIBRARY_ORDER].reverse();
     const block = markedBlock(
       applyRelease(shipped(), payload(), {
