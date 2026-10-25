@@ -28,10 +28,6 @@ const COPIED = Object.keys(record.files).sort();
 /** What a failure tells the one who edited the copy. */
 const FIX_IN_LIBRARY = `a shared file is never edited in the Template: undo the edit and make the fix in ${record.repository}, whose .claude/shared.json names what is shared; the copy follows it (AGENTS.md, Template maintenance)`;
 
-/** The skill a path of the skills folder belongs to, or undefined outside it. */
-const skillOf = (rel: string): string | undefined =>
-  rel.startsWith(`${SKILLS_FOLDER}/`) ? rel.split("/")[2] : undefined;
-
 /** The shared skills: the folders of the skills folder the record names a file of. */
 const SHARED_SKILLS = copiedSkills(ROOT);
 
@@ -50,14 +46,12 @@ const SEEDS = fs
  * any other copied file below `.claude/` (the hooks').
  */
 const OWNED_FOLDERS = [
-  ...new Set(
-    COPIED.map((rel) => {
-      const skill = skillOf(rel);
-      return skill === undefined
-        ? path.posix.dirname(rel)
-        : `${SKILLS_FOLDER}/${skill}`;
-    }).filter((folder) => folder !== "." && folder !== ".claude"),
-  ),
+  ...new Set([
+    ...SHARED_SKILLS.map((name) => `${SKILLS_FOLDER}/${name}`),
+    ...COPIED.filter((rel) => !rel.startsWith(`${SKILLS_FOLDER}/`))
+      .map((rel) => path.posix.dirname(rel))
+      .filter((folder) => folder !== "." && folder !== ".claude"),
+  ]),
 ].sort();
 
 /** Every file under `folder`, relative to the root with forward slashes. */

@@ -77,8 +77,6 @@ const LIBRARY_ORDER = [
   "Built-in object",
   "Custom object",
   "Editor form",
-  "Upstream skill",
-  "Skill variant",
 ];
 const libraryGlossary = (terms: readonly string[] = LIBRARY_ORDER) =>
   [

@@ -90,14 +90,6 @@ _Avoid_: map object, custom unit
 Object data as the 3.0 World Editor itself saves it (localizable strings as `TRIGSTR` references into a sorted and commented `war3map.wts`, each field in the file the editor keeps it in, every object in both files, new string numbers above every existing one), which a World Editor save leaves byte for byte.
 _Avoid_: canonical form
 
-**Upstream skill**:
-An Agent skill installed unmodified from `mattpocock/skills`, at the version its lock names.
-_Avoid_: global skill, vendored skill, external skill
-
-**Skill variant**:
-An Agent skill of this repository built from an Upstream skill's steps, under its own name, recording the Upstream skill's version it was built from.
-_Avoid_: wrapper (a library class over a Handle), fork, override
-
 <!-- reforged-ts:terms:end -->
 
 ## Your map's terms
