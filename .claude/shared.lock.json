@@ -1,10 +1,11 @@
 {
   "$comment": "The record of origin of the copy of what the library shares (its .claude/shared.json, ADR 0024 of phmilk/reforged-ts): the library repository, the commit the files were copied from, and the sha256 of each file's bytes, by its path from the root. Never edit a copied file: a fix goes to the library. tests/pipeline/shared-skills.test.ts checks the copy against this record.",
   "repository": "phmilk/reforged-ts",
-  "commit": "e3cf753ae92e4a18dc8fdb161977faf64f314e22",
+  "commit": "e5add3d2cfbc57dc2cfccb1fa122f36622601a01",
   "files": {
+    ".claude/hooks/background-wait.mjs": "69ac8439dfa5d570d0a45d982548c660b9256a2b4ce4c3ecc1014e4961750de3",
     ".claude/hooks/shadowed-skills.mjs": "6adfe5016e4fb57840a5bbd5e2816330a2219bcec747107f4504e68c5c884ec9",
-    ".claude/settings.json": "c626c0142a8179a33551a53899fb0eda3d8b1f5d06bbec73d61432a9197cbd8e",
+    ".claude/settings.json": "d41eea4c34c2fb3047bd0c7140af32a509fb9b543c0adb22355bee648625d15c",
     ".claude/skills/ask-matt/PHASE-BOUNDARIES.md": "a8aa20158609ef39e2b308b6ba0660c91066838d07a867202e63a7744a88a3ed",
     ".claude/skills/ask-matt/SKILL.md": "1371f5ce005de0992a44b137748bfb960a56948aa9871b405fe9d90b24332e3c",
     ".claude/skills/ask-matt/agents/openai.yaml": "bdffbc5a0a99ed1b6ef3253d251d755fd18162b9845972e380007f844b09b05c",
@@ -81,7 +82,7 @@
     ".claude/skills/wizard/SKILL.md": "bdf31d48211ea559878f95a4f344aeabf8d85897488ba564382bab0b000daac1",
     ".claude/skills/wizard/agents/openai.yaml": "98f44d682d58e262f160dc59a8befc365e0aa65820dd0261864af26aa8e59d83",
     ".claude/skills/wizard/template.sh": "6566f147299bc6f1d941e64591ed04385416d543e11f96f564c7228f5018d0ed",
-    ".claude/skills/write-spec/SKILL.md": "73886c054e38ac5c9674c610288d65ccce2697dd31ed01a4ba5c7f5766a1fcda",
+    ".claude/skills/write-spec/SKILL.md": "e244e4ff95975f70b557df1687b907566b401cd999177805d662e9813317f7cb",
     ".claude/skills/writing-for-agents/SKILL-MECHANICS.md": "c768e6307c7c10728c401c213f2c4ba71c542127eeb7ad2956aabd15a0fa0059",
     ".claude/skills/writing-for-agents/SKILL.md": "551adca942227b44192edba88acd4e8db911f0121ce58ad16944ccf6a896a74a",
     ".claude/skills/writing-for-agents/agents/openai.yaml": "eacb24b2a618cfb81dacb0416f4fdd75ddf3a8060f8ddb99aae1b1e301907e4b",
