@@ -6,17 +6,17 @@ import { EXECUTABLE_ENV } from "../../scripts/config.ts";
 import { LAUNCH_ARGS, launchCommand } from "../../scripts/launch.ts";
 import { copyProject, makeTempDir } from "./helpers.ts";
 
-const staging = path.resolve("project", "dist", "staging", "my-map.w3x");
+const archive = path.resolve("project", "dist", "my-map-dev.w3x");
 
 describe("launchCommand", () => {
-  it("builds the native argument list confirmed in game: -loadfile <staging folder> -launch -editor -windowmode windowed", () => {
+  it("builds the native argument list confirmed in game: -loadfile <archive> -launch -editor -windowmode windowed", () => {
     expect(
-      launchCommand({ executable: "wc3", extraArgs: [] }, staging),
+      launchCommand({ executable: "wc3", extraArgs: [] }, archive),
     ).toEqual({
       command: "wc3",
       args: [
         "-loadfile",
-        staging,
+        archive,
         "-launch",
         "-editor",
         "-windowmode",
@@ -33,11 +33,11 @@ describe("launchCommand", () => {
           executable: "wc3",
           extraArgs: ["-nowfpause", "-graphicsapi", "Direct3D11"],
         },
-        staging,
+        archive,
       ).args,
     ).toEqual([
       "-loadfile",
-      staging,
+      archive,
       ...LAUNCH_ARGS,
       "-nowfpause",
       "-graphicsapi",
@@ -46,7 +46,7 @@ describe("launchCommand", () => {
   });
 
   it.skipIf(process.platform === "win32")(
-    "runs through Wine with the folder as a Z: path and the prefix set",
+    "runs through Wine with the archive as a Z: path and the prefix set",
     () => {
       const exe =
         "C:\\Program Files (x86)\\Warcraft III\\_retail_\\x86_64\\Warcraft III.exe";
@@ -59,14 +59,14 @@ describe("launchCommand", () => {
             winePath: "wine",
             winePrefix,
           },
-          staging,
+          archive,
         ),
       ).toEqual({
         command: "wine",
         args: [
           exe,
           "-loadfile",
-          `Z:${staging}`,
+          `Z:${archive}`,
           "-launch",
           "-editor",
           "-windowmode",
@@ -78,7 +78,7 @@ describe("launchCommand", () => {
       expect(
         launchCommand(
           { executable: exe, extraArgs: [], winePath: "wine" },
-          staging,
+          archive,
         ).env,
       ).toEqual({});
     },
@@ -114,7 +114,7 @@ describe("pnpm test:map", () => {
   );
 
   it.skipIf(process.platform === "win32")(
-    "builds, then starts the executable on the staging folder",
+    "builds, then starts the executable on the packed archive",
     async () => {
       const dir = copyProject();
       const record = path.join(makeTempDir(), "argv.txt");
@@ -130,18 +130,17 @@ describe("pnpm test:map", () => {
       const deadline = Date.now() + 5000;
       while (!fs.existsSync(record) && Date.now() < deadline)
         await new Promise((r) => setTimeout(r, 50));
-      const staging = path.join(
-        dir,
-        "dist",
-        "staging",
-        "reforged-ts-template.w3m",
-      );
+      const archives = fs
+        .readdirSync(path.join(dir, "dist"))
+        .filter((name) => name.endsWith(".w3m"));
+      expect(archives).toHaveLength(1);
+      const archive = path.join(dir, "dist", archives[0] ?? "");
       expect(fs.readFileSync(record, "utf8").trimEnd().split("\n")).toEqual([
         "-loadfile",
-        staging,
+        archive,
         ...LAUNCH_ARGS,
       ]);
-      expect(fs.existsSync(path.join(staging, "war3map.lua"))).toBe(true);
+      expect(fs.statSync(archive).isFile()).toBe(true);
     },
     60_000,
   );

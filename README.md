@@ -37,7 +37,7 @@ Either way, the install wrote the generated files under `src/generated`; after t
 
 1. Open the map folder, at the project root beside `src` (`my-map.w3m`; `reforged-ts-template.w3m` in the Template itself), in the World Editor and save it. Leave Scenario > Map Options > Script Language on Lua: the build appends the map's code to the script the editor writes. To rename the map, save it at the root with the new name and set `mapFolder` in `reforged.config.ts`.
 2. Build: `pnpm build`. It prints the packed archive, `dist/my-map-0.0.0-dev.w3m` (`dist/reforged-ts-template-0.0.0-dev.w3m` in the Template itself): the map folder's name without its suffix, the `version` of `package.json`, and `-dev` for a dev build. `pnpm build --mode release` packs `dist/my-map-0.0.0.w3m`, the archive you ship. `pnpm version patch` (or `minor`, `major`) bumps the version and tags the commit.
-3. Play: `pnpm test:map` builds, then opens the game on the built map folder, windowed. To pick the map from the game's own map list instead, copy the archive into the game's Maps folder.
+3. Play: `pnpm test:map` builds, then opens the game on the packed archive, windowed. To pick the map from the game's own map list instead, copy the archive into the game's Maps folder.
 4. Iterate: `pnpm dev` rebuilds on every change under `src` or the map folder, until Ctrl+C.
 
 `pnpm test:map` finds the game in the Battle.net install locations. When the game lives elsewhere, set the `WC3_EXECUTABLE` environment variable to its executable (and `WINEPREFIX` for a Wine prefix) rather than writing the path into `gameExecutable`: `reforged.config.ts` is committed, so it holds only what every machine shares. `pnpm test` fails when a committed file holds an absolute path (`tests/pipeline/absolute-paths.test.ts`), because such a path works on one machine only. The check reads the files as committed in `HEAD`, so a local setting you do not commit never fails it.
@@ -49,11 +49,11 @@ Either way, the install wrote the generated files under `src/generated`; after t
 | `pnpm build`                | Builds the map in dev mode, the library's runtime checks on, into `dist/<map>-<version>-dev.<suffix>`.            |
 | `pnpm build --mode release` | Builds the map in release mode, the runtime checks off, into `dist/<map>-<version>.<suffix>`: the build you ship. |
 | `pnpm dev`                  | Watches `src` and the map folder and rebuilds on every change.                                                    |
-| `pnpm test:map`             | Builds, then launches the game on the built map folder.                                                           |
+| `pnpm test:map`             | Builds, then launches the game on the packed archive.                                                             |
 | `pnpm test`                 | Runs the tests without the game: the build scripts' in Node, the map's on the Lua 5.3 harness.                    |
 | `pnpm check`                | Runs `lint`, `typecheck` and `test` in that order and stops at the first failure: the definition of done.         |
 
-The archive's name is the map folder's name without its suffix, then the `version` of `package.json` (left out when there is none), then `-dev` for a dev build, then the map folder's suffix; `archiveName` in `reforged.config.ts` replaces it, used as written. `pnpm test:map` launches the staged map folder, which keeps the map folder's name.
+The archive's name is the map folder's name without its suffix, then the `version` of `package.json` (left out when there is none), then `-dev` for a dev build, then the map folder's suffix; `archiveName` in `reforged.config.ts` replaces it, used as written. `pnpm test:map` launches that archive: since Patch 3.0.1 the game no longer opens a map folder given to `-loadfile`, only a packed map (phmilk/reforged-ts#642).
 
 `pnpm lint` and `pnpm lint:fix` run ESLint alone ([Lint](#lint)), `pnpm typecheck` the TypeScript compiler alone, and `pnpm use:local <checkout>` installs the library from a local checkout ([below](#developing-against-a-local-checkout-of-the-library)).
 
