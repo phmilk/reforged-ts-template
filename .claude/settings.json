@@ -1,5 +1,11 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "extraKnownMarketplaces": {
+    "reforged-ts": {
+      "source": { "source": "github", "repo": "phmilk/reforged-ts" }
+    }
+  },
+  "enabledPlugins": { "background-band@reforged-ts": true },
   "hooks": {
     "SessionStart": [
       {
@@ -8,6 +14,29 @@
           {
             "type": "command",
             "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/shadowed-skills.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/background-wait.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/background-wait.mjs\"",
             "timeout": 10
           }
         ]
