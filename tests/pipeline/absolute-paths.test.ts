@@ -104,7 +104,7 @@ describe("findAbsolutePaths", () => {
       'env["ProgramFiles(x86)"] ?? "C:\\\\Program Files (x86)"',
       'return ["/Applications/Warcraft III/_retail_/x86_64/Warcraft III.app/Contents/MacOS/Warcraft III"];',
       '// gameExecutable: "<path to Warcraft III.exe>",',
-      'mapFolder: "reforged-ts-template.w3m"',
+      'mapFolder: "my-map.w3m"',
       "the Windows side's (`C:\\...`) path",
       'args: ["-loadfile", `Z:${folder}`]',
       "See https://example.com/a/b and the `/domain-modeling` skill; // a comment",

@@ -14,10 +14,12 @@ import {
 import {
   COPY_VERSION,
   copyProject,
+  defaultArchiveName,
   escapeRegExp,
   ENTRY_MODULE,
   makeTempDir,
   MAP_FOLDER,
+  MAP_FOLDER_NAME,
   ROOT,
 } from "./helpers.ts";
 
@@ -280,7 +282,7 @@ class DevProcess {
 /** `Built <archive> (<n> bytes, mode <mode>)` for the copy's archive in `mode`. */
 const built = (mode: "dev" | "release"): RegExp =>
   new RegExp(
-    `^Built dist[\\\\/]reforged-ts-template-${COPY_VERSION.replaceAll(".", "\\.")}${mode === "dev" ? "-dev" : ""}\\.w3m \\(\\d+ bytes, mode ${mode}\\)$`,
+    `^Built dist[\\\\/]${escapeRegExp(defaultArchiveName(mode, COPY_VERSION))} \\(\\d+ bytes, mode ${mode}\\)$`,
     "m",
   );
 const BUILT = built("dev");
@@ -363,13 +365,7 @@ describe("node scripts/dev.ts (pnpm dev)", () => {
     await dev.waitFor(BUILT, 2);
     expect(
       fs.readFileSync(
-        path.join(
-          project,
-          "dist",
-          "staging",
-          "reforged-ts-template.w3m",
-          "war3map.lua",
-        ),
+        path.join(project, "dist", "staging", MAP_FOLDER_NAME, "war3map.lua"),
         "utf8",
       ),
     ).toContain("-- saved as a new folder");
