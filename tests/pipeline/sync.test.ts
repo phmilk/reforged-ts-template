@@ -77,6 +77,11 @@ const LIBRARY_ORDER = [
   "Built-in object",
   "Custom object",
   "Editor form",
+  "Object definition",
+  "Object sync",
+  "Object manifest",
+  "Object adoption",
+  "Object release",
 ];
 const libraryGlossary = (terms: readonly string[] = LIBRARY_ORDER) =>
   [

@@ -68,7 +68,15 @@ export default defineConfig(
   // Warcraft III pitfalls do not apply.
   {
     files: ["src/**/*.ts", "tests/lua/**/*.ts"],
+    ignores: ["src/objects/**"],
     extends: [reforged.configs.recommended],
+  },
+  // The Object definitions run in Node at build time (tsconfig.objects.json):
+  // of the game's pitfalls only the Rawcodes apply, each literal a known object.
+  {
+    files: ["src/objects/**/*.ts"],
+    plugins: { reforged },
+    rules: { "reforged/no-unknown-rawcodes": "warn" },
   },
   // A disable comment says why: `// eslint-disable-next-line <rule> -- <reason>`.
   comments.recommended,

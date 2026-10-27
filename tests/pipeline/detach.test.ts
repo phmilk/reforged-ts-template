@@ -96,6 +96,17 @@ describe("the manifest of the Template maintenance", () => {
     );
   });
 
+  it("leaves the Object definitions to the Map project: their folder, commands, type check and manifest", () => {
+    for (const rel of [
+      "src/objects/.gitkeep",
+      "scripts/objects.ts",
+      "tsconfig.objects.json",
+      "object-manifest.json",
+      ".prettierignore",
+    ])
+      expect(MANIFEST, rel).not.toContain(rel);
+  });
+
   it("leaves the diff driver of Object data to the Map project", () => {
     expect(MANIFEST).not.toContain("scripts/diff-driver.ts");
     expect(MANIFEST).not.toContain(".gitattributes");
@@ -206,6 +217,12 @@ describe("pnpm template:detach", () => {
     expect(
       fs.readFileSync(path.join(dir, "eslint.config.mjs"), "utf8"),
     ).toContain('"tests/lint/**",');
+    expect(fs.readFileSync(path.join(dir, ".prettierignore"), "utf8")).toBe(
+      fs
+        .readFileSync(path.join(ROOT, ".prettierignore"), "utf8")
+        .split("\n# template-maintenance:start")[0]
+        .trimEnd() + "\n",
+    );
     // Nothing that stays names what the command removed.
     for (const rel of [...KEPT, ...MARKED_FILES, "package.json"].filter(
       (name) => fs.statSync(path.join(dir, name)).isFile(),

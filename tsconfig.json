@@ -8,6 +8,9 @@
     "rootDir": "src"
   },
   "include": ["src"],
+  // The Object definitions run in Node at build time (tsconfig.objects.json
+  // type-checks them): none reaches the map's Lua.
+  "exclude": ["src/objects"],
   // Compiles nothing: leads the editor's and the lint's TypeScript server to
   // the Node side's program (see tsconfig.solution.json).
   "references": [{ "path": "./tsconfig.solution.json" }],

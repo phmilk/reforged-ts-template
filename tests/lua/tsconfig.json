@@ -11,6 +11,8 @@
     "outDir": "../../dist-test"
   },
   "include": ["../../src", "."],
+  // The Object definitions are Node modules, never Lua (tsconfig.objects.json).
+  "exclude": ["../../src/objects"],
   "tstl": {
     "buildMode": "default"
   }

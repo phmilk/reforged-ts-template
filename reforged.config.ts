@@ -5,6 +5,9 @@ export default {
   outputFolder: "dist",
   // `dev`: the library's runtime checks run. `pnpm build --mode release` overrides it for one build.
   mode: "dev",
+  // `true`: `pnpm dev` runs Object sync (`pnpm objects:sync`) before each build, so each change
+  // under src/objects/ shows in the World Editor too. Off, the build still merges the definitions.
+  devObjectSync: false,
   // `pnpm test:map` finds the game on its own (WC3_EXECUTABLE, then the Battle.net default folders).
   // This file is committed: a path of your machine only goes in WC3_EXECUTABLE (and WINEPREFIX), never here,
   // or `pnpm test` fails on the absolute path. `gameExecutable` is for a path every machine shares:

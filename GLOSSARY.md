@@ -90,6 +90,26 @@ _Avoid_: map object, custom unit
 Object data as the 3.0 World Editor itself saves it (localizable strings as `TRIGSTR` references into a sorted and commented `war3map.wts`, each field in the file the editor keeps it in, every object in both files, new string numbers above every existing one), which a World Editor save leaves byte for byte.
 _Avoid_: canonical form
 
+**Object definition**:
+A type of object declared in a Map project's code rather than authored in an editor: a new Custom object, or a change to a Built-in object the map folder does not already change. It belongs to the code alone, never also to the map folder.
+_Avoid_: code object, compiletime object
+
+**Object sync**:
+Writing a Map project's Object definitions into its map folder's Object data, so that the World Editor and the Studio show them before a build.
+_Avoid_: inject, export, object generation
+
+**Object manifest**:
+The Map project's record of which Rawcodes belong to its Object definitions and what an Object sync last wrote for each, and of the objects a sync removed, so a later one can replace, remove or detect a change made outside the code, and tell a removed object a stale World Editor save brought back from a new one.
+_Avoid_: lock file, provenance field
+
+**Object adoption**:
+Handing an object of the map folder (a Custom object, or a Built-in object the map folder changes) to the code: it becomes an Object definition and enters the Object manifest, while the map folder stays as it was.
+_Avoid_: import, convert, export
+
+**Object release**:
+The reverse of an Object adoption: an object that belongs to an Object definition goes back to the map folder as the code last defined it, and leaves the code and the Object manifest.
+_Avoid_: eject, release (a library release is something else)
+
 <!-- reforged-ts:terms:end -->
 
 ## Your map's terms

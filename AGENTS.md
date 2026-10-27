@@ -2,13 +2,14 @@
 
 ## Overview
 
-This repository is a Map project: a Warcraft III 3.0.0 map whose code is TypeScript compiled to Lua with typescript-to-lua and [reforged-ts](https://github.com/phmilk/reforged-ts). The World Editor owns the map data (terrain, object data, placed units); this repository owns the code. Files in the map folder change only through the World Editor. The project vocabulary lives in `GLOSSARY.md`; use its terms.
+This repository is a Map project: a Warcraft III 3.0.0 map whose code is TypeScript compiled to Lua with typescript-to-lua and [reforged-ts](https://github.com/phmilk/reforged-ts). The World Editor owns the map data (terrain, object data, placed units); this repository owns the code, its Object definitions included. Object data changes through the World Editor or through Object definitions and `pnpm objects:sync`; everything else in the map folder changes only through the World Editor. The project vocabulary lives in `GLOSSARY.md`; use its terms.
 
 ## Commands
 
-- `pnpm build`: compiles `src` in dev mode (the `mode` `reforged.config.ts` ships with), with the library's runtime checks on, stages the map folder and packs the archive into `dist/`, named `<map folder's name without its suffix>-<version>-dev.<suffix>` from the `version` of `package.json`, without `-<version>` when it has none.
+- `pnpm build`: compiles `src` in dev mode (the `mode` `reforged.config.ts` ships with), with the library's runtime checks on, stages the map folder, merges the Object definitions into the staged copy and packs the archive into `dist/`, named `<map folder's name without its suffix>-<version>-dev.<suffix>` from the `version` of `package.json`, without `-<version>` when it has none.
 - `pnpm build --mode release`: the same build with the runtime checks off, as players get it: `<map folder's name without its suffix>-<version>.<suffix>`.
-- `pnpm dev`: rebuilds on every change to `src` or the map folder, until stopped.
+- `pnpm dev`: rebuilds on every change to `src` or the map folder, until stopped; with `devObjectSync` on in `reforged.config.ts`, it runs `pnpm objects:sync` before each build.
+- `pnpm objects:sync`, `pnpm objects:adopt <rawcode...>` (or `--all`), `pnpm objects:release <rawcode...>`: write the Object definitions into the map folder and the Object manifest, hand objects of the map folder to the code, hand them back (see Object definitions).
 - `pnpm test:map`: builds (dev mode unless `--mode release`), then launches the game on the packed archive.
 - `pnpm test`: runs the map's tests and the Template's pipeline tests, without the game (see Testing).
 - `pnpm check`: lint, type check and tests, stopping at the first failure.
@@ -18,8 +19,10 @@ A task is finished when `pnpm check` is green.
 ## Layout
 
 - `src/`: the map's code; `src/main.ts` is the entry point. New code goes here.
-- The map folder (`mapFolder` in `reforged.config.ts`): owned by the World Editor, read-only here. Never edit the bytes of its files by hand.
+- `src/objects/`: the Object definitions, one `define<Kind>` call per object from `reforged-map/objects`, laid out by adoption as `src/objects/<kind>/<Name>_<rawcode>.ts`. Node modules the build loads, never part of the map's Lua: `tsconfig.objects.json` type-checks them.
+- The map folder (`mapFolder` in `reforged.config.ts`): owned by the World Editor, written here only by the `objects:` commands. Never edit the bytes of its files by hand.
   - Read a change to its Object data with `git diff`, which shows each file as text: an object's line names its table and Rawcode (`custom h000 from hfoo`), and each line under it a field and its value (`umvs int = 320`). A `TRIGSTR_nnn` value is a string of `war3map.wts`, whose own diff shows its text. `pnpm install` sets the driver in the clone's git configuration.
+- `object-manifest.json`: the Object manifest, the objects the code owns and what the last sync wrote of each. Committed; written only by the `objects:` commands, never by hand.
 - `reforged.config.ts`: the typed build configuration. It is committed, so it holds only what every machine shares.
 - `pnpm-workspace.yaml`: pnpm's settings. The project runs on pnpm 12 (`packageManager` in `package.json`; `npm install --global pnpm@12` installs it), which reads its settings nowhere else. A new dependency with an install script fails the install until `allowBuilds` lists it.
 - `src/generated/`: `env.ts` (the build mode); the Editor globals (`editor-globals.d.ts`, `editor-globals.lua` for the harness), the `gg_` and `udg_` globals of the map folder, which `reforged-map` declares from `war3map.lua` and `war3map.wtg`; and the map's objects, which it reads from the map folder's Object data: `map-objects.d.ts` (a `FourCC` overload per Custom object and per Built-in object the map modifies) and a constants module per Object kind (`custom-units.ts`, `custom-items.ts`, `custom-abilities.ts`, `custom-buffs.ts`, `custom-destructables.ts`, `custom-doodads.ts`, `custom-upgrades.ts`). Rewritten by every install and build. Read-only: change the config or the map instead.
@@ -51,6 +54,16 @@ A task is finished when `pnpm check` is green.
 - `tsconfig.base.json` enables `reforged-map/typescript-plugin` for editors only (the hover of a Rawcode literal); it changes no build, lint or test, and stays in place. Find an object by the generated constants and `reforged-builtins`, not by the hover.
 - `as Rawcode<"unit">` is only for a number the compiler cannot know (a save code, a sync message), never to silence a kind error.
 - The rules in full: [Rawcodes](https://phmilk.github.io/reforged-ts/docs/guides/rawcodes).
+
+## Object definitions
+
+- A field is keyed by its field id (`uhpm`, as the Object Editor's raw-data view shows it); the hover of the id gives its label. A wrong field or value fails `pnpm typecheck`.
+- Name another object with `FourCC("A001")`, never with the generated `Custom<Kind>s` constants or `reforged-builtins`' constants: they exist only in the map's Lua, and the build refuses the import.
+- To move an object made in the World Editor into code: `pnpm objects:adopt <rawcode>`. To give one back to the World Editor: `pnpm objects:release <rawcode>`, before deleting its definition.
+- Deleting a definition removes its object from the map folder at the next `pnpm objects:sync`, and its placements on the terrain at the World Editor's next save.
+- Never edit `object-manifest.json` by hand.
+- A sync refused for unsaved edits in the World Editor (its title ends in ` *]`) or for a change made outside the code is shown to the author, never forced (`--force`) on their behalf.
+- The feature in full: [Object definitions](https://phmilk.github.io/reforged-ts/docs/guides/object-definitions).
 
 ## Lint
 
@@ -90,7 +103,7 @@ Each skill is a step list for a recurring task. An agent without skill support r
 
 ## Template maintenance
 
-This section, `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `docs/agents/release-gate.md`, the sync-shape tests (`tests/pipeline/seeds.test.ts`, `tests/pipeline/readme.test.ts` and their helper `tests/pipeline/sync-markers.ts`), the sync script `scripts/sync.ts` with its test `tests/pipeline/sync.test.ts`, the sync workflow `.github/workflows/sync.yml` that runs it, the claim workflow `.github/workflows/claim.yml`, the board caller `.github/workflows/board.yml`, `tests/pipeline/board.test.ts`, the test of both callers, the copy of what the library shares (every file its record `.claude/shared.lock.json` names) with the git attributes `.claude/.gitattributes` and the Prettier ignores `.prettierignore` that keep its bytes, its test `tests/pipeline/shared-skills.test.ts`, and the detach command `scripts/detach.ts` with its test `tests/pipeline/detach.test.ts` serve the development of the Template itself. `template-maintenance.json` lists them, and `tests/pipeline/detach.test.ts` holds this list equal to it. In a generated Map project, `pnpm template:detach` deletes them, the manifest, this section, the line of Agent skills that names the copy's record, the blocks of `.gitattributes` and `eslint.config.mjs` between the `template-maintenance` markers and the README's "Deletable in a generated project", and keeps the Seeds and Your project below.
+This section, `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `docs/agents/release-gate.md`, the sync-shape tests (`tests/pipeline/seeds.test.ts`, `tests/pipeline/readme.test.ts` and their helper `tests/pipeline/sync-markers.ts`), the sync script `scripts/sync.ts` with its test `tests/pipeline/sync.test.ts`, the sync workflow `.github/workflows/sync.yml` that runs it, the claim workflow `.github/workflows/claim.yml`, the board caller `.github/workflows/board.yml`, `tests/pipeline/board.test.ts`, the test of both callers, the copy of what the library shares (every file its record `.claude/shared.lock.json` names) with the git attributes `.claude/.gitattributes` that keep its bytes, its test `tests/pipeline/shared-skills.test.ts`, and the detach command `scripts/detach.ts` with its test `tests/pipeline/detach.test.ts` serve the development of the Template itself. `template-maintenance.json` lists them, and `tests/pipeline/detach.test.ts` holds this list equal to it. In a generated Map project, `pnpm template:detach` deletes them, the manifest, this section, the line of Agent skills that names the copy's record, the blocks of `.gitattributes`, `eslint.config.mjs` and `.prettierignore` between the `template-maintenance` markers and the README's "Deletable in a generated project", and keeps the Seeds and Your project below.
 
 - **Issue tracker**: the Template's issues live in `phmilk/reforged-ts-template`'s GitHub Issues and are driven with the `gh` CLI; the library's live in `phmilk/reforged-ts`. Specs carry the `spec` label and their tickets are sub-issues with native "blocked by" dependencies. See `docs/agents/issue-tracker.md`. Before working on an issue, claim it: `gh issue edit <n> --add-assignee @me`, your first write; an issue assigned to another login is theirs (`docs/agents/issue-tracker.md`, "Claim").
 - **Triage labels**: the five canonical triage labels are used as-is: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. Two kind labels sit next to them: `spec` on an issue created with `to-spec`, `ticket` on one created with `to-tickets`. See `docs/agents/triage-labels.md`.

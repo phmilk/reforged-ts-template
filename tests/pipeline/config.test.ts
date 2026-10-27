@@ -6,6 +6,7 @@ import {
   isInside,
   loadConfig,
   loadLaunchConfig,
+  loadObjectsConfig,
   parseCommandLine,
   resolveConfig,
   resolveGameLaunch,
@@ -39,6 +40,9 @@ describe("resolveConfig", () => {
       sourceFolder: path.join(root, "src"),
       generatedFolder: path.join(root, "src", "generated"),
       tsconfig: path.join(root, "tsconfig.json"),
+      objectsFolder: path.join(root, "src", "objects"),
+      objectManifest: path.join(root, "object-manifest.json"),
+      devObjectSync: false,
     });
   });
 
@@ -101,6 +105,21 @@ describe("resolveConfig", () => {
   it("requires the map folder", () => {
     expect(() => resolveConfig({} as never, root)).toThrow(/mapFolder/);
   });
+
+  it("keeps devObjectSync, and refuses one that is not a boolean", () => {
+    expect(
+      resolveConfig({ mapFolder: "m.w3m", devObjectSync: true }, root)
+        .devObjectSync,
+    ).toBe(true);
+    expect(() =>
+      resolveConfig(
+        { mapFolder: "m.w3m", devObjectSync: "yes" as never },
+        root,
+      ),
+    ).toThrow(
+      'reforged.config.ts: `devObjectSync` must be true or false, got "yes".',
+    );
+  });
 });
 
 /** Writes a configuration file default-exporting `config` into a fresh folder and returns its path. */
@@ -123,6 +142,9 @@ describe("loadConfig", () => {
       sourceFolder: path.join(dir, "src"),
       generatedFolder: path.join(dir, "src", "generated"),
       tsconfig: path.join(dir, "tsconfig.json"),
+      objectsFolder: path.join(dir, "src", "objects"),
+      objectManifest: path.join(dir, "object-manifest.json"),
+      devObjectSync: false,
     });
   });
 
@@ -367,5 +389,42 @@ describe("loadLaunchConfig (executable detection, injected probe)", () => {
     expect((await loadConfig(file)).mapFolder).toBe(
       path.join(path.dirname(file), "m.w3x"),
     );
+  });
+});
+
+describe("loadObjectsConfig (the World Editor beside the game, injected probe)", () => {
+  const X86_EDITOR =
+    "C:\\Program Files (x86)\\Warcraft III\\_retail_\\x86_64\\World Editor.exe";
+
+  it("finds World Editor.exe beside the game the discovery of pnpm test:map finds", async () => {
+    const file = writeConfig({ mapFolder: "m.w3x" });
+    const config = await loadObjectsConfig(
+      file,
+      [],
+      fakeProbe("win32", [X86, X86_EDITOR], windowsEnv),
+    );
+    expect(config.worldEditorExecutable).toBe(X86_EDITOR);
+    expect(config.mapFolder).toBe(path.join(path.dirname(file), "m.w3x"));
+  });
+
+  it("has none when the game is not found, has no World Editor beside it, or runs through Wine", async () => {
+    const file = writeConfig({ mapFolder: "m.w3x" });
+    for (const probe of [
+      fakeProbe("win32", [], windowsEnv),
+      fakeProbe("win32", [X86], windowsEnv),
+      fakeProbe("linux", []),
+    ])
+      expect(
+        (await loadObjectsConfig(file, [], probe)).worldEditorExecutable,
+      ).toBeUndefined();
+    const wine = writeConfig({
+      mapFolder: "m.w3x",
+      winePath: "wine",
+      gameExecutable: "game/Warcraft III.exe",
+    });
+    expect(
+      (await loadObjectsConfig(wine, [], fakeProbe("linux", [])))
+        .worldEditorExecutable,
+    ).toBeUndefined();
   });
 });

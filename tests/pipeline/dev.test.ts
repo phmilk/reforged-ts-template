@@ -3,8 +3,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import * as ts from "typescript";
-import { afterEach, describe, expect, it } from "vitest";
-import { debounce, watchFolders, type Timers } from "../../scripts/dev.ts";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { resolveConfig } from "../../scripts/config.ts";
+import {
+  debounce,
+  startDev,
+  watchFolders,
+  type Timers,
+} from "../../scripts/dev.ts";
 import {
   COPY_VERSION,
   copyProject,
@@ -133,6 +139,40 @@ describe("watchFolders", () => {
       await sleep(300);
     }
     expect(calls).toBe(0);
+  });
+});
+
+describe("watchFolders, the paths and the files", () => {
+  it("passes the changed paths, and watches a file by name whether it exists or not", async () => {
+    const dir = makeTempDir();
+    const folder = path.join(dir, "src");
+    fs.mkdirSync(folder);
+    const manifest = path.join(dir, "object-manifest.json");
+    const calls: (readonly string[] | undefined)[] = [];
+    const watcher = watchFolders({
+      folders: [folder],
+      files: [manifest],
+      ignore: [],
+      debounceMs: 100,
+      onChange: (changed) => calls.push(changed),
+    });
+    try {
+      await sleep(100);
+      fs.writeFileSync(path.join(folder, "a.ts"), "// a\n");
+      await sleep(500);
+      expect(calls).toEqual([[path.join(folder, "a.ts")]]);
+
+      fs.writeFileSync(manifest, "{}\n");
+      await sleep(500);
+      expect(calls.slice(1)).toEqual([[manifest]]);
+
+      // Another file beside the watched one is no change.
+      fs.writeFileSync(path.join(dir, "other.json"), "{}\n");
+      await sleep(500);
+      expect(calls).toHaveLength(2);
+    } finally {
+      watcher.close();
+    }
   });
 });
 
@@ -432,5 +472,168 @@ describe("the VS Code dev task", () => {
       "built",
       "end",
     ]);
+  });
+});
+
+/** A Custom unit, the Sergeant, derived from the Footman: a definition file's text. */
+const SERGEANT = `import { defineUnit } from "reforged-map/objects";
+
+export const Sergeant = defineUnit({
+  rawcode: "h002",
+  base: FourCC("hfoo"),
+  fields: { unam: "Sergeant", uhpm: 520 },
+});
+`;
+
+/**
+ * `startDev` in this process over a `copyProject()` copy, with Object sync on
+ * or off and the World Editor's windows' titles given by `titles`: what it
+ * prints, on any stream, in order.
+ */
+class InProcessDev {
+  readonly lines: string[] = [];
+  private readonly watcher: { close(): void };
+  readonly project = copyProject();
+  constructor(devObjectSync: boolean, titles: () => readonly string[]) {
+    for (const stream of ["log", "warn", "error"] as const)
+      vi.spyOn(console, stream).mockImplementation((...args: unknown[]) => {
+        this.lines.push(args.map(String).join(" "));
+      });
+    const config = resolveConfig(
+      { mapFolder: MAP_FOLDER, devObjectSync },
+      this.project,
+      {},
+      COPY_VERSION,
+    );
+    this.watcher = startDev(
+      { ...config, worldEditorExecutable: undefined },
+      {
+        debounceMs: 100,
+        worldEditor: { worldEditorCheck: { readWindowTitles: titles } },
+      },
+    );
+  }
+  count(pattern: RegExp): number {
+    return this.lines.filter((line) => pattern.test(line)).length;
+  }
+  async waitFor(pattern: RegExp, times: number): Promise<void> {
+    const deadline = Date.now() + 30_000;
+    while (this.count(pattern) < times) {
+      if (Date.now() > deadline)
+        throw new Error(
+          `timed out waiting for ${String(times)} x ${String(pattern)}:\n${this.lines.join("\n")}`,
+        );
+      await sleep(50);
+    }
+  }
+  /** The kind of each line `kinds` names, in order. */
+  sequence(kinds: Record<string, RegExp>): string[] {
+    return this.lines.flatMap((line) => {
+      const kind = Object.entries(kinds).find(([, pattern]) =>
+        pattern.test(line),
+      );
+      return kind ? [kind[0]] : [];
+    });
+  }
+  stop(): void {
+    this.watcher.close();
+    vi.restoreAllMocks();
+  }
+}
+
+const SYNCED = /^Object sync: /;
+const REFUSED = /^objects:sync failed: /;
+const BUILT_LINE = new RegExp(BUILT.source);
+
+describe("pnpm dev with devObjectSync", () => {
+  let dev: InProcessDev | undefined;
+  afterEach(() => {
+    dev?.stop();
+    dev = undefined;
+  });
+
+  it("runs Object sync then a build on start and on a change under src/objects/, and its own writes never retrigger it", async () => {
+    dev = new InProcessDev(true, () => []);
+    await dev.waitFor(/^Watching /, 1);
+    expect(dev.lines.find((line) => line.startsWith("Watching "))).toMatch(
+      /object-manifest\.json for changes, syncing the Object definitions before each build/,
+    );
+
+    fs.mkdirSync(path.join(dev.project, "src", "objects"), { recursive: true });
+    fs.writeFileSync(
+      path.join(dev.project, "src", "objects", "units.ts"),
+      SERGEANT,
+    );
+    await dev.waitFor(BUILT_LINE, 2);
+    expect(dev.lines).toContain("Added unit h002 (src/objects/units.ts)");
+    expect(
+      fs.readFileSync(path.join(dev.project, "object-manifest.json"), "utf8"),
+    ).toContain('"rawcode": "h002"');
+
+    // The sync wrote the map folder and the manifest: no rebuild follows.
+    await sleep(1500);
+    expect(dev.count(BUILT_LINE)).toBe(2);
+    expect(
+      dev.sequence({
+        sync: SYNCED,
+        built: BUILT_LINE,
+        change: /^Change detected/,
+      }),
+    ).toEqual(["sync", "built", "change", "sync", "built"]);
+  });
+
+  it("prints a refused sync and still builds, and keeps watching", async () => {
+    let title = "";
+    dev = new InProcessDev(true, () => (title === "" ? [] : [title]));
+    await dev.waitFor(/^Watching /, 1);
+    const mapFolder = path.join(dev.project, MAP_FOLDER);
+    // Unsaved edits in the World Editor: the sync refuses.
+    title = `Warcraft III World Editor - [${mapFolder} *]`;
+
+    fs.mkdirSync(path.join(dev.project, "src", "objects"), { recursive: true });
+    fs.writeFileSync(
+      path.join(dev.project, "src", "objects", "units.ts"),
+      SERGEANT,
+    );
+    await dev.waitFor(BUILT_LINE, 2);
+    expect(dev.count(REFUSED)).toBe(1);
+    expect(fs.existsSync(path.join(dev.project, "object-manifest.json"))).toBe(
+      false,
+    );
+
+    // Saved in the World Editor: the next change syncs.
+    title = "";
+    fs.appendFileSync(
+      path.join(dev.project, "src", "objects", "units.ts"),
+      "// saved\n",
+    );
+    await dev.waitFor(BUILT_LINE, 3);
+    expect(dev.lines).toContain("Added unit h002 (src/objects/units.ts)");
+  });
+});
+
+describe("pnpm dev without devObjectSync", () => {
+  let dev: InProcessDev | undefined;
+  afterEach(() => {
+    dev?.stop();
+    dev = undefined;
+  });
+
+  it("rebuilds on a change under src/objects/ and never syncs", async () => {
+    dev = new InProcessDev(false, () => []);
+    await dev.waitFor(/^Watching /, 1);
+    const map = fs.readdirSync(path.join(dev.project, MAP_FOLDER));
+
+    fs.mkdirSync(path.join(dev.project, "src", "objects"), { recursive: true });
+    fs.writeFileSync(
+      path.join(dev.project, "src", "objects", "units.ts"),
+      SERGEANT,
+    );
+    await dev.waitFor(BUILT_LINE, 2);
+    expect(dev.count(SYNCED)).toBe(0);
+    expect(fs.readdirSync(path.join(dev.project, MAP_FOLDER))).toEqual(map);
+    expect(fs.existsSync(path.join(dev.project, "object-manifest.json"))).toBe(
+      false,
+    );
   });
 });

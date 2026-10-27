@@ -1,6 +1,6 @@
 # reforged-ts-template
 
-A Map project template: a Warcraft III 3.0.0 map whose code is TypeScript compiled to Lua with typescript-to-lua and [reforged-ts](https://github.com/phmilk/reforged-ts). You write the map's code in `src`, `pnpm build` appends it to the script the World Editor saved and packs the map, and `pnpm test:map` opens it in the game. The World Editor owns the map's data (terrain, object data, placed units); this repository owns the code. The way the build works (the editor's map folder, the code appended to its script, the archive packed) comes from cipherxof's [wc3-ts-template](https://github.com/cipherxof/wc3-ts-template) (MIT).
+A Map project template: a Warcraft III 3.0.0 map whose code is TypeScript compiled to Lua with typescript-to-lua and [reforged-ts](https://github.com/phmilk/reforged-ts). You write the map's code in `src`, `pnpm build` appends it to the script the World Editor saved and packs the map, and `pnpm test:map` opens it in the game. The World Editor owns the map's data (terrain, object data, placed units); this repository owns the code, and the types of object it declares as [Object definitions](#object-definitions). The way the build works (the editor's map folder, the code appended to its script, the archive packed) comes from cipherxof's [wc3-ts-template](https://github.com/cipherxof/wc3-ts-template) (MIT).
 
 **Status: under construction.** The Template is being built in the open specs of its issue tracker, at https://github.com/phmilk/reforged-ts-template/issues. The library packages are published as alphas under npm's `next` dist-tag (see [the library packages](#the-library-packages)); the documentation site is not live yet: its links, the `llms.txt` one included, are placeholders until it is.
 
@@ -39,6 +39,7 @@ Either way, the install wrote the generated files under `src/generated`; after t
 2. Build: `pnpm build`. It prints the packed archive, `dist/my-map-0.0.0-dev.w3m` (`dist/reforged-ts-template-0.0.0-dev.w3m` in the Template itself): the map folder's name without its suffix, the `version` of `package.json`, and `-dev` for a dev build. `pnpm build --mode release` packs `dist/my-map-0.0.0.w3m`, the archive you ship. `pnpm version patch` (or `minor`, `major`) bumps the version and tags the commit.
 3. Play: `pnpm test:map` builds, then opens the game on the packed archive, windowed. To pick the map from the game's own map list instead, copy the archive into the game's Maps folder.
 4. Iterate: `pnpm dev` rebuilds on every change under `src` or the map folder, until Ctrl+C.
+5. Define objects in code, when it suits: [Object definitions](#object-definitions).
 
 `pnpm test:map` finds the game in the Battle.net install locations. When the game lives elsewhere, set the `WC3_EXECUTABLE` environment variable to its executable (and `WINEPREFIX` for a Wine prefix) rather than writing the path into `gameExecutable`: `reforged.config.ts` is committed, so it holds only what every machine shares. `pnpm test` fails when a committed file holds an absolute path (`tests/pipeline/absolute-paths.test.ts`), because such a path works on one machine only. The check reads the files as committed in `HEAD`, so a local setting you do not commit never fails it.
 
@@ -52,6 +53,9 @@ Either way, the install wrote the generated files under `src/generated`; after t
 | `pnpm test:map`             | Builds, then launches the game on the packed archive.                                                             |
 | `pnpm test`                 | Runs the tests without the game: the build scripts' in Node, the map's on the Lua 5.3 harness.                    |
 | `pnpm check`                | Runs `lint`, `typecheck` and `test` in that order and stops at the first failure: the definition of done.         |
+| `pnpm objects:sync`         | Writes the Object definitions of `src/objects/` into the map folder and the Object manifest.                      |
+| `pnpm objects:adopt`        | Hands objects of the map folder to the code (`<rawcode...>` or `--all`), as definition files.                     |
+| `pnpm objects:release`      | Hands objects the code owns back to the map folder (`<rawcode...>`), deleting their definition files.             |
 
 The archive's name is the map folder's name without its suffix, then the `version` of `package.json` (left out when there is none), then `-dev` for a dev build, then the map folder's suffix; `archiveName` in `reforged.config.ts` replaces it, used as written. `pnpm test:map` launches that archive: since Patch 3.0.1 the game no longer opens a map folder given to `-loadfile`, only a packed map (phmilk/reforged-ts#642).
 
@@ -63,7 +67,7 @@ Every install, build and watch (`pnpm dev`) rewrites `src/generated/`, ignored b
 
 - `env.ts`: the build mode, `devMode`, from `--mode` or `mode` in `reforged.config.ts`.
 - `editor-globals.d.ts` and `editor-globals.lua`: the Editor globals, the `gg_` and `udg_` globals the World Editor declares for the map, as TypeScript declarations for the map's code and a Lua stub for the test harness. [`reforged-map`](https://github.com/phmilk/reforged-ts/tree/master/packages/reforged-map) declares them from the map folder's `war3map.lua` and `war3map.wtg`. A GUI variable of an object type is typed by its Object kind, read from its type in the Variable Editor: a Unit-Type `udg_SpawnType` is a `Rawcode<"unit">`, so `CreateUnit(owner, udg_SpawnType, …)` compiles with no cast. To add, rename or retype one, change it in the World Editor and save the map.
-- `map-objects.d.ts` and the constants modules `custom-units.ts`, `custom-items.ts`, `custom-abilities.ts`, `custom-buffs.ts`, `custom-destructables.ts`, `custom-doodads.ts` and `custom-upgrades.ts`: the map's objects, which `reforged-map` reads from the map folder's Object data (`war3map.w3u` to `war3map.w3q` and their `war3mapSkin` counterparts, the names through `war3map.wts`). `map-objects.d.ts` declares a `FourCC` overload per Custom object and per Built-in object the map modifies, so `FourCC("h000")` is a `Rawcode<"unit">` with the object's name on hover. Each constants module names the Custom objects of its Object kind by name and Rawcode: `CustomUnits.Captain_h000`, imported from `./generated/custom-units`; a kind the map has none of gets an empty one. A Custom object that keeps its base's name is named after the base, read from `reforged-builtins`. To add or rename one, change it in the Object Editor and save the map: the constant follows the name, and each use of the old name stops compiling.
+- `map-objects.d.ts` and the constants modules `custom-units.ts`, `custom-items.ts`, `custom-abilities.ts`, `custom-buffs.ts`, `custom-destructables.ts`, `custom-doodads.ts` and `custom-upgrades.ts`: the map's objects, which `reforged-map` reads from the map folder's Object data (`war3map.w3u` to `war3map.w3q` and their `war3mapSkin` counterparts, the names through `war3map.wts`). `map-objects.d.ts` declares a `FourCC` overload per Custom object and per Built-in object the map modifies, so `FourCC("h000")` is a `Rawcode<"unit">` with the object's name on hover. Each constants module names the Custom objects of its Object kind by name and Rawcode: `CustomUnits.Captain_h000`, imported from `./generated/custom-units`; a kind the map has none of gets an empty one. A Custom object that keeps its base's name is named after the base, read from `reforged-builtins`. To add or rename one, change it in the Object Editor and save the map: the constant follows the name, and each use of the old name stops compiling. They include the objects the code defines ([Object definitions](#object-definitions)), named from the definition's name field, whose hover names the definition's file.
 
 ## Object data in `git diff`
 
@@ -82,6 +86,31 @@ The map folder's Object data files (`war3map.w3u` to `war3map.w3q` and their `wa
 Each file is shown as text by [`reforged-map`](https://github.com/phmilk/reforged-ts/tree/master/packages/reforged-map#object-data-in-git-diff)'s `textconv` driver. One line per object names its table and its Rawcode, `builtin hfoo` for a Built-in object the map modifies or `custom h000 from hfoo` for a Custom object and its base; under it, indented, one line per modification gives the field id, its value type, its level and data pointer for abilities, doodads and upgrades, then `=` and the value. git's hunk header names the object above the change. A `TRIGSTR_nnn` value is a string of `war3map.wts`, which is text: its own diff shows the string whose text changed.
 
 `.gitattributes` names the driver on the Object data files and keeps every byte of the map folder as the World Editor wrote it, whatever `core.autocrlf` says. The driver's command is local to each clone, since git never takes a command from a repository's files: `pnpm install` sets it (`scripts/diff-driver.ts`, run by `prepare`) in the clone's `.git/config`, with `diff.reforged-object-data.cachetextconv` so each version of a file is converted once. Without git, outside a git work tree, or when git cannot write its configuration, the install warns and goes on, and `git diff` says "Binary files differ" until the next `pnpm install`.
+
+## Object definitions
+
+An Object definition declares one of the map's types of object in TypeScript instead of the Object Editor: a new Custom object, or a change to a Built-in object. The code then owns it, and the World Editor still shows it. The library's guide, [Object definitions](https://phmilk.github.io/reforged-ts/docs/next/guides/object-definitions), gives every rule; [`reforged-map`'s README](https://github.com/phmilk/reforged-ts/tree/master/packages/reforged-map#object-definitions) every detail.
+
+```ts
+// src/objects/unit/Sergeant_h002.ts
+import { defineUnit } from "reforged-map/objects";
+
+export const Sergeant_h002 = defineUnit({
+  rawcode: "h002",
+  base: FourCC("hfoo"),
+  fields: { unam: "Sergeant", uhpm: 520 },
+});
+```
+
+- **The folder.** `src/objects/` holds the definitions, one exported `define<Kind>` call of `reforged-map/objects` per object, by field id (`uhpm`; its hover gives the Object Editor's label). Adoption lays them out as `src/objects/<kind>/<Name>_<rawcode>.ts`. They are Node modules the build loads, never part of the map's Lua: the map's `tsconfig.json` and the Lua tests' leave the folder out, and `tsconfig.objects.json`, which `pnpm typecheck` runs, type-checks it with the Typings' `FourCC` and Rawcode types, the generated `map-objects.d.ts` and `reforged-map/objects`. ESLint lints it with that project, `reforged/no-unknown-rawcodes` included. A definition names another object with `FourCC("A001")`: the generated constants and those of `reforged-builtins` exist only in the map's Lua.
+- **The build's merge.** `pnpm build` merges every definition into its staged copy of the map folder, after staging and before packing, so `dist/` holds them without a sync; the map folder and the manifest are only read. Its warnings go to stderr; a collision with an object the map folder defines, or an invalid definition, fails the build naming the file, the Rawcode and the field. The generated constants and overloads include the objects defined in code (`CustomUnits.Sergeant_h002`).
+- **`pnpm objects:sync`** writes the definitions into the map folder itself, in the form the World Editor saves, so that the World Editor and `git diff` show them, and records them in the manifest. A second sync writes nothing. It prints its report and exits non-zero when it refuses, writing nothing: an invalid definition, a collision (adopt the object, or choose another Rawcode), an owned object changed outside the code (copy each change listed into its definition, or `--force` to overwrite them), unsaved edits in the World Editor, or a manifest it cannot read.
+- **`pnpm objects:adopt <rawcode...>`**, or `--all`, hands objects made in the World Editor to the code: each gets a definition file, formatted with the project's Prettier, and an entry in the manifest; the map folder is left byte for byte. A Rawcode two kinds share names its kind: `buff:B000`.
+- **`pnpm objects:release <rawcode...>`** hands objects back: each is synced one last time, then leaves the manifest, and its definition file is deleted, its placements on the terrain kept. Deleting a definition instead removes its object at the next sync, and its placements at the World Editor's next save.
+- **The Object manifest**, `object-manifest.json` at the root, records what the code owns and what the last sync wrote of each object. It is committed, written only by the three commands, never by hand; `.prettierignore` leaves it as `reforged-map` writes it. A merge conflict in it is resolved by keeping both sides' entries, then `pnpm objects:sync`.
+- **In `pnpm dev`**, `devObjectSync: true` in `reforged.config.ts` (off by default) runs Object sync before each build and watches the manifest too; a refused sync is printed, and the build still runs with the definitions merged.
+
+Each command takes `--force`, which overrides only what that command's refusal says it may. **Take turns with the World Editor**: it keeps the map it loaded in memory and its next save writes all of it back, so save or discard its edits before a sync, an adoption or a release; a window title ending in ` *]` refuses them. After a sync that writes the map folder, a World Editor holding the map without unsaved edits is reloaded with `World Editor.exe -launch -loadfile <map folder>`, the executable beside the game `pnpm test:map` finds; when the game is not found, the sync warns to reload the map by hand (File > Open). Edit an owned object in code, not in the Object Editor. Everything else in the map folder (terrain, placed units, triggers, the map's options) changes only through the World Editor.
 
 ## Compatibility matrix
 
@@ -128,7 +157,7 @@ A rule is silenced on one line only, with the reason after `--`; a disable comme
 TriggerSleepAction(1);
 ```
 
-The type-aware rules find each file's program through the nearest `tsconfig.json`. The Node side (`scripts`, `tests/pipeline`, `tests/harness` and the configuration files) is typed by `tsconfig.scripts.json`, which no `tsconfig.json` names; the map's `tsconfig.json` references it through `tsconfig.solution.json`, a solution file that compiles nothing, so ESLint and the editor both find it.
+The type-aware rules find each file's program through the nearest `tsconfig.json`. The Node side (`scripts`, `tests/pipeline`, `tests/harness` and the configuration files) is typed by `tsconfig.scripts.json`, and the Object definitions (`src/objects`) by `tsconfig.objects.json`, which no `tsconfig.json` names; the map's `tsconfig.json` references both through `tsconfig.solution.json`, a solution file that compiles nothing, so ESLint and the editor both find them. `src/objects` gets only the rule `reforged/no-unknown-rawcodes` of `eslint-plugin-reforged`: the others guard code that runs in the game.
 
 ## The library packages
 
@@ -170,7 +199,7 @@ This repository keeps the Template itself up to date with the library. A Map pro
 - The sync script the workflow runs, `scripts/sync.ts`, and its test `tests/pipeline/sync.test.ts`.
 - The tests that hold the Template's files to the sync's shape: `tests/pipeline/seeds.test.ts` (`AGENTS.md` and `GLOSSARY.md`), `tests/pipeline/readme.test.ts` (this README) and their helper `tests/pipeline/sync-markers.ts`.
 - The Template's maintenance docs: `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `docs/agents/release-gate.md` and the Template maintenance section of `AGENTS.md`, which lists all of the above.
-- The copy of the Agent skills the Template shares with the library: every file its record `.claude/shared.lock.json` names (the Upstream skills and their lock, `write-spec`, the session-start hook and its registration in `.claude/settings.json`), the git attributes `.claude/.gitattributes` and the Prettier ignores `.prettierignore` that keep its bytes, its test `tests/pipeline/shared-skills.test.ts`, and the blocks of `.gitattributes` and `eslint.config.mjs` between the `template-maintenance` markers. The Seeds `map-feature` and `run-in-game` stay.
+- The copy of the Agent skills the Template shares with the library: every file its record `.claude/shared.lock.json` names (the Upstream skills and their lock, `write-spec`, the session-start hook and its registration in `.claude/settings.json`), the git attributes `.claude/.gitattributes` that keep its bytes, its test `tests/pipeline/shared-skills.test.ts`, and the blocks of `.gitattributes`, `eslint.config.mjs` and `.prettierignore` between the `template-maintenance` markers, which keep the rest of each file. The Seeds `map-feature` and `run-in-game` stay.
 - The detach command, `scripts/detach.ts`, its test `tests/pipeline/detach.test.ts` and its manifest `template-maintenance.json`.
 
 ## Links

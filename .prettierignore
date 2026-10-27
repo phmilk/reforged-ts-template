@@ -1,10 +1,15 @@
+# The Object manifest: reforged-map writes it byte-stably, and only the
+# objects: commands write it (pnpm objects:sync, objects:adopt, objects:release).
+object-manifest.json
+
+# template-maintenance:start
 # The copy of what the library shares (.claude/shared.lock.json records it)
 # keeps the library's bytes: a fix goes to the library, never here. The Seeds
-# are formatted. Template maintenance: a generated Map project deletes this
-# file (see AGENTS.md).
+# are formatted. Template maintenance: pnpm template:detach removes this block.
 skills-lock.json
 .claude/hooks/
 .claude/settings.json
 .claude/skills/*
 !.claude/skills/map-feature/
 !.claude/skills/run-in-game/
+# template-maintenance:end

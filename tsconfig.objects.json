@@ -1,0 +1,20 @@
+{
+  // Type-checks the Object definitions under src/objects/: Node modules the
+  // build, Object sync and the generated code load at build time, never part
+  // of the map's Lua (tsconfig.json leaves the folder out). They see the
+  // Typings' FourCC and Rawcode types, the map's generated overloads and
+  // reforged-map/objects, not the Natives, which exist only in the game.
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["ESNext"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["node", "reforged-types/rawcode.d.ts", "reforged-types/lua-runtime.d.ts"],
+    // For editors only, as in tsconfig.base.json: the hover of a Rawcode literal.
+    "plugins": [{ "name": "reforged-map/typescript-plugin" }]
+  },
+  "include": ["src/objects", "src/generated/map-objects.d.ts"]
+}

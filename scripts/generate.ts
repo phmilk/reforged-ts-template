@@ -4,6 +4,7 @@ import {
   generateEditorGlobals,
   generateObjects,
   MapFolderError,
+  ObjectDefinitionsError,
   type EditorGlobalsOutput,
   type ObjectsOutput,
 } from "reforged-map";
@@ -73,19 +74,45 @@ export const generateEditorGlobalsFiles: Generator = (config, warn) => {
 };
 
 /**
+ * Where `reforged-map` finds a Map project's Object definitions, its
+ * generated folder (which a definition may not import) and its Object
+ * manifest: the options its definitions functions share.
+ */
+export function definitionsOptions(config: ResolvedConfig): {
+  definitionsFolder: string;
+  generatedFolder: string;
+  manifest: string;
+} {
+  return {
+    definitionsFolder: config.objectsFolder,
+    generatedFolder: config.generatedFolder,
+    manifest: config.objectManifest,
+  };
+}
+
+/**
  * The map's objects, which `reforged-map` reads from the map folder's Object
- * data: `map-objects.d.ts`, a `FourCC` overload per Custom object and per
- * Built-in object the map modifies, and per Object kind a constants module
+ * data and the Object definitions of `src/objects/`: `map-objects.d.ts`, a
+ * `FourCC` overload per Custom object and per Built-in object the map
+ * modifies or the code defines, and per Object kind a constants module
  * (`custom-units.ts` exports `CustomUnits`). `reforged-builtins` is resolved
  * from the Map project, for the base names. Its warnings go to `warn`; a
- * missing map folder is an AuthorError with the package's message.
+ * missing map folder, or a definition that fails to load or names an
+ * invalid Rawcode or base, is an AuthorError with the package's message.
  */
 export const generateObjectsFiles: Generator = (config, warn) => {
   let output: ObjectsOutput;
   try {
-    output = generateObjects(config.mapFolder, { projectRoot: config.root });
+    output = generateObjects(config.mapFolder, {
+      projectRoot: config.root,
+      ...definitionsOptions(config),
+    });
   } catch (error) {
-    if (error instanceof MapFolderError) throw new AuthorError(error.message);
+    if (
+      error instanceof MapFolderError ||
+      error instanceof ObjectDefinitionsError
+    )
+      throw new AuthorError(error.message);
     throw error;
   }
   for (const warning of output.warnings) warn(warning);
