@@ -39,6 +39,11 @@ export const LIBRARY_TERMS = [
   "Built-in object",
   "Custom object",
   "Editor form",
+  "Object definition",
+  "Object sync",
+  "Object manifest",
+  "Object adoption",
+  "Object release",
 ] as const;
 
 /** The files the sync rewrites, relative to the repository root. */

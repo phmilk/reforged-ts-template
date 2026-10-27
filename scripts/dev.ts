@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { build, builtMessage } from "./build.ts";
@@ -5,9 +6,16 @@ import { printFailure, runAsEntry } from "./cli.ts";
 import {
   CONFIG_FILE,
   isInside,
-  loadConfig,
+  loadObjectsConfig,
+  type ObjectsConfig,
   type ResolvedConfig,
 } from "./config.ts";
+import { printWarning } from "./generate.ts";
+import {
+  syncObjects,
+  syncReportLines,
+  type WorldEditorSeams,
+} from "./objects.ts";
 
 /** Quiet time after the last change before the build runs: an editor save writes many files. */
 export const DEBOUNCE_MS = 300;
@@ -49,10 +57,21 @@ export function debounce(
 export interface WatchOptions {
   /** Folders watched recursively. */
   folders: string[];
+  /**
+   * Files watched by name, through their folder without recursion, whether
+   * they exist or not. A change the platform reports without a file name is
+   * dropped here: the folder (the root, for the Object manifest) also holds
+   * what the build writes.
+   */
+  files?: string[];
   /** Folders (absolute) whose changes are dropped, wherever they sit. */
   ignore: string[];
-  /** Called once per burst of changes, after `debounceMs` of quiet. */
-  onChange: () => void;
+  /**
+   * Called once per burst of changes, after `debounceMs` of quiet, with the
+   * absolute paths that changed; undefined when the platform did not name
+   * one of them.
+   */
+  onChange: (changed: readonly string[] | undefined) => void;
   debounceMs?: number;
   timers?: Timers;
 }
@@ -72,11 +91,23 @@ export interface WatchOptions {
  * is left to the folder's own watch, which applies the ignore list.
  */
 export function watchFolders(options: WatchOptions): { close(): void } {
-  const trigger = debounce(
-    options.onChange,
+  let changed = new Set<string>();
+  let unnamed = false;
+  const debounced = debounce(
+    () => {
+      const paths = unnamed ? undefined : [...changed];
+      changed = new Set();
+      unnamed = false;
+      options.onChange(paths);
+    },
     options.debounceMs ?? DEBOUNCE_MS,
     options.timers,
   );
+  const trigger = (file: string | undefined) => {
+    if (file === undefined) unnamed = true;
+    else changed.add(file);
+    debounced();
+  };
   const ignored = (file: string) =>
     options.ignore.some((folder) => isInside(file, folder));
   const closers = options.folders.map((folder) => {
@@ -88,9 +119,12 @@ export function watchFolders(options: WatchOptions): { close(): void } {
         return;
       inner = fs
         .watch(folder, { recursive: true }, (_event, filename) => {
-          if (filename !== null && ignored(path.resolve(folder, filename)))
+          if (filename === null) {
+            trigger(undefined);
             return;
-          trigger();
+          }
+          const file = path.resolve(folder, filename);
+          if (!ignored(file)) trigger(file);
         })
         .on("error", (error) => {
           console.error(`Watch error on ${folder}:`, error);
@@ -104,7 +138,7 @@ export function watchFolders(options: WatchOptions): { close(): void } {
         if (filename !== null && filename !== name) return;
         if (ignored(folder)) return;
         arm();
-        trigger();
+        trigger(folder);
       })
       .on("error", (error) => {
         console.error(`Watch error on ${path.dirname(folder)}:`, error);
@@ -115,9 +149,22 @@ export function watchFolders(options: WatchOptions): { close(): void } {
       inner?.close();
     };
   });
+  for (const file of options.files ?? []) {
+    const name = path.basename(file);
+    const watcher = fs
+      .watch(path.dirname(file), (_event, filename) => {
+        if (filename === name) trigger(file);
+      })
+      .on("error", (error) => {
+        console.error(`Watch error on ${path.dirname(file)}:`, error);
+      });
+    closers.push(() => {
+      watcher.close();
+    });
+  }
   return {
     close() {
-      trigger.cancel();
+      debounced.cancel();
       for (const close of closers) close();
     },
   };
@@ -132,41 +179,105 @@ function buildAndReport(config: ResolvedConfig): void {
   }
 }
 
+/** sha256 of a file's bytes; undefined when it is missing. */
+function hashOf(file: string): string | undefined {
+  try {
+    return createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Runs Object sync and prints its report; never throws, so a refused sync
+ * is printed and the build still runs. Returns the files it wrote (the map
+ * folder's, and the manifest), each with its hash, so the watch can tell the
+ * sync's own writes from an author's.
+ */
+function syncAndReport(
+  config: ObjectsConfig,
+  seams: WorldEditorSeams,
+): Map<string, string | undefined> {
+  try {
+    const report = syncObjects(config, seams);
+    for (const warning of report.warnings) printWarning(warning);
+    for (const line of syncReportLines(config, report)) console.log(line);
+    const written = [
+      ...report.written.map((name) => path.join(config.mapFolder, name)),
+      ...(report.manifestWritten ? [config.objectManifest] : []),
+    ];
+    return new Map(written.map((file) => [file, hashOf(file)]));
+  } catch (error) {
+    printFailure("objects:sync", error);
+    return new Map();
+  }
+}
+
+export interface DevOptions {
+  /** Quiet time before a rebuild: `DEBOUNCE_MS` when left out. */
+  debounceMs?: number;
+  /** How Object sync reaches the World Editor: the system's when left out. */
+  worldEditor?: WorldEditorSeams;
+}
+
 /**
  * The dev loop: watch the source folder and the map folder, build once, then
  * rebuild after every burst of changes. The generated folder and the output
  * folder are the build's own writes and are ignored, so a build never
  * retriggers itself.
  *
+ * With `devObjectSync`, Object sync runs before each build and the Object
+ * manifest is watched too (`src/objects/` is under the source folder). A
+ * burst made only of the sync's own writes, each file still as it wrote it,
+ * runs nothing, so a sync never retriggers itself either.
+ *
  * Every rebuild opens with the "Change detected" line and every build, failed
  * or not, closes with the "Watching" line: the VS Code `dev` task's background
  * patterns (`.vscode/tasks.json`) wait for these two lines.
  */
 export function startDev(
-  config: ResolvedConfig,
-  debounceMs = DEBOUNCE_MS,
+  config: ObjectsConfig,
+  options: DevOptions = {},
 ): { close(): void } {
   const { sourceFolder } = config;
-  const shown = (folder: string) => path.relative(config.root, folder) || ".";
-  const watchingLine = `Watching ${shown(sourceFolder)} and ${shown(config.mapFolder)} for changes (Ctrl+C to stop)`;
-  const buildAndAnnounce = () => {
+  const shown = (file: string) => path.relative(config.root, file) || ".";
+  const watchingLine = config.devObjectSync
+    ? `Watching ${shown(sourceFolder)}, ${shown(config.mapFolder)} and ${shown(config.objectManifest)} for changes, syncing the Object definitions before each build (Ctrl+C to stop)`
+    : `Watching ${shown(sourceFolder)} and ${shown(config.mapFolder)} for changes (Ctrl+C to stop)`;
+  let ownWrites = new Map<string, string | undefined>();
+  const syncBuildAndAnnounce = () => {
+    if (config.devObjectSync)
+      ownWrites = syncAndReport(config, options.worldEditor ?? {});
     buildAndReport(config);
     console.log(watchingLine);
   };
+  const onlyOwnWrites = (changed: readonly string[] | undefined) =>
+    changed !== undefined &&
+    changed.length > 0 &&
+    changed.every(
+      (file) => ownWrites.has(file) && ownWrites.get(file) === hashOf(file),
+    );
   const watcher = watchFolders({
     folders: [sourceFolder, config.mapFolder],
+    files: config.devObjectSync ? [config.objectManifest] : [],
     ignore: [config.generatedFolder, config.outputFolder],
-    debounceMs,
-    onChange: () => {
+    debounceMs: options.debounceMs ?? DEBOUNCE_MS,
+    onChange: (changed) => {
+      if (onlyOwnWrites(changed)) {
+        ownWrites = new Map();
+        return;
+      }
       console.log("Change detected, rebuilding...");
-      buildAndAnnounce();
+      syncBuildAndAnnounce();
     },
   });
-  buildAndAnnounce();
+  syncBuildAndAnnounce();
   return watcher;
 }
 
 /** Command line: `node scripts/dev.ts [--mode dev|release]`, run from the repository root. Runs until interrupted. */
 await runAsEntry(import.meta.url, "Build", async () => {
-  startDev(await loadConfig(path.resolve(CONFIG_FILE), process.argv.slice(2)));
+  startDev(
+    await loadObjectsConfig(path.resolve(CONFIG_FILE), process.argv.slice(2)),
+  );
 });

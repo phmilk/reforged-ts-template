@@ -35,6 +35,14 @@ export interface Config {
   winePath?: string;
   /** `WINEPREFIX` for the Wine launch. Default: Wine's own (the `WINEPREFIX` environment variable, where a prefix of one machine belongs). */
   winePrefix?: string;
+  /**
+   * Runs Object sync (`pnpm objects:sync`) before each build of `pnpm dev`,
+   * and watches `src/objects/` and the Object manifest, so each change to an
+   * Object definition shows in the World Editor too. A refused sync is
+   * printed and the build still runs. Default `false`: the build merges the
+   * definitions into the map it packs either way.
+   */
+  devObjectSync?: boolean;
 }
 
 /** Which build the pipeline produces. The only thing it changes is the generated env file's `devMode`. */
@@ -60,9 +68,17 @@ export interface ResolvedConfig {
   generatedFolder: string;
   /** The tstl project compiled into the bundle. */
   tsconfig: string;
+  /** `src/objects`: the Object definitions, Node modules the build loads (never part of the bundle). */
+  objectsFolder: string;
+  /** `object-manifest.json` at the root: the Object manifest, which only the `objects:` commands write. */
+  objectManifest: string;
+  /** `devObjectSync`: whether `pnpm dev` runs Object sync before each build. */
+  devObjectSync: boolean;
 }
 
 export const CONFIG_FILE = "reforged.config.ts";
+/** The Object manifest's file, at the root. */
+export const OBJECT_MANIFEST = "object-manifest.json";
 
 /**
  * Applies the defaults and resolves every path against `root`. `version` is the
@@ -100,6 +116,14 @@ export function resolveConfig(
       `${CONFIG_FILE}: \`mode\` must be ${MODES.map((m) => `"${m}"`).join(" or ")}, got ${JSON.stringify(config.mode)}.`,
     );
   }
+  if (
+    config.devObjectSync !== undefined &&
+    typeof config.devObjectSync !== "boolean"
+  ) {
+    throw new AuthorError(
+      `${CONFIG_FILE}: \`devObjectSync\` must be true or false, got ${JSON.stringify(config.devObjectSync)}.`,
+    );
+  }
   const mode = overrides.mode ?? config.mode ?? "dev";
   const archiveName =
     config.archiveName ?? defaultArchiveName(mapFolder, version, mode);
@@ -117,6 +141,9 @@ export function resolveConfig(
     sourceFolder,
     generatedFolder: path.join(sourceFolder, "generated"),
     tsconfig: path.join(root, "tsconfig.json"),
+    objectsFolder: path.join(sourceFolder, "objects"),
+    objectManifest: path.join(root, OBJECT_MANIFEST),
+    devObjectSync: config.devObjectSync ?? false,
   };
 }
 
@@ -380,5 +407,62 @@ export async function loadLaunchConfig(
   return {
     ...resolveConfig(config, root, overrides, version),
     game: resolveGameLaunch(config, root, probe),
+  };
+}
+
+/** The World Editor's executable, beside the game's. */
+export const WORLD_EDITOR_EXECUTABLE = "World Editor.exe";
+
+/**
+ * The World Editor's executable, with which Object sync reloads a World
+ * Editor that holds the map folder: `World Editor.exe` beside the game the
+ * discovery of `pnpm test:map` finds (`resolveGameLaunch`). Undefined when
+ * the game is not found, when it runs through Wine (a reload needs Windows
+ * or WSL), or when no such file is there: `reforged-map` then warns to
+ * reload the map by hand.
+ */
+export function findWorldEditor(
+  config: Config,
+  root: string,
+  probe: ExecutableProbe,
+): string | undefined {
+  let game: GameLaunch;
+  try {
+    game = resolveGameLaunch(config, root, probe);
+  } catch (error) {
+    if (error instanceof AuthorError) return undefined;
+    throw error;
+  }
+  if (game.winePath !== undefined) return undefined;
+  // A Windows path (`C:\...`, from WC3_EXECUTABLE or the Battle.net folders), whatever the host.
+  const paths = game.executable.includes("\\") ? path.win32 : path;
+  const editor = paths.join(
+    paths.dirname(game.executable),
+    WORLD_EDITOR_EXECUTABLE,
+  );
+  return probe.exists(editor) ? editor : undefined;
+}
+
+/** A resolved configuration that also knows the World Editor's executable: what the `objects:` commands and `pnpm dev` load. */
+export interface ObjectsConfig extends ResolvedConfig {
+  /** From `findWorldEditor`. */
+  worldEditorExecutable: string | undefined;
+}
+
+/**
+ * `loadConfig` plus the World Editor's executable (`findWorldEditor`), for
+ * the `objects:` commands and `pnpm dev`. Never fails for a game it does not
+ * find.
+ */
+export async function loadObjectsConfig(
+  configPath: string,
+  argv: readonly string[] = [],
+  probe: ExecutableProbe = systemProbe,
+): Promise<ObjectsConfig> {
+  const overrides = parseCommandLine(argv);
+  const { config, root, version } = await importConfigFile(configPath);
+  return {
+    ...resolveConfig(config, root, overrides, version),
+    worldEditorExecutable: findWorldEditor(config, root, probe),
   };
 }

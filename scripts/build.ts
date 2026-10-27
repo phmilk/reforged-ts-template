@@ -12,6 +12,7 @@ import { AuthorError } from "./errors.ts";
 import { runAsEntry, writeGithubOutputs } from "./cli.ts";
 import { packMapFolder } from "./pack.ts";
 import { generate } from "./generate.ts";
+import { mergeObjects } from "./objects.ts";
 import {
   EDITOR_SCRIPT,
   cleanOutputFolder,
@@ -35,11 +36,13 @@ export interface BuildResult {
  * Runs the pipeline once: read the editor script and find the tsconfig's
  * bundle file (a map folder without the script, or a bundle outside the
  * output folder, fails before anything is written), clean the output folder, stage the map
- * folder, regenerate the generated folder (every writer in `GENERATORS`: the
- * env file for the effective mode, the editor-globals typings and stub),
- * compile the bundle, compose the map script into the staging folder, pack
- * the staging folder and write the archive. The map folder and the tsconfig
- * are only read.
+ * folder, merge the Object definitions of `src/objects/` into the staged copy
+ * (`mergeObjects`), regenerate the generated folder (every writer in
+ * `GENERATORS`: the env file for the effective mode, the editor-globals
+ * typings and stub, the map's objects), compile the bundle, compose the map
+ * script into the staging folder, pack the staging folder and write the
+ * archive. The map folder, the Object manifest and the tsconfig are only
+ * read.
  */
 export function build(config: ResolvedConfig): BuildResult {
   // Fail on a map folder without the editor script before touching the output folder.
@@ -49,6 +52,8 @@ export function build(config: ResolvedConfig): BuildResult {
   cleanOutputFolder(config.outputFolder);
   const stagingFolder = stagingFolderFor(config.outputFolder, config.mapFolder);
   stageMapFolder(config.mapFolder, stagingFolder);
+  // The archive holds the definitions without a sync. Warnings go to stderr.
+  mergeObjects(config, stagingFolder);
 
   // Before compiling: the source imports the generated files. Warnings go to stderr.
   generate(config);

@@ -1,11 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
+import { objectDataText } from "reforged-map";
 import { describe, expect, it } from "vitest";
 import { openArchive } from "../../scripts/pack.ts";
 import {
   COPY_VERSION,
   copyProject,
   ENTRY_MODULE,
+  FIXTURE_OBJECTS_MAP,
   hashTree,
   makeTempDir,
   MAP_FOLDER,
@@ -431,5 +433,85 @@ describe("node scripts/generate.ts (the prepare script)", () => {
     expect(fs.readFileSync(path.join(project, ENV), "utf8")).toContain(
       "export const devMode: boolean = false;",
     );
+  });
+});
+
+/** A Custom unit, the Sergeant, derived from the Footman: a definition file's text. */
+const SERGEANT = `import { defineUnit } from "reforged-map/objects";
+
+export const Sergeant = defineUnit({
+  rawcode: "h002",
+  base: FourCC("hfoo"),
+  fields: { unam: "Sergeant", uhpm: 520 },
+});
+`;
+
+/** Writes `text` as the copy's `src/objects/units.ts`. */
+function defineUnits(project: string, text: string): void {
+  fs.mkdirSync(path.join(project, "src", "objects"), { recursive: true });
+  fs.writeFileSync(path.join(project, "src", "objects", "units.ts"), text);
+}
+
+describe("the Object definitions in pnpm build", () => {
+  it("merges a definition into the staged map folder and the archive, leaving the map folder and the manifest alone, and none reaches the Lua", () => {
+    const project = copyProject();
+    defineUnits(project, SERGEANT);
+    const map = hashTree(path.join(project, MAP_FOLDER));
+
+    const result = runScript(project, "scripts/build.ts");
+
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    const staged = new Uint8Array(
+      fs.readFileSync(
+        path.join(project, "dist", "staging", MAP_FOLDER, "war3map.w3u"),
+      ),
+    );
+    expect(objectDataText(staged, "war3map.w3u")).toContain(
+      "custom h002 from hfoo",
+    );
+    const archived = openArchive(
+      new Uint8Array(fs.readFileSync(path.join(project, ARCHIVE))),
+    ).get("war3map.w3u");
+    expect(archived && new Uint8Array(archived.bytes())).toEqual(staged);
+    // Only read: the map folder as it was, no manifest written.
+    expect(hashTree(path.join(project, MAP_FOLDER))).toEqual(map);
+    expect(fs.existsSync(path.join(project, "object-manifest.json"))).toBe(
+      false,
+    );
+    // The definitions run in Node only: the Lua gets the generated constant, never the definition.
+    const bundle = fs.readFileSync(
+      path.join(project, "dist", "bundle.lua"),
+      "utf8",
+    );
+    expect(bundle).toContain("Sergeant_h002 = 1747988530");
+    expect(bundle).not.toContain("reforged-map");
+    expect(bundle).not.toContain("defineUnit");
+    expect(bundle).not.toContain('["objects.');
+  });
+
+  it("fails with the definitions' problems and exit 1 on an invalid definition or a collision", () => {
+    const project = copyProject();
+    defineUnits(project, SERGEANT.replace("uhpm: 520", 'uhpm: "many"'));
+
+    const invalid = runScript(project, "scripts/build.ts");
+
+    expect(invalid.status).toBe(1);
+    expect(invalid.stderr).toMatch(/^Build failed: .*h002/m);
+    expect(invalid.stderr).toContain("uhpm");
+    expect(invalid.stderr).not.toMatch(/^\s+at /m);
+
+    // h000 is the Captain of the objects map, which the code does not own.
+    fs.rmSync(path.join(project, MAP_FOLDER), { recursive: true });
+    fs.cpSync(FIXTURE_OBJECTS_MAP, path.join(project, MAP_FOLDER), {
+      recursive: true,
+    });
+    defineUnits(project, SERGEANT.replace('"h002"', '"h000"'));
+
+    const collision = runScript(project, "scripts/build.ts");
+
+    expect(collision.status).toBe(1);
+    expect(collision.stderr).toMatch(/^Build failed: .*h000/m);
+    expect(collision.stderr).toContain("objects:adopt");
   });
 });

@@ -50,6 +50,7 @@ const AGENTS_SECTIONS = [
   "Layout",
   "Runtime constraints",
   "Rawcodes",
+  "Object definitions",
   "Lint",
   "Testing",
   "Domain docs",
@@ -108,10 +109,43 @@ describe("AGENTS.md", () => {
     expect(bullet).toContain("Never edit the bytes of its files by hand");
     expect(bullet).toContain("`git diff`");
     expect(bullet).toContain("`TRIGSTR_nnn`");
-    // Kept as is (#97) until Object sync's spec changes it.
+    expect(bullet).toContain("written here only by the `objects:` commands");
+    // Object sync (#114): Object data has two ways in, the rest of the map folder one.
     expect(agents).toContain(
+      "Object data changes through the World Editor or through Object definitions and `pnpm objects:sync`; everything else in the map folder changes only through the World Editor.",
+    );
+    expect(agents).not.toContain(
       "Files in the map folder change only through the World Editor.",
     );
+  });
+
+  it("lists the Object definitions' folder and the Object manifest in the Layout, and the three commands", () => {
+    const layout = section(agents, "Layout");
+    expect(layout).toMatch(/^- `src\/objects\/`: /m);
+    expect(layout).toContain("`src/objects/<kind>/<Name>_<rawcode>.ts`");
+    expect(layout).toMatch(/^- `object-manifest\.json`: /m);
+    const commands = section(agents, "Commands");
+    for (const command of ["objects:sync", "objects:adopt", "objects:release"])
+      expect(commands, command).toContain(`\`pnpm ${command}`);
+  });
+
+  it("says how to work with Object definitions", () => {
+    const objects = section(agents, "Object definitions");
+    for (const text of [
+      "field id",
+      "hover",
+      '`FourCC("A001")`',
+      "`Custom<Kind>s`",
+      "`reforged-builtins`",
+      "`pnpm objects:adopt <rawcode>`",
+      "`pnpm objects:release <rawcode>`, before deleting its definition",
+      "at the next `pnpm objects:sync`, and its placements on the terrain at the World Editor's next save",
+      "Never edit `object-manifest.json` by hand",
+      "` *]`",
+      "a change made outside the code",
+      "never forced",
+    ])
+      expect(objects, text).toContain(text);
   });
 
   it("fits in the line cap", () => {
@@ -187,6 +221,20 @@ describe("GLOSSARY.md", () => {
     expect(readRepoFile("docs/agents/domain.md")).toContain(
       "**`GLOSSARY.md`** at the repo root",
     );
+  });
+
+  it("carries the terms of Object definitions (#114)", () => {
+    const block = markedBlock(glossary, "terms");
+    for (const term of [
+      "Object definition",
+      "Object sync",
+      "Object manifest",
+      "Object adoption",
+      "Object release",
+    ]) {
+      expect(LIBRARY_TERMS, term).toContain(term);
+      expect(block, term).toContain(`\n**${term}**:\n`);
+    }
   });
 
   it("holds the library terms between the terms markers, then Your map's terms", () => {

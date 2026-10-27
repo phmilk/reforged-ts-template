@@ -135,6 +135,7 @@ export function copyProject(): string {
     "tsconfig.base.json",
     "tsconfig.solution.json",
     "tsconfig.scripts.json",
+    "tsconfig.objects.json",
     "reforged.config.ts",
     "vitest.config.ts",
     "eslint.config.mjs",

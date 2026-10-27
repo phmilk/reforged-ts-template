@@ -179,6 +179,46 @@ describe("GENERATORS", () => {
     ).toMatch(/export const CustomUnits = \{\s*\} as const;/);
   });
 
+  it("includes the objects defined in code: a constant and an overload, named from the definition", () => {
+    const root = makeTempDir();
+    linkNodeModules(root);
+    fs.mkdirSync(path.join(root, "src", "objects"), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, "src", "objects", "units.ts"),
+      `import { defineUnit } from "reforged-map/objects";\n\nexport const Sergeant = defineUnit({\n  rawcode: "h002",\n  base: FourCC("hfoo"),\n  fields: { unam: "Sergeant" },\n});\n`,
+    );
+    const files = generateObjectsFiles(
+      resolveConfig({ mapFolder: FIXTURE_MAP }, root),
+      () => undefined,
+    );
+    const read = (name: string) =>
+      files.find((file) => file.name === name)?.contents ?? "";
+    expect(read("custom-units.ts")).toContain(
+      'Sergeant_h002: 1747988530 as Rawcode<"unit">,',
+    );
+    expect(read("map-objects.d.ts")).toContain(
+      'declare function FourCC(id: "h002"): Rawcode<"unit">;',
+    );
+    expect(read("map-objects.d.ts")).toContain("src/objects/units.ts");
+  });
+
+  it("fails the objects with an author error on a definition that does not load", () => {
+    const root = makeTempDir();
+    linkNodeModules(root);
+    fs.mkdirSync(path.join(root, "src", "objects"), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, "src", "objects", "units.ts"),
+      `import { defineUnit } from "reforged-map/objects";\n\nexport const Odd = defineUnit({ rawcode: "h002", base: FourCC("zzzz"), fields: {} });\n`,
+    );
+    const run = () =>
+      generateObjectsFiles(
+        resolveConfig({ mapFolder: FIXTURE_MAP }, root),
+        () => undefined,
+      );
+    expect(run).toThrow(AuthorError);
+    expect(run).toThrow(/units\.ts.*h002.*zzzz/);
+  });
+
   it("fails the objects with an author error on a missing map folder", () => {
     const run = () =>
       generateObjectsFiles(configIn(makeTempDir()), () => undefined);

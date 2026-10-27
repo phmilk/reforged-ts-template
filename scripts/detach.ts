@@ -5,8 +5,8 @@
 // phmilk/reforged-ts); the sections are AGENTS.md's "Template maintenance"
 // and the README's "Deletable in a generated project", and the lines of both
 // that name a copy's record (the pointer of AGENTS.md's Agent skills); the
-// blocks are those between the template-maintenance markers of .gitattributes
-// and eslint.config.mjs (the copy's attributes and ignores). It removes
+// blocks are those between the template-maintenance markers of .gitattributes,
+// eslint.config.mjs and .prettierignore (the copy's attributes and ignores). It removes
 // itself, its package script and the manifest too, so it runs once.
 //
 // Template maintenance: a generated Map project deletes it (see AGENTS.md).
@@ -31,6 +31,7 @@ export const SECTIONS: Readonly<Record<string, string>> = {
 export const MARKED_FILES: readonly string[] = [
   ".gitattributes",
   "eslint.config.mjs",
+  ".prettierignore",
 ];
 /** A block of Template maintenance runs from a line holding `<MARKER>:start` to one holding `<MARKER>:end`. */
 export const MARKER = "template-maintenance";

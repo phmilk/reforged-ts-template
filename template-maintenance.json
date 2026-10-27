@@ -14,7 +14,6 @@
     "tests/pipeline/board.test.ts",
     ".claude/shared.lock.json",
     ".claude/.gitattributes",
-    ".prettierignore",
     "tests/pipeline/shared-skills.test.ts",
     "scripts/detach.ts",
     "tests/pipeline/detach.test.ts",
