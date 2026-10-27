@@ -420,7 +420,7 @@ describe("loadObjectsConfig (the World Editor beside the game, injected probe)",
     const wine = writeConfig({
       mapFolder: "m.w3x",
       winePath: "wine",
-      gameExecutable: "C:\\Games\\Warcraft III.exe",
+      gameExecutable: "game/Warcraft III.exe",
     });
     expect(
       (await loadObjectsConfig(wine, [], fakeProbe("linux", [])))
