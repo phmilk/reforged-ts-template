@@ -17,6 +17,27 @@ export const MAP_FOLDER = path
   .relative(ROOT, resolveConfig(config, ROOT).mapFolder)
   .split(path.sep)
   .join("/");
+/** The map folder's own name, suffix included (`my-map.w3m`), as the pipeline's messages name it. */
+export const MAP_FOLDER_NAME = path.posix.basename(MAP_FOLDER);
+/** The map folder's suffix (`.w3m` or `.w3x`), which the archive keeps. */
+export const MAP_SUFFIX = path.posix.extname(MAP_FOLDER);
+/** The map folder's name without its suffix (`my-map`): the base of the default archive name. */
+export const MAP_NAME = path.posix.basename(MAP_FOLDER, MAP_SUFFIX);
+/**
+ * The archive name a build gives by default, written out from the naming the
+ * README states rather than read from the build: `MAP_NAME`, then
+ * `-<version>` unless `version` is `undefined`, then `-dev` in dev mode, then
+ * `MAP_SUFFIX` (`my-map-1.2.0-dev.w3m`).
+ */
+export function defaultArchiveName(
+  mode: "dev" | "release",
+  version: string | undefined,
+): string {
+  const parts = [MAP_NAME];
+  if (version !== undefined) parts.push(version);
+  if (mode === "dev") parts.push("dev");
+  return parts.join("-") + MAP_SUFFIX;
+}
 /**
  * Map folders the configs that leave a map folder to the World Editor
  * (`.gitattributes`, the editor configs) must match: the project's, and one

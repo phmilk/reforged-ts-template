@@ -6,25 +6,25 @@ import { openArchive } from "../../scripts/pack.ts";
 import {
   COPY_VERSION,
   copyProject,
+  defaultArchiveName,
   ENTRY_MODULE,
+  escapeRegExp,
   FIXTURE_OBJECTS_MAP,
   hashTree,
   makeTempDir,
   MAP_FOLDER,
+  MAP_FOLDER_NAME,
   runScript,
   setPackageVersion,
   sha256,
 } from "./helpers.ts";
 
 /** The archive a dev build packs: the map folder's name, the version, `-dev`. */
-const ARCHIVE = path.join(
-  "dist",
-  `reforged-ts-template-${COPY_VERSION}-dev.w3m`,
-);
+const ARCHIVE = path.join("dist", defaultArchiveName("dev", COPY_VERSION));
 /** The archive a release build packs: no `-dev`. */
 const RELEASE_ARCHIVE = path.join(
   "dist",
-  `reforged-ts-template-${COPY_VERSION}.w3m`,
+  defaultArchiveName("release", COPY_VERSION),
 );
 const ENV = path.join("src", "generated", "env.ts");
 
@@ -125,8 +125,8 @@ describe("node scripts/build.ts (pnpm build)", () => {
     const dev = runScript(project, "scripts/build.ts");
     expect(dev.status).toBe(0);
     expect(dev.stderr).toBe("");
-    expect(dev.stdout).toMatch(
-      /^Built dist[\\/]reforged-ts-template-dev\.w3m \(\d+ bytes, mode dev\)$/m,
+    expect(dev.stdout).toContain(
+      `Built ${path.join("dist", defaultArchiveName("dev", undefined))} (`,
     );
     const release = runScript(project, "scripts/build.ts", [
       "--mode",
@@ -134,11 +134,11 @@ describe("node scripts/build.ts (pnpm build)", () => {
     ]);
     expect(release.status).toBe(0);
     expect(release.stderr).toBe("");
-    expect(release.stdout).toMatch(
-      /^Built dist[\\/]reforged-ts-template\.w3m \(\d+ bytes, mode release\)$/m,
+    expect(release.stdout).toContain(
+      `Built ${path.join("dist", defaultArchiveName("release", undefined))} (`,
     );
     expect(fs.readdirSync(path.join(project, "dist"))).toContain(
-      "reforged-ts-template.w3m",
+      defaultArchiveName("release", undefined),
     );
   });
 
@@ -274,7 +274,7 @@ describe("node scripts/build.ts (pnpm build)", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(
-      "reforged-ts-template.w3m has no war3map.lua: the map was not saved with Lua as the script language",
+      `${MAP_FOLDER_NAME} has no war3map.lua: the map was not saved with Lua as the script language`,
     );
     expect(fs.existsSync(path.join(project, ARCHIVE))).toBe(false);
     expect(fs.readdirSync(path.join(project, "dist"))).toEqual(["keep.txt"]);
@@ -421,7 +421,9 @@ describe("node scripts/generate.ts (the prepare script)", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toMatch(
-      /^Generate failed: reforged-ts-template\.w3m has no war3map\.lua/,
+      new RegExp(
+        `^Generate failed: ${escapeRegExp(MAP_FOLDER_NAME)} has no war3map\\.lua`,
+      ),
     );
   });
 
@@ -513,5 +515,58 @@ describe("the Object definitions in pnpm build", () => {
     expect(collision.status).toBe(1);
     expect(collision.stderr).toMatch(/^Build failed: .*h000/m);
     expect(collision.stderr).toContain("objects:adopt");
+  });
+});
+
+describe("a Map project whose map folder was renamed", () => {
+  it("builds the archive the pipeline helpers name, which follow the copy's reforged.config.ts", () => {
+    // What `create-reforged-map my-map` does: the map folder renamed, `mapFolder` pointed at it.
+    const renamed =
+      MAP_FOLDER === "my-map.w3m" ? "other-map.w3m" : "my-map.w3m";
+    const base = path.basename(renamed, ".w3m");
+    const project = copyProject();
+    const configFile = path.join(project, "reforged.config.ts");
+    const text = fs.readFileSync(configFile, "utf8");
+    const entry = `mapFolder: ${JSON.stringify(MAP_FOLDER)}`;
+    expect(text).toContain(entry);
+    fs.writeFileSync(
+      configFile,
+      text.replace(entry, `mapFolder: ${JSON.stringify(renamed)}`),
+    );
+    fs.renameSync(path.join(project, MAP_FOLDER), path.join(project, renamed));
+    // The copy's own helpers, as its pipeline tests import them.
+    fs.writeFileSync(
+      path.join(project, "print-helpers.ts"),
+      `import * as h from "./tests/pipeline/helpers.ts";
+console.log(JSON.stringify({
+  mapFolder: h.MAP_FOLDER,
+  name: h.MAP_FOLDER_NAME,
+  dev: h.defaultArchiveName("dev", h.COPY_VERSION),
+  release: h.defaultArchiveName("release", undefined),
+}));
+`,
+    );
+
+    const printed = runScript(project, "print-helpers.ts");
+
+    expect(printed.stderr).toBe("");
+    expect(printed.status).toBe(0);
+    const helpers = JSON.parse(printed.stdout) as Record<string, string>;
+    expect(helpers).toEqual({
+      mapFolder: renamed,
+      name: renamed,
+      dev: `${base}-${COPY_VERSION}-dev.w3m`,
+      release: `${base}.w3m`,
+    });
+
+    const result = runScript(project, "scripts/build.ts");
+
+    expect(result.stderr).toBe("");
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      `Built ${path.join("dist", helpers.dev)} (`,
+    );
+    expect(fs.existsSync(path.join(project, "dist", helpers.dev))).toBe(true);
+    expect(fs.existsSync(path.join(project, MAP_FOLDER))).toBe(false);
   });
 });

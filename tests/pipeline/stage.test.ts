@@ -3,7 +3,12 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { AuthorError } from "../../scripts/errors.ts";
 import { readEditorScript, stageMapFolder } from "../../scripts/stage.ts";
-import { FIXTURE_MAP, hashTree, makeTempDir } from "./helpers.ts";
+import {
+  FIXTURE_MAP,
+  hashTree,
+  makeTempDir,
+  MAP_FOLDER_NAME,
+} from "./helpers.ts";
 
 describe("readEditorScript", () => {
   it("returns the editor's war3map.lua", () => {
@@ -36,11 +41,7 @@ describe("readEditorScript", () => {
 describe("stageMapFolder", () => {
   it("copies the map folder and leaves it unchanged", () => {
     const before = hashTree(FIXTURE_MAP);
-    const staging = path.join(
-      makeTempDir(),
-      "staging",
-      "reforged-ts-template.w3m",
-    );
+    const staging = path.join(makeTempDir(), "staging", MAP_FOLDER_NAME);
     stageMapFolder(FIXTURE_MAP, staging);
     expect(hashTree(staging)).toEqual(before);
     expect(hashTree(FIXTURE_MAP)).toEqual(before);
