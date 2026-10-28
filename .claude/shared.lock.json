@@ -1,11 +1,12 @@
 {
   "$comment": "The record of origin of the copy of what the library shares (its .claude/shared.json, ADR 0024 of phmilk/reforged-ts): the library repository, the commit the files were copied from, and the sha256 of each file's bytes, by its path from the root. Never edit a copied file: a fix goes to the library. tests/pipeline/shared-skills.test.ts checks the copy against this record.",
   "repository": "phmilk/reforged-ts",
-  "commit": "e5add3d2cfbc57dc2cfccb1fa122f36622601a01",
+  "commit": "2f6db491895e060cf45e05eac133305375e0194b",
   "files": {
     ".claude/hooks/background-wait.mjs": "69ac8439dfa5d570d0a45d982548c660b9256a2b4ce4c3ecc1014e4961750de3",
     ".claude/hooks/shadowed-skills.mjs": "6adfe5016e4fb57840a5bbd5e2816330a2219bcec747107f4504e68c5c884ec9",
-    ".claude/settings.json": "d41eea4c34c2fb3047bd0c7140af32a509fb9b543c0adb22355bee648625d15c",
+    ".claude/hooks/skill-target.mjs": "f2e187917b814cd6420efd8ddbbc73bc5cabcf9eb3fe5cb97f19e39e6d98a6cf",
+    ".claude/settings.json": "40d9e8b4792be00b6b89cb4310fd93aa4a83be630c4befd5ced42c76b609c95f",
     ".claude/skills/ask-matt/PHASE-BOUNDARIES.md": "a8aa20158609ef39e2b308b6ba0660c91066838d07a867202e63a7744a88a3ed",
     ".claude/skills/ask-matt/SKILL.md": "1371f5ce005de0992a44b137748bfb960a56948aa9871b405fe9d90b24332e3c",
     ".claude/skills/ask-matt/agents/openai.yaml": "bdffbc5a0a99ed1b6ef3253d251d755fd18162b9845972e380007f844b09b05c",
@@ -37,6 +38,7 @@
     ".claude/skills/improve-codebase-architecture/HTML-REPORT.md": "581e8bb5a521e46bbda8ca7e19b15948bed882187108092ebb90c62513b77528",
     ".claude/skills/improve-codebase-architecture/SKILL.md": "552240a5ab5cec6b67c15dd1ad6e9f6962b1bca6ce870059a8c2713760c20392",
     ".claude/skills/improve-codebase-architecture/agents/openai.yaml": "c8cb20f68ebf0edb4e497bc11ae5fcaa196004e661cd189015b04f4109ced7f1",
+    ".claude/skills/next-step/SKILL.md": "8a77f19c88b867d894b5fb50f7f77e8b73b2935d88409e02f5d05075ac6af68d",
     ".claude/skills/pr/CREDITS.md": "a7a087127665d7298a72280ef6e19c41ad8404523712a788c8dc3ab414bc2497",
     ".claude/skills/pr/SKILL.md": "ab63f1cf78647389edcd386c9427c5dfca27ed2836930c24773ffee834c19bcd",
     ".claude/skills/pr/agents/openai.yaml": "2295b586624db4ef546f3fd4695492f039d941a46d8a1593a702ce3ca511b8ad",
@@ -48,13 +50,14 @@
     ".claude/skills/research/agents/openai.yaml": "9b4c470d63221c1f68f22df70b83e2f12401b317babe0d1b7b5f24a974474d0d",
     ".claude/skills/retro/SKILL.md": "33fbc28568e3146f20fd908b12998bc0ab30aa4f4c87288199a40793efa94696",
     ".claude/skills/retro/agents/openai.yaml": "cb6fb9d7e6b4be5975f41f6def1dd00a1255bad5d9b02696b124c924a8b8745c",
-    ".claude/skills/setup-matt-pocock-skills/SKILL.md": "f148858ffb7f63c03c06fca06e6fdb1d91a35c6b293244b8fdfacd5f4cc028c4",
+    ".claude/skills/setup-matt-pocock-skills/SKILL.md": "b01e05bfe8c323171275c6ceec78b12f1bd4c62dfd26c2cfe8be806d3883f1ed",
     ".claude/skills/setup-matt-pocock-skills/agents/openai.yaml": "9527de0110541c45712319025155aeab8dc7d77c6ed6e5e83271bab1851ab939",
     ".claude/skills/setup-matt-pocock-skills/domain.md": "593a7042218689f1d24df89df14eaf0a20e19e0d0a7d479a01947ac78f0784b9",
-    ".claude/skills/setup-matt-pocock-skills/issue-tracker-github.md": "f0653fe106dd8ee7b33be27bd7fe3104b40555896cb45f61997aed20467020c3",
-    ".claude/skills/setup-matt-pocock-skills/issue-tracker-gitlab.md": "591a9e7057382aaccdfbed3f7ea3f2ad07e0cd29f012d18b82ee4e485fd81e24",
+    ".claude/skills/setup-matt-pocock-skills/issue-tracker-github.md": "6fdb3e9b00b7b0b115ecac3b1c00e3790f637f190abf598815368722c0a94692",
+    ".claude/skills/setup-matt-pocock-skills/issue-tracker-gitlab.md": "947602d33a80f98f939fb990995b8f95a3459b114b919c4221d08bd75d7cffe0",
     ".claude/skills/setup-matt-pocock-skills/issue-tracker-local.md": "7dcda20a2eb4bdc89b95d1143423c0691309921cadae3132e6424f371030506e",
     ".claude/skills/setup-matt-pocock-skills/triage-labels.md": "ae512af838c78b8750471c42cd2b20fa32319553e61d84c9a23d171b40ce14aa",
+    ".claude/skills/split-spec/SKILL.md": "473b62dc34fda3fbbfb10a67185630f6916be0b81c6bc020d72588eb669e4ea4",
     ".claude/skills/tdd/SKILL.md": "5505d25bbaa8fc14a79e4d20163936958992a2995b7f1dd1d6197edc9ed722e0",
     ".claude/skills/tdd/agents/openai.yaml": "ea6f01cf1b8c06a4b0f5b649d74b1b8ce8685e72af1b38d70d877693e092af0b",
     ".claude/skills/tdd/mocking.md": "3ceb807fdf4a47d6a93d4d9a891e5ba6d362a6247bd08adc451feebfc17361ef",
@@ -82,10 +85,10 @@
     ".claude/skills/wizard/SKILL.md": "bdf31d48211ea559878f95a4f344aeabf8d85897488ba564382bab0b000daac1",
     ".claude/skills/wizard/agents/openai.yaml": "98f44d682d58e262f160dc59a8befc365e0aa65820dd0261864af26aa8e59d83",
     ".claude/skills/wizard/template.sh": "6566f147299bc6f1d941e64591ed04385416d543e11f96f564c7228f5018d0ed",
-    ".claude/skills/write-spec/SKILL.md": "e244e4ff95975f70b557df1687b907566b401cd999177805d662e9813317f7cb",
+    ".claude/skills/write-spec/SKILL.md": "bbb752a303c2cbb6b8037456f043eb9f8e560fd619577122877fc38cf21db5c8",
     ".claude/skills/writing-for-agents/SKILL-MECHANICS.md": "c768e6307c7c10728c401c213f2c4ba71c542127eeb7ad2956aabd15a0fa0059",
     ".claude/skills/writing-for-agents/SKILL.md": "551adca942227b44192edba88acd4e8db911f0121ce58ad16944ccf6a896a74a",
     ".claude/skills/writing-for-agents/agents/openai.yaml": "eacb24b2a618cfb81dacb0416f4fdd75ddf3a8060f8ddb99aae1b1e301907e4b",
-    "skills-lock.json": "944faa6e8c32e0a5811f3488b3c6c29d46820855d9f55165a6c1e26021558341"
+    "skills-lock.json": "4d5e9ef6aff96567b859b6376231261cb1fe47a2e55e17a09c97f7c846415355"
   }
 }
