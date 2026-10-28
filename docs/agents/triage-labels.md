@@ -33,8 +33,8 @@ An issue carrying `wayfinder:*`, `ticket` or `spec` is not triaged: its body is 
 
 One more label says where a spec stands. It is not a triage role: the Claim board derives it, in both repos, whatever set it ([ADR 0025](https://github.com/phmilk/reforged-ts/blob/master/docs/adr/0025-only-a-split-specs-unblocked-tickets-are-worked.md)).
 
-| Label         | Applied to                                                                                                                                                                                             |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `needs-split` | An open spec with no ticket yet (no sub-issue), in place of `ready-for-agent`: split it first. Once it has a ticket, the board removes `needs-split` and puts `ready-for-agent` back, within the hour. |
+| Label         | Applied to                                                                                                                                                                                                                       |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `needs-split` | An open spec with no ticket yet (no sub-issue), in place of `ready-for-agent`, and Backlog on the board: split it first. Once it has a ticket, the board removes `needs-split` and puts `ready-for-agent` back, within the hour. |
 
 A spec with another triage label (`ready-for-human`, `needs-triage`, `needs-info`, `wontfix`) keeps it and only gets or loses `needs-split`.
