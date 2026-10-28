@@ -142,6 +142,28 @@ describe("watchFolders", () => {
     }
     expect(calls).toBe(0);
   });
+
+  it("does not call when only a child folder's own times change, as a read updating its last access time does", async () => {
+    const folder = path.join(makeTempDir(), "src");
+    const objects = path.join(folder, "objects");
+    fs.mkdirSync(objects, { recursive: true });
+    let calls = 0;
+    closers.push(
+      watchFolders({
+        folders: [folder],
+        ignore: [],
+        debounceMs: 100,
+        onChange: () => calls++,
+      }),
+    );
+    await sleep(100);
+
+    // Windows with last access updates on (#131) reports the build's read of src/objects/ as a change on the folder.
+    const { mtime } = fs.statSync(objects);
+    fs.utimesSync(objects, new Date(), mtime);
+    await sleep(500);
+    expect(calls).toBe(0);
+  });
 });
 
 describe("watchFolders, the paths and the files", () => {

@@ -81,6 +81,11 @@ export interface WatchOptions {
  * ignored folder never trigger; a change whose file name the platform does not
  * report does.
  *
+ * A `change` naming a folder inside them is dropped: it is about the folder's
+ * own times or attributes (Windows reports a read that updates its last
+ * access time, #131), and what changes inside it arrives under its own name.
+ * A folder created or deleted is a `rename`, and still triggers.
+ *
  * A watched folder may be deleted and created again (an editor saving a map
  * folder that way): on Linux the recursive watch stays on the deleted folder
  * and goes silent. So each folder's parent is also watched, without
@@ -118,13 +123,19 @@ export function watchFolders(options: WatchOptions): { close(): void } {
       if (!fs.statSync(folder, { throwIfNoEntry: false })?.isDirectory())
         return;
       inner = fs
-        .watch(folder, { recursive: true }, (_event, filename) => {
+        .watch(folder, { recursive: true }, (event, filename) => {
           if (filename === null) {
             trigger(undefined);
             return;
           }
           const file = path.resolve(folder, filename);
-          if (!ignored(file)) trigger(file);
+          if (ignored(file)) return;
+          if (
+            event === "change" &&
+            fs.statSync(file, { throwIfNoEntry: false })?.isDirectory()
+          )
+            return;
+          trigger(file);
         })
         .on("error", (error) => {
           console.error(`Watch error on ${folder}:`, error);
