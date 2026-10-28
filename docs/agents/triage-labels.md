@@ -28,3 +28,13 @@ Two more labels say what an issue is, next to its triage label. Apply them when 
 Both repos (`phmilk/reforged-ts` and `phmilk/reforged-ts-template`) have them. Issues of the wayfinder map, bugs and follow-ups carry neither.
 
 An issue carrying `wayfinder:*`, `ticket` or `spec` is not triaged: its body is its brief, and the map or the split gave it its labels. An assigned issue is taken, whatever its labels: see "Claim" in `docs/agents/issue-tracker.md`.
+
+## State labels
+
+One more label says where a spec stands. It is not a triage role: the Claim board derives it, in both repos, whatever set it ([ADR 0025](https://github.com/phmilk/reforged-ts/blob/master/docs/adr/0025-only-a-split-specs-unblocked-tickets-are-worked.md)).
+
+| Label         | Applied to                                                                                                                                                                                             |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `needs-split` | An open spec with no ticket yet (no sub-issue), in place of `ready-for-agent`: split it first. Once it has a ticket, the board removes `needs-split` and puts `ready-for-agent` back, within the hour. |
+
+A spec with another triage label (`ready-for-human`, `needs-triage`, `needs-info`, `wontfix`) keeps it and only gets or loses `needs-split`.
