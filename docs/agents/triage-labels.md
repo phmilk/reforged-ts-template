@@ -31,10 +31,10 @@ An issue carrying `wayfinder:*`, `ticket` or `spec` is not triaged: its body is 
 
 ## State labels
 
-One more label says where a spec stands. It is not a triage role: the Claim board derives it, in both repos, whatever set it ([ADR 0025](https://github.com/phmilk/reforged-ts/blob/master/docs/adr/0025-only-a-split-specs-unblocked-tickets-are-worked.md)).
+One more label says where a Spec stands. It is not a triage role: the Claim board derives it, in both repos, whatever set it ([ADR 0025](https://github.com/phmilk/reforged-ts/blob/master/docs/adr/0025-only-a-split-specs-unblocked-tickets-are-worked.md)).
 
-| Label         | Applied to                                                                                                                                                                                                                               |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `needs-split` | An open spec with no ticket yet (no sub-issue), in place of `ready-for-agent`, so the board shows it as Backlog: split it first. Once it has a ticket, the board removes `needs-split` and puts `ready-for-agent` back, within the hour. |
+| Label         | Applied to                                                                                                                                                                                                                                                                                                                                                                |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `needs-split` | An open Spec with no Ticket yet (no sub-issue), in place of `ready-for-agent`, so the board shows it as Backlog: split it first, with `split-spec`, which swaps `needs-split` for `ready-for-agent` once the Tickets are published. Once it has a Ticket, the board also removes `needs-split` and puts `ready-for-agent` back, within the hour, whatever made the split. |
 
-A spec with another triage label (`ready-for-human`, `needs-triage`, `needs-info`, `wontfix`) keeps it and only gets or loses `needs-split`.
+A Spec with another triage label (`ready-for-human`, `needs-triage`, `needs-info`, `wontfix`) keeps it and only gets or loses `needs-split`.
