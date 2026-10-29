@@ -61,6 +61,58 @@ The archive's name is the map folder's name without its suffix, then the `versio
 
 `pnpm lint` and `pnpm lint:fix` run ESLint alone ([Lint](#lint)), `pnpm typecheck` the TypeScript compiler alone, and `pnpm use:local <checkout>` installs the library from a local checkout ([below](#developing-against-a-local-checkout-of-the-library)).
 
+## Toolchain
+
+How the map's TypeScript becomes the map script inside the packed archive. `pnpm build` runs the solid edges once, in the order of `scripts/build.ts`: stage the map folder, merge the Object definitions, write `src/generated/`, compile, compose the map script, pack. `pnpm dev` runs them again on every change, and `pnpm install` writes `src/generated/` without building. The dashed edges are no step of the build: lint checks the source, and the Lua tests load the stub of the Editor globals.
+
+```mermaid
+flowchart TB
+  %% diagram: toolchain
+  map_folder["the map folder (mapFolder in reforged.config.ts)"]
+  definitions["src/objects/: the Object definitions"]
+  src["src/, from src/main.ts: the map's TypeScript"]
+  reforged_map["reforged-map"]
+  generated["src/generated/: the build mode, the Editor globals' declarations and Lua stub, the map's objects"]
+  library["reforged-ts and reforged-types: the library's Lua and declarations"]
+  tstl["typescript-to-lua, by tsconfig.json"]
+  bundle["dist/bundle.lua: the Lua bundle"]
+  lint["ESLint with eslint-plugin-reforged"]
+  staging["dist/staging/: the staged copy of the map folder"]
+  script["the map script: the editor's war3map.lua, then the bundle"]
+  archive["the packed archive in dist/"]
+  harness["reforged-test: the Lua tests"]
+
+  map_folder -->|"war3map.lua, war3map.wtg, Object data"| reforged_map
+  definitions --> reforged_map
+  reforged_map -->|"pnpm install, pnpm build, pnpm dev"| generated
+  src --> tstl
+  generated --> tstl
+  library --> tstl
+  tstl --> bundle
+  src -.->|"pnpm lint, pnpm check"| lint
+  generated -.->|"src/generated/editor-globals.lua, pnpm test"| harness
+  map_folder -->|"copied"| staging
+  definitions -->|"merged"| staging
+  map_folder -->|"war3map.lua"| script
+  bundle --> script
+  script -->|"written into"| staging
+  staging -->|"packed"| archive
+```
+
+| Node                             | Read                                                                                                   |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| the map folder                   | [First run](#first-run); `mapFolder` in `reforged.config.ts`                                           |
+| `src/objects/`                   | [Object definitions](#object-definitions); the merge, `mergeObjects` in `scripts/objects.ts`           |
+| `src/`                           | the entry point, `src/main.ts`                                                                         |
+| `reforged-map`, `src/generated/` | [Generated files](#generated-files); the writers, `GENERATORS` in `scripts/generate.ts`                |
+| `reforged-ts`, `reforged-types`  | [The library packages](#the-library-packages)                                                          |
+| typescript-to-lua                | `compileBundle` in `scripts/compile.ts`; `tstl.luaBundle` and `tstl.luaBundleEntry` in `tsconfig.json` |
+| ESLint                           | [Lint](#lint); `eslint.config.mjs`                                                                     |
+| the staged copy                  | `stageMapFolder` in `scripts/stage.ts`                                                                 |
+| the map script                   | `composeMapScript` in `scripts/compose.ts`                                                             |
+| the packed archive               | [Commands](#commands), for its name; `packMapFolder` in `scripts/pack.ts`                              |
+| `reforged-test`                  | `tests/harness/compile.ts`, which writes `src/generated/` before the Lua tests compile                 |
+
 ## Generated files
 
 Every install, build and watch (`pnpm dev`) rewrites `src/generated/`, ignored by git and read-only in the editor:
@@ -198,6 +250,7 @@ This repository keeps the Template itself up to date with the library. A Map pro
 - `.github/workflows/board.yml`, the workflow that tells the library's Claim board to reconcile on every issue and pull-request event, and its test `tests/pipeline/board.test.ts`. It runs only in `phmilk/reforged-ts-template`, so it is inert in your repository.
 - The sync script the workflow runs, `scripts/sync.ts`, and its test `tests/pipeline/sync.test.ts`.
 - The tests that hold the Template's files to the sync's shape: `tests/pipeline/seeds.test.ts` (`AGENTS.md` and `GLOSSARY.md`), `tests/pipeline/readme.test.ts` (this README) and their helper `tests/pipeline/sync-markers.ts`.
+- The diagram convention test, `tests/pipeline/diagrams.test.ts`, which fails when the [Toolchain](#toolchain) diagram cites a script, package, folder or file the project no longer has. The diagram stays: after the detach it is yours to keep true.
 - The Template's maintenance docs: `docs/agents/issue-tracker.md`, `docs/agents/triage-labels.md`, `docs/agents/release-gate.md` and the Template maintenance section of `AGENTS.md`, which lists all of the above.
 - The copy of the Agent skills the Template shares with the library: every file its record `.claude/shared.lock.json` names (the Upstream skills and their lock, `write-spec`, the session-start hook and its registration in `.claude/settings.json`), the git attributes `.claude/.gitattributes` that keep its bytes, its test `tests/pipeline/shared-skills.test.ts`, and the blocks of `.gitattributes`, `eslint.config.mjs` and `.prettierignore` between the `template-maintenance` markers, which keep the rest of each file. The Seeds `map-feature` and `run-in-game` stay.
 - The repository settings script, `scripts/repo-settings.ts`, which an administrator runs to set the Template's merge settings (auto-merge on), and its test `tests/pipeline/repo-settings.test.ts`.

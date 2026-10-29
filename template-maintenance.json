@@ -6,6 +6,7 @@
     "tests/pipeline/seeds.test.ts",
     "tests/pipeline/readme.test.ts",
     "tests/pipeline/sync-markers.ts",
+    "tests/pipeline/diagrams.test.ts",
     "scripts/sync.ts",
     "tests/pipeline/sync.test.ts",
     ".github/workflows/sync.yml",
