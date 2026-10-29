@@ -26,7 +26,7 @@ describe("planMergeSettings", () => {
       }),
     ).toEqual({
       method: "PATCH",
-      endpoint: "/repos/phmilk/reforged-ts-template",
+      endpoint: "repos/phmilk/reforged-ts-template",
       body: {
         allow_squash_merge: true,
         allow_merge_commit: false,

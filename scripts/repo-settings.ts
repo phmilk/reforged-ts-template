@@ -22,10 +22,13 @@ export const MERGE_SETTINGS = {
   allow_auto_merge: true,
 } as const;
 
+/** The repository's endpoint, as `gh api` takes it: no leading `/`. */
+export const REPOSITORY_ENDPOINT = `repos/${TEMPLATE_REPOSITORY}`;
+
 /** The request that makes the repository's merge settings match. */
 export interface MergeSettingsRequest {
   method: "PATCH";
-  /** The path under the API root, with a leading `/`. */
+  /** The path under the API root, as `gh api` takes it. */
   endpoint: string;
   body: typeof MERGE_SETTINGS;
 }
@@ -47,7 +50,7 @@ export function planMergeSettings(
     ? null
     : {
         method: "PATCH",
-        endpoint: `/repos/${TEMPLATE_REPOSITORY}`,
+        endpoint: REPOSITORY_ENDPOINT,
         body: { ...MERGE_SETTINGS },
       };
 }
@@ -74,8 +77,7 @@ function main(args: readonly string[]): void {
   if (args.some((arg) => arg !== "--dry-run")) throw new AuthorError(USAGE);
   const dryRun = args.includes("--dry-run");
 
-  const endpoint = `/repos/${TEMPLATE_REPOSITORY}`;
-  const current = ghApi([endpoint]) as Record<string, unknown> & {
+  const current = ghApi([REPOSITORY_ENDPOINT]) as Record<string, unknown> & {
     permissions?: { admin?: boolean };
   };
   if (current.permissions?.admin !== true) {
