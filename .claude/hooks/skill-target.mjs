@@ -24,12 +24,18 @@
 // When it lets /implement or /implement-spec through, it adds a line to the
 // Agent's context: end the work with the next-step skill (#745).
 //
+// A typed Replaced skill (/to-spec, /to-tickets), or a call of the Skill tool
+// with one, is stopped too, with the variant to run instead (ADR 0027): the
+// map of Replaced skills comes from the skills' folders (replaced-skills.mjs),
+// so this stop needs neither GitHub nor an issue reference.
+//
 // An issue of the clone's repository is named #n, any other in full, in
 // the reason and in the commands it gives. With no issue reference it is
 // silent; when `gh` or the network fails it lets the skill run with a
 // one-line warning, since the claim check still holds the rule on the pull
-// request. requestOf, issueRefOf and verdict are pure; the rest reads
-// GitHub through `gh` and prints the event's output. It always exits 0.
+// request. requestOf, issueRefOf, verdict and replacedVerdict are pure; the
+// rest reads GitHub through `gh` and prints the event's output. It always
+// exits 0.
 //
 // Dependency-free: it runs on the Node that runs the session, before any
 // `pnpm install`. Both repositories run it (.claude/shared.json, ADR 0024).
@@ -41,6 +47,8 @@ import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL, URL } from "node:url";
+
+import { replacedSkills } from "./replaced-skills.mjs";
 
 /** @typedef {"implement" | "implement-spec" | "ship-spec" | "split-spec"} Skill */
 
@@ -296,6 +304,61 @@ export function verdict(request, issue, takeable, home) {
   return { verdict: "pass" };
 }
 
+/**
+ * The check's verdict on a hook input that runs a Replaced skill, given the
+ * map of Replaced skills (from the Upstream skill replaced to its variant):
+ * a prompt that opens with one (a plugin's `name:` prefix aside), or a call
+ * of the Skill tool with one, is stopped with the variant to run and the
+ * same arguments. Any other input passes. It reads no issue.
+ *
+ * @param {Record<string, unknown>} input
+ * @param {Readonly<Record<string, string>>} replaced
+ * @returns {Verdict}
+ */
+export function replacedVerdict(input, replaced) {
+  /** @type {{ event: Request["event"], skill: string, args: string } | null} */
+  let named = null;
+  if (
+    input.hook_event_name === "UserPromptSubmit" &&
+    typeof input.prompt === "string"
+  ) {
+    const match = /^\s*\/(?:[\w-]+:)?([\w-]+)(?:\s+([\s\S]*))?$/.exec(
+      input.prompt,
+    );
+    if (match !== null) {
+      named = {
+        event: "UserPromptSubmit",
+        skill: match[1] ?? "",
+        args: (match[2] ?? "").trim(),
+      };
+    }
+  } else if (
+    input.hook_event_name === "PreToolUse" &&
+    input.tool_name === "Skill"
+  ) {
+    const toolInput = /** @type {Record<string, unknown>} */ (
+      input.tool_input ?? {}
+    );
+    if (typeof toolInput.skill === "string") {
+      named = {
+        event: "PreToolUse",
+        skill: toolInput.skill.slice(toolInput.skill.indexOf(":") + 1),
+        args: typeof toolInput.args === "string" ? toolInput.args.trim() : "",
+      };
+    }
+  }
+  if (named === null || !Object.hasOwn(replaced, named.skill)) {
+    return { verdict: "pass" };
+  }
+  const variant = replaced[named.skill] ?? "";
+  const command =
+    named.args === "" ? `/${variant}` : `/${variant} ${named.args}`;
+  return block(
+    named.event,
+    `/${named.skill} is a Replaced skill: \`${variant}\` replaces \`${named.skill}\`, which is never run or recommended (ADR 0027, .claude/hooks/skill-target.mjs). Run ${command} instead.`,
+  );
+}
+
 /** The line an implement let through gets in the Agent's context (#745). */
 const NEXT_STEP = `This repository ends every implement with the next-step skill: when this work is done, run next-step, which prints the next steps from the state of the issue, its Spec and its pull request (${SOURCE}).`;
 
@@ -509,6 +572,20 @@ function currentRepository() {
 }
 
 /**
+ * The map of Replaced skills of the skills' folders, or none when they
+ * cannot be read: the check never fails a prompt on its own error.
+ *
+ * @returns {Record<string, string>}
+ */
+function readReplacedSkills() {
+  try {
+    return replacedSkills();
+  } catch {
+    return {};
+  }
+}
+
+/**
  * The output that lets the skill run and says why the check could not.
  *
  * @param {string} message
@@ -527,6 +604,8 @@ function warning(message) {
  * @returns {Promise<object | null>}
  */
 export async function run(input, projectDir) {
+  const replaced = replacedVerdict(input, readReplacedSkills());
+  if (replaced.verdict === "block") return replaced.output;
   const request = requestOf(input);
   if (request === null) return null;
   // A bare number or #n names an issue of this clone's repository; an
