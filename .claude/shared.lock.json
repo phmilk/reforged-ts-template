@@ -1,7 +1,7 @@
 {
   "$comment": "The record of origin of the copy of what the library shares (its .claude/shared.json, ADR 0024 of phmilk/reforged-ts): the library repository, the commit the files were copied from, and the sha256 of each file's bytes, by its path from the root. Never edit a copied file: a fix goes to the library. tests/pipeline/shared-skills.test.ts checks the copy against this record.",
   "repository": "phmilk/reforged-ts",
-  "commit": "2a74239862e8c12fb7e36eabfa303339256f9571",
+  "commit": "0e65e63e5732644667df279006a1c96220d36111",
   "files": {
     ".claude/hooks/background-wait.mjs": "69ac8439dfa5d570d0a45d982548c660b9256a2b4ce4c3ecc1014e4961750de3",
     ".claude/hooks/replaced-skill-stop.mjs": "df8caa9de71a2b6660d970d351749513ea5addfead04596b79adf6cab97ac805",
@@ -9,7 +9,7 @@
     ".claude/hooks/shadowed-skills.mjs": "6adfe5016e4fb57840a5bbd5e2816330a2219bcec747107f4504e68c5c884ec9",
     ".claude/hooks/ship-stop.mjs": "7d8ea89945e166a96e835c65ea210cc10167990d91925bc46390ba05cabe1671",
     ".claude/hooks/skill-target.mjs": "cf1ae381ea3b4623d58ea700f1d3163448a0661774123411b5ff343d11acecf7",
-    ".claude/settings.json": "ba760e750c702833bf9b638847e2660df5ae1c30249a0854be95f14da75b7519",
+    ".claude/settings.json": "d3f10123b9de320d037649c2844774ba3ce783088e9d7a842d7d3ba5d634d0d0",
     ".claude/skills/ask-matt/PHASE-BOUNDARIES.md": "a8aa20158609ef39e2b308b6ba0660c91066838d07a867202e63a7744a88a3ed",
     ".claude/skills/ask-matt/SKILL.md": "1371f5ce005de0992a44b137748bfb960a56948aa9871b405fe9d90b24332e3c",
     ".claude/skills/ask-matt/agents/openai.yaml": "bdffbc5a0a99ed1b6ef3253d251d755fd18162b9845972e380007f844b09b05c",

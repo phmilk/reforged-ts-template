@@ -1,11 +1,5 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "extraKnownMarketplaces": {
-    "reforged-ts": {
-      "source": { "source": "github", "repo": "phmilk/reforged-ts" }
-    }
-  },
-  "enabledPlugins": { "background-band@reforged-ts": true },
   "hooks": {
     "SessionStart": [
       {
