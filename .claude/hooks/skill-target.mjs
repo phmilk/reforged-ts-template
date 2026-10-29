@@ -1,8 +1,9 @@
 // @ts-check
 // The skill-target check of ADR 0025 (#743), registered in
 // .claude/settings.json on two events: a typed /implement, /implement-spec,
-// /ship-spec or /split-spec (UserPromptSubmit), and a call of the Skill
-// tool with one of them (PreToolUse), so that a skill another skill invokes
+// /ship-spec, /split-spec, /grill-with-docs or /write-spec
+// (UserPromptSubmit), and a call of the Skill tool with one of them
+// (PreToolUse), so that a skill another skill invokes
 // is held to the same rule as one a human typed. The Upstream skills cannot
 // carry the rule in their steps (ADR 0022), and the claim check stops a
 // merge, not the work before it.
@@ -22,7 +23,13 @@
 //   /implement a closed Ticket: closed, and by whom; nothing to run.
 //
 // When it lets /implement or /implement-spec through, it adds a line to the
-// Agent's context: end the work with the next-step skill (#745).
+// Agent's context (#745, #806): on the default branch, create the branch
+// <type>/<n>-<slug> from the remote default first; then end the work with
+// /ship (ADR 0026) and the next-step skill. The current and default branches
+// reach that line as facts, read with `git`. When it lets /grill-with-docs,
+// /write-spec or /split-spec through, the line is the next-step one alone:
+// next-step prints the next steps at every hand-over of the main flow. The
+// first two name no issue to check, so they read nothing from GitHub.
 //
 // A typed Replaced skill (/to-spec, /to-tickets), or a call of the Skill tool
 // with one, is stopped too, with the variant to run instead (ADR 0027): the
@@ -30,12 +37,13 @@
 // so this stop needs neither GitHub nor an issue reference.
 //
 // An issue of the clone's repository is named #n, any other in full, in
-// the reason and in the commands it gives. With no issue reference it is
-// silent; when `gh` or the network fails it lets the skill run with a
-// one-line warning, since the claim check still holds the rule on the pull
-// request. requestOf, issueRefOf, verdict and replacedVerdict are pure; the
-// rest reads GitHub through `gh` and prints the event's output. It always
-// exits 0.
+// the reason and in the commands it gives. With no issue reference it reads
+// no issue and lets the skill run with its line; when `gh` or the network
+// fails it lets the skill run with a one-line warning and its line, since
+// the claim check still holds the rule on the pull request. requestOf,
+// issueRefOf, verdict, replacedVerdict and passOutput are pure; the rest
+// reads GitHub through `gh` and the branches through `git`, and prints the
+// event's output. It always exits 0.
 //
 // Dependency-free: it runs on the Node that runs the session, before any
 // `pnpm install`. Both repositories run it (.claude/shared.json, ADR 0024).
@@ -50,7 +58,9 @@ import { fileURLToPath, pathToFileURL, URL } from "node:url";
 
 import { replacedSkills } from "./replaced-skills.mjs";
 
-/** @typedef {"implement" | "implement-spec" | "ship-spec" | "split-spec"} Skill */
+/**
+ * @typedef {"implement" | "implement-spec" | "ship-spec" | "split-spec" | "grill-with-docs" | "write-spec"} Skill
+ */
 
 /**
  * What the check looks at: the event, the skill and its arguments.
@@ -59,6 +69,13 @@ import { replacedSkills } from "./replaced-skills.mjs";
  */
 
 /** @typedef {{ repository: string, number: number }} IssueRef */
+
+/**
+ * The session's branches as `git` reads them: the current one (`""` on a
+ * detached HEAD) and the remote's default, by its name without `origin/`.
+ *
+ * @typedef {{ current: string, default: string }} Branches
+ */
 
 /**
  * An issue as the check reads it.
@@ -82,11 +99,44 @@ import { replacedSkills } from "./replaced-skills.mjs";
  */
 
 /**
- * The skills the check holds, by the name a prompt or the Skill tool gives.
+ * The skills the check reads, by the name a prompt or the Skill tool gives.
  *
  * @type {readonly Skill[]}
  */
-const SKILLS = ["implement", "implement-spec", "ship-spec", "split-spec"];
+const SKILLS = [
+  "implement",
+  "implement-spec",
+  "ship-spec",
+  "split-spec",
+  "grill-with-docs",
+  "write-spec",
+];
+
+/**
+ * The skills whose first issue the check reads and may stop on.
+ *
+ * @type {readonly Skill[]}
+ */
+const ISSUE_CHECKED = [
+  "implement",
+  "implement-spec",
+  "ship-spec",
+  "split-spec",
+];
+
+/**
+ * The implements: they end with /ship, then next-step.
+ *
+ * @type {readonly Skill[]}
+ */
+const IMPLEMENTS = ["implement", "implement-spec"];
+
+/**
+ * The other hand-overs of the main flow that end with next-step.
+ *
+ * @type {readonly Skill[]}
+ */
+const HAND_OVERS = ["grill-with-docs", "write-spec", "split-spec"];
 
 /**
  * The skills that work a Spec, or one of its Tickets, rather than split it.
@@ -261,6 +311,7 @@ function insteadOfBlocked(spec, takeable, home) {
  */
 export function verdict(request, issue, takeable, home) {
   const { skill } = request;
+  if (!ISSUE_CHECKED.includes(skill)) return { verdict: "pass" };
   const name = refName(issue, home);
   if (!issue.open) {
     // A closed Spec, whatever skill names it; a closed Ticket, for the
@@ -359,27 +410,79 @@ export function replacedVerdict(input, replaced) {
   );
 }
 
-/** The line an implement let through gets in the Agent's context (#745). */
-const NEXT_STEP = `This repository ends every implement with the next-step skill: when this work is done, run next-step, which prints the next steps from the state of the issue, its Spec and its pull request (${SOURCE}).`;
+/** The source cited by the line a skill that was let through gets. */
+const NEXT_STEP_SOURCE = "ADR 0026, .claude/hooks/skill-target.mjs";
+
+/**
+ * The line an implement let through gets in the Agent's context (#745,
+ * #806): the branch to create first when the session is on the default
+ * one, or may be, then /ship and next-step.
+ *
+ * @param {Branches | null} branches `null` when `git` could not read them.
+ */
+function implementLine(branches) {
+  const end = `This repository ends every implement with /ship, which reviews the branch, pushes it and opens its pull request, then with the next-step skill, which prints the next steps from the state of the issue, its Spec and its pull request (${NEXT_STEP_SOURCE}).`;
+  if (branches === null) {
+    return `When this session is on the default branch, first create the work's branch <type>/<n>-<slug> from the remote default (git fetch origin <default>, then git switch -c <type>/<n>-<slug> origin/<default>). ${end}`;
+  }
+  if (branches.current !== branches.default) return end;
+  const name = branches.default;
+  return `This session is on the default branch, ${name}: before the first commit, create the work's branch from the remote default, git fetch origin ${name} then git switch -c <type>/<n>-<slug> origin/${name}, <type> the Conventional Commits type of the work, <n> its issue and <slug> a few kebab-case words of the issue's title. ${end}`;
+}
+
+/**
+ * The line a hand-over of the main flow other than an implement gets.
+ *
+ * @param {Skill} skill
+ */
+function handOverLine(skill) {
+  return `This repository ends /${skill} with the next-step skill: when this work is done, run next-step, which prints the next steps of the main flow from the state of the work, its issue and its Spec (${NEXT_STEP_SOURCE}).`;
+}
 
 /**
  * The output that lets `request` through: for /implement and
- * /implement-spec, the next-step line in the Agent's context; nothing for
- * the other skills.
+ * /implement-spec, the line that names the branch to create on the default
+ * branch, /ship and next-step, given the session's `branches` (`null`:
+ * unread); for /grill-with-docs, /write-spec and /split-spec, the next-step
+ * line; nothing for /ship-spec.
  *
  * @param {Request} request
+ * @param {Branches | null} branches
  * @returns {object | null}
  */
-export function passOutput(request) {
-  if (request.skill !== "implement" && request.skill !== "implement-spec") {
-    return null;
+export function passOutput(request, branches) {
+  /** @type {string | null} */
+  let line = null;
+  if (IMPLEMENTS.includes(request.skill)) line = implementLine(branches);
+  else if (HAND_OVERS.includes(request.skill)) {
+    line = handOverLine(request.skill);
   }
+  if (line === null) return null;
   return {
     hookSpecificOutput: {
       hookEventName: request.event,
-      additionalContext: NEXT_STEP,
+      additionalContext: line,
     },
   };
+}
+
+/**
+ * Runs `program` with `args` (constants and checked names only), its output
+ * as text. On Windows it goes through the shell, which finds a `.exe` or a
+ * `.cmd` of that name.
+ *
+ * @param {"gh" | "git"} program
+ * @param {readonly string[]} args
+ * @param {{ input?: string, cwd?: string, timeout: number }} options
+ */
+function spawnTool(program, args, options) {
+  return process.platform === "win32"
+    ? spawnSync(`${program} ${args.join(" ")}`, {
+        ...options,
+        encoding: "utf8",
+        shell: true,
+      })
+    : spawnSync(program, args, { ...options, encoding: "utf8" });
 }
 
 // GitHub, through `gh`.
@@ -387,29 +490,20 @@ export function passOutput(request) {
 /** How long one `gh` call may take: the session waits on it. */
 const GH_TIMEOUT_MS = 20_000;
 
+/** How long one `git` call may take: it reads the clone, never the network. */
+const GIT_TIMEOUT_MS = 5_000;
+
 /**
  * `gh`'s standard output for `args` (constants and a checked repository
  * name only), with `input` on its standard input; throws with `gh`'s own
- * message when it fails. On Windows the shell finds `gh.exe` or a `gh.cmd`.
+ * message when it fails.
  *
  * @param {readonly string[]} args
  * @param {string} [input]
  * @returns {string}
  */
 function gh(args, input) {
-  const windows = process.platform === "win32";
-  const result = windows
-    ? spawnSync(`gh ${args.join(" ")}`, {
-        input,
-        encoding: "utf8",
-        shell: true,
-        timeout: GH_TIMEOUT_MS,
-      })
-    : spawnSync("gh", args, {
-        input,
-        encoding: "utf8",
-        timeout: GH_TIMEOUT_MS,
-      });
+  const result = spawnTool("gh", args, { input, timeout: GH_TIMEOUT_MS });
   if (result.error !== undefined) throw result.error;
   if (result.status !== 0) {
     throw new Error(
@@ -571,6 +665,50 @@ function currentRepository() {
   return name;
 }
 
+// The clone, through `git`.
+
+/**
+ * `git`'s trimmed standard output for `args` (constants only) in `cwd`;
+ * throws when it fails.
+ *
+ * @param {readonly string[]} args
+ * @param {string} cwd
+ * @returns {string}
+ */
+function git(args, cwd) {
+  const result = spawnTool("git", args, { cwd, timeout: GIT_TIMEOUT_MS });
+  if (result.error !== undefined) throw result.error;
+  if (result.status !== 0) {
+    throw new Error(`git ${args[0] ?? ""} exited ${String(result.status)}`);
+  }
+  return result.stdout.trim();
+}
+
+/**
+ * The session's branches in `cwd`: the current one, and the default one
+ * the remote's HEAD names (`origin/HEAD`, which a clone sets). `null` when
+ * `git` cannot read either: the line then names the branch to create as a
+ * condition.
+ *
+ * @param {string} cwd
+ * @returns {Branches | null}
+ */
+function readBranches(cwd) {
+  try {
+    const remoteHead = git(
+      ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
+      cwd,
+    );
+    if (!remoteHead.startsWith("origin/")) return null;
+    return {
+      current: git(["branch", "--show-current"], cwd),
+      default: remoteHead.slice("origin/".length),
+    };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * The map of Replaced skills of the skills' folders, or none when they
  * cannot be read: the check never fails a prompt on its own error.
@@ -608,10 +746,20 @@ export async function run(input, projectDir) {
   if (replaced.verdict === "block") return replaced.output;
   const request = requestOf(input);
   if (request === null) return null;
+  const branches = IMPLEMENTS.includes(request.skill)
+    ? readBranches(
+        typeof input.cwd === "string" && existsSync(input.cwd)
+          ? input.cwd
+          : projectDir,
+      )
+    : null;
+  const passing = passOutput(request, branches);
+  // /grill-with-docs and /write-spec name no issue to check.
+  if (!ISSUE_CHECKED.includes(request.skill)) return passing;
   // A bare number or #n names an issue of this clone's repository; an
-  // issue named in full is named in full again.
+  // issue named in full is named in full again. With none, the skill runs.
   const named = issueRefOf(request.args, null);
-  if (named === null) return null;
+  if (named === null) return passing;
   try {
     const home = named.repository === null ? currentRepository() : null;
     const issue = readIssue({
@@ -626,13 +774,13 @@ export async function run(input, projectDir) {
         ? await takeableOf(projectDir, issue.spec, home)
         : null;
     const result = verdict(request, issue, takeable, home);
-    return result.verdict === "block" ? result.output : passOutput(request);
+    return result.verdict === "block" ? result.output : passing;
   } catch (error) {
     // The skill runs, and still ends with its next steps.
     const warned = warning(
       error instanceof Error ? error.message : String(error),
     );
-    return { ...warned, ...passOutput(request) };
+    return { ...warned, ...passing };
   }
 }
 
