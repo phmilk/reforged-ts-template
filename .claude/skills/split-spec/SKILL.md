@@ -3,12 +3,13 @@ name: split-spec
 description: Split a Spec into Tickets and write its Coverage table. Use when explicitly asked to split a Spec, or when another skill asks for it.
 metadata:
   upstream: to-tickets
+  replaces: to-tickets
   upstream-hash: 5f871bdc46a9212222214ba399be4965374208af1bd7f48f1271bef72841dd31
 ---
 
 # Split a Spec
 
-A Skill variant of the Upstream skill `to-tickets`, with its steps, that an Agent may invoke ([Skill variants](https://github.com/phmilk/reforged-ts/blob/master/docs/agents/development-loop.md#skill-variants)). It breaks a Spec into **Tickets**, tracer-bullet vertical slices each declaring the Tickets that **block** it, and loses no item of the Spec on the way: every item gets a row in the Spec's **Coverage table**. It runs on an explicit request to split a Spec or on another skill's call; whoever invoked it, its quiz asks the human.
+A Skill variant of the Upstream skill `to-tickets`, with its steps, that replaces it (ADR 0027) and that an Agent may invoke ([Skill variants](https://github.com/phmilk/reforged-ts/blob/master/docs/agents/development-loop.md#skill-variants)). It breaks a Spec into **Tickets**, tracer-bullet vertical slices each declaring the Tickets that **block** it, and loses no item of the Spec on the way: every item gets a row in the Spec's **Coverage table**. It runs on an explicit request to split a Spec or on another skill's call; whoever invoked it, its quiz asks the human.
 
 Two paths run through the same steps:
 
