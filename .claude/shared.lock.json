@@ -1,7 +1,7 @@
 {
   "$comment": "The record of origin of the copy of what the library shares (its .claude/shared.json, ADR 0024 of phmilk/reforged-ts): the library repository, the commit the files were copied from, and the sha256 of each file's bytes, by its path from the root. Never edit a copied file: a fix goes to the library. tests/pipeline/shared-skills.test.ts checks the copy against this record.",
   "repository": "phmilk/reforged-ts",
-  "commit": "0e65e63e5732644667df279006a1c96220d36111",
+  "commit": "6224cabbcdf4e57fa4834bd07b7358bbae128337",
   "files": {
     ".claude/hooks/background-wait.mjs": "69ac8439dfa5d570d0a45d982548c660b9256a2b4ce4c3ecc1014e4961750de3",
     ".claude/hooks/replaced-skill-stop.mjs": "df8caa9de71a2b6660d970d351749513ea5addfead04596b79adf6cab97ac805",
@@ -60,6 +60,10 @@
     ".claude/skills/setup-matt-pocock-skills/issue-tracker-gitlab.md": "947602d33a80f98f939fb990995b8f95a3459b114b919c4221d08bd75d7cffe0",
     ".claude/skills/setup-matt-pocock-skills/issue-tracker-local.md": "7dcda20a2eb4bdc89b95d1143423c0691309921cadae3132e6424f371030506e",
     ".claude/skills/setup-matt-pocock-skills/triage-labels.md": "ae512af838c78b8750471c42cd2b20fa32319553e61d84c9a23d171b40ce14aa",
+    ".claude/skills/ship-spec/SKILL.md": "5fbe38b77a87802418bc0ee34e592c6fcfaed28a3870280a8d6ac92157a9ea71",
+    ".claude/skills/ship-spec/implementer.md": "602aeb59ef3dcdff441730c5f249798b1f461bf08813d7bd03cdda2569188355",
+    ".claude/skills/ship-spec/known-flakes.md": "5985eacb2c8dfb4300c3eb912dc4a16ebd9879c6f2e358439941ee32f4f9bdbd",
+    ".claude/skills/ship-spec/template-tickets.md": "ad503d0841417277ba966cd4a483150c571c53ed96ad9342ee45cff309e9c4cc",
     ".claude/skills/ship/SKILL.md": "78bab5beaaa505a659caf2df936ac3968d958f8e38312c0498fa9dee430b606e",
     ".claude/skills/split-spec/SKILL.md": "938b002a613a3888abce98fa264ae7a7b75de678ef2253ee18d18acc46a5e19c",
     ".claude/skills/tdd/SKILL.md": "5505d25bbaa8fc14a79e4d20163936958992a2995b7f1dd1d6197edc9ed722e0",
