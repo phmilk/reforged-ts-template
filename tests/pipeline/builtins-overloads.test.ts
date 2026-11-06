@@ -22,7 +22,7 @@ export {};
  * A Map project with reforged-builtins' overloads turned on: the Template's
  * tsconfig files, its node_modules linked, the files the pipeline generates
  * from the objects fixture map, and `src/modified-footman.ts`. Its program
- * adds `reforged-builtins/3.0.0` to `types`, as the README says to.
+ * adds `reforged-builtins/3.0.1` to `types`, as the README says to.
  */
 function overloadsProgram(): { program: ts.Program; root: string } {
   const root = makeTempDir();
@@ -42,7 +42,7 @@ function overloadsProgram(): { program: ts.Program; root: string } {
   ).config as { compilerOptions: { types: string[] } };
   const parsed = ts.getParsedCommandLineOfConfigFile(
     path.join(root, "tsconfig.json"),
-    { types: [...base.compilerOptions.types, "reforged-builtins/3.0.0"] },
+    { types: [...base.compilerOptions.types, "reforged-builtins/3.0.1"] },
     {
       ...ts.sys,
       onUnRecoverableConfigFileDiagnostic: (diagnostic) => {
@@ -94,7 +94,7 @@ describe("reforged-builtins' overloads, turned on", () => {
         .find(
           (file) =>
             file.fileName.split("/").slice(-2).join("/") ===
-            "reforged-builtins/3.0.0.d.ts",
+            "reforged-builtins/3.0.1.d.ts",
         )?.text,
     ).toContain('declare function FourCC(id: "hfoo"): Rawcode<"unit">;');
 

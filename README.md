@@ -1,12 +1,12 @@
 # reforged-ts-template
 
-A Map project template: a Warcraft III 3.0.0 map whose code is TypeScript compiled to Lua with typescript-to-lua and [reforged-ts](https://github.com/phmilk/reforged-ts). You write the map's code in `src`, `pnpm build` appends it to the script the World Editor saved and packs the map, and `pnpm test:map` opens it in the game. The World Editor owns the map's data (terrain, object data, placed units); this repository owns the code, and the types of object it declares as [Object definitions](#object-definitions). The way the build works (the editor's map folder, the code appended to its script, the archive packed) comes from cipherxof's [wc3-ts-template](https://github.com/cipherxof/wc3-ts-template) (MIT).
+A Map project template: a Warcraft III 3.0.1 map whose code is TypeScript compiled to Lua with typescript-to-lua and [reforged-ts](https://github.com/phmilk/reforged-ts). You write the map's code in `src`, `pnpm build` appends it to the script the World Editor saved and packs the map, and `pnpm test:map` opens it in the game. The World Editor owns the map's data (terrain, object data, placed units); this repository owns the code, and the types of object it declares as [Object definitions](#object-definitions). The way the build works (the editor's map folder, the code appended to its script, the archive packed) comes from cipherxof's [wc3-ts-template](https://github.com/cipherxof/wc3-ts-template) (MIT).
 
 **Status: under construction.** The Template is being built in the open specs of its issue tracker, at https://github.com/phmilk/reforged-ts-template/issues. The library packages are published as alphas under npm's `next` dist-tag (see [the library packages](#the-library-packages)); the documentation site is not live yet: its links, the `llms.txt` one included, are placeholders until it is.
 
 ## Requirements
 
-- **Warcraft III 3.0.0** with a Battle.net login saved on the machine: `pnpm test:map` starts the game with the flag that reuses it.
+- **Warcraft III 3.0.1** with a Battle.net login saved on the machine: `pnpm test:map` starts the game with the flag that reuses it.
 - **The World Editor**, which ships with the game. The map is saved as a folder, with Lua as its script language.
 - **Node 24** (`.node-version`).
 - **pnpm 12** (`packageManager` in `package.json`): install it with `npm install --global pnpm@12`. pnpm 11 or later switches to the pinned version by itself; pnpm 10 cannot start pnpm 12 on Windows. Its settings live in `pnpm-workspace.yaml`.
@@ -220,7 +220,7 @@ The Template depends on six packages of [phmilk/reforged-ts](https://github.com/
 `reforged-builtins` also declares a `FourCC` overload per Built-in object, which types `FourCC("hfoo")` as a `Rawcode<"unit">` and completes the Built-in Rawcodes inside `FourCC("")`. The Template leaves them off: they cost 6.6 to 7.0 ms of type-check time per literal `FourCC` call (about 7 seconds per thousand calls, in the editor and in `pnpm typecheck`), and nothing at run time. A literal they do not cover stays an `UnknownRawcode`, which every Rawcode parameter accepts, and the constants import either way at no check-time cost. To turn them on, add the entry of the Game version to `types` in `tsconfig.base.json`:
 
 ```jsonc
-"types": ["@typescript-to-lua/language-extensions", "reforged-types/3.0.0", "reforged-builtins/3.0.0"]
+"types": ["@typescript-to-lua/language-extensions", "reforged-types/3.0.1", "reforged-builtins/3.0.1"]
 ```
 
 The map's own overloads in `src/generated/map-objects.d.ts` still win for a Built-in object the map modifies, so its hover gives the map's name.

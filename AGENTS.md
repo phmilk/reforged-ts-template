@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository is a Map project: a Warcraft III 3.0.0 map whose code is TypeScript compiled to Lua with typescript-to-lua and [reforged-ts](https://github.com/phmilk/reforged-ts). The World Editor owns the map data (terrain, object data, placed units); this repository owns the code, its Object definitions included. Object data changes through the World Editor or through Object definitions and `pnpm objects:sync`; everything else in the map folder changes only through the World Editor. The project vocabulary lives in `GLOSSARY.md`; use its terms.
+This repository is a Map project: a Warcraft III 3.0.1 map whose code is TypeScript compiled to Lua with typescript-to-lua and [reforged-ts](https://github.com/phmilk/reforged-ts). The World Editor owns the map data (terrain, object data, placed units); this repository owns the code, its Object definitions included. Object data changes through the World Editor or through Object definitions and `pnpm objects:sync`; everything else in the map folder changes only through the World Editor. The project vocabulary lives in `GLOSSARY.md`; use its terms.
 
 ## Commands
 
@@ -50,7 +50,7 @@ A task is finished when `pnpm check` is green.
 - A GUI variable of an object type (`udg_SpawnType`) is declared with its kind from the Variable Editor's type: a Unit-Type is a `Rawcode<"unit">`, an array a `Record<number, Rawcode<"unit">>`. If its kind is wrong, change the variable's type in the World Editor; never cast the variable.
 - Custom objects are named by their `Custom<Kind>s` constants, generated from the map folder: `import { CustomUnits } from "./generated/custom-units";`, then `CustomUnits.Captain_h000`. Built-in objects are named by `reforged-builtins`' constants: `import { Units } from "reforged-builtins/units";`, then `Units.Footman_hfoo`. A Custom object's literal, `FourCC("h000")`, is typed by its kind through the generated overload.
 - A rename in the World Editor renames the constant and breaks each use: follow the rename to the new name, never cast.
-- To find a Custom object's Rawcode by its name, read the generated constants in `src/generated/` (`custom-<kind>s.ts`); a Built-in object's, search `node_modules/reforged-builtins/3.0.0/index.json`.
+- To find a Custom object's Rawcode by its name, read the generated constants in `src/generated/` (`custom-<kind>s.ts`); a Built-in object's, search `node_modules/reforged-builtins/3.0.1/index.json`.
 - `tsconfig.base.json` enables `reforged-map/typescript-plugin` for editors only (the hover of a Rawcode literal); it changes no build, lint or test, and stays in place. Find an object by the generated constants and `reforged-builtins`, not by the hover.
 - `as Rawcode<"unit">` is only for a number the compiler cannot know (a save code, a sync message), never to silence a kind error.
 - The rules in full: [Rawcodes](https://phmilk.github.io/reforged-ts/docs/guides/rawcodes).
@@ -91,7 +91,7 @@ The documentation of the installed reforged-ts version, as one plain-text file f
 
 <!-- reforged-ts:docs:end -->
 
-The TSDoc of every Wrapper, System and Native lives in the installed declarations: `node_modules/reforged-ts/dist/**/*.d.ts` and `node_modules/reforged-types/3.0.0/*.d.ts`. Read them before calling an API from memory.
+The TSDoc of every Wrapper, System and Native lives in the installed declarations: `node_modules/reforged-ts/dist/**/*.d.ts` and `node_modules/reforged-types/3.0.1/*.d.ts`. Read them before calling an API from memory.
 
 ## Agent skills
 
