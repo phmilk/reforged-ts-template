@@ -6,6 +6,7 @@
 // the rest of it (see AGENTS.md).
 import fs from "node:fs";
 import path from "node:path";
+import * as ts from "typescript";
 import {
   CONSTANTS_FILES,
   DECLARATIONS_FILE,
@@ -246,4 +247,41 @@ describe("GLOSSARY.md", () => {
     const afterBlock = glossary.slice(glossary.indexOf(endMarker("terms")));
     expect(headings(afterBlock)).toEqual(["Your map's terms"]);
   });
+});
+
+describe("the Game version the Template names (#147)", () => {
+  // The minimum Game version is the Patch of the installed Typings
+  // (`reforged.patch` of reforged-types, a Build such as 3.0.1.24370); the
+  // Typings and Built-in objects of an older one are not shipped.
+  const patch = (
+    JSON.parse(readRepoFile("node_modules/reforged-types/package.json")) as {
+      reforged: { patch: string };
+    }
+  ).reforged.patch;
+  const version = patch.split(".").slice(0, 3).join(".");
+
+  it("types the map with the Typings of the minimum Game version", () => {
+    const base = ts.readConfigFile(
+      path.join(ROOT, "tsconfig.base.json"),
+      (file) => ts.sys.readFile(file),
+    ).config as { compilerOptions: { types: string[] } };
+    expect(
+      base.compilerOptions.types.filter((entry) =>
+        entry.startsWith("reforged-types/"),
+      ),
+    ).toEqual([`reforged-types/${version}`]);
+  });
+
+  it.each(["AGENTS.md", "README.md"])(
+    "%s names the Typings and Built-in objects of that version",
+    (file) => {
+      const named = [
+        ...readRepoFile(file).matchAll(
+          /reforged-(?:types|builtins)\/(\d+\.\d+\.\d+)/g,
+        ),
+      ].map(([, named]) => named);
+      expect(named.length).toBeGreaterThan(0);
+      expect(new Set(named)).toEqual(new Set([version]));
+    },
+  );
 });
