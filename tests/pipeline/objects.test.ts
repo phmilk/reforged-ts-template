@@ -200,17 +200,30 @@ describe("pnpm objects:sync", () => {
     expect(config.worldEditorExecutable).toBe(editor);
     writeDefinition(project, "units.ts", SERGEANT);
     const launched: [string, readonly string[]][] = [];
+    // A stand-in for the World Editor's windows: File > Close Map empties the
+    // window holding the map, and -launch -loadfile shows the map again. The
+    // reload never meets a Warning dialog here, so cancel does nothing.
+    const shown = `Warcraft III World Editor - [${path.resolve(config.mapFolder)}]`;
+    const holding = { handle: "1", title: shown, kind: "main" as const };
+    let windows = [holding];
+    const worldEditorReload = {
+      system: "windows" as const,
+      launch: (executable: string, args: readonly string[]) => {
+        launched.push([executable, args]);
+        windows = [holding];
+      },
+      windows: {
+        list: () => windows,
+        closeMap: () => {
+          windows = [];
+        },
+        cancel: () => undefined,
+      },
+    };
 
     const report = syncObjects(config, {
-      worldEditorCheck: {
-        readWindowTitles: () => [
-          `Warcraft III World Editor - [${config.mapFolder}]`,
-        ],
-      },
-      worldEditorReload: {
-        system: "windows",
-        launch: (executable, args) => launched.push([executable, args]),
-      },
+      worldEditorCheck: { readWindowTitles: () => [shown] },
+      worldEditorReload,
     });
 
     expect(report.worldEditor).toBe("open");
