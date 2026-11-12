@@ -200,6 +200,24 @@ describe("pnpm objects:sync", () => {
     expect(config.worldEditorExecutable).toBe(editor);
     writeDefinition(project, "units.ts", SERGEANT);
     const launched: [string, readonly string[]][] = [];
+    // A stand-in for the World Editor's windows: File, Close Map empties the
+    // window holding the map, and -launch -loadfile shows the map again.
+    const shown = `Warcraft III World Editor - [${path.resolve(config.mapFolder)}]`;
+    let windows = [{ handle: "1", title: shown, kind: "main" as const }];
+    const worldEditorReload = {
+      system: "windows" as const,
+      launch: (executable: string, args: readonly string[]) => {
+        launched.push([executable, args]);
+        windows = [{ handle: "1", title: shown, kind: "main" }];
+      },
+      windows: {
+        list: () => windows,
+        closeMap: () => {
+          windows = [];
+        },
+        cancel: () => undefined,
+      },
+    };
 
     const report = syncObjects(config, {
       worldEditorCheck: {
@@ -207,10 +225,7 @@ describe("pnpm objects:sync", () => {
           `Warcraft III World Editor - [${config.mapFolder}]`,
         ],
       },
-      worldEditorReload: {
-        system: "windows",
-        launch: (executable, args) => launched.push([executable, args]),
-      },
+      worldEditorReload,
     });
 
     expect(report.worldEditor).toBe("open");
