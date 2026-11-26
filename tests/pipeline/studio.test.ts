@@ -109,7 +109,9 @@ describe("loadStudioConfig", () => {
     });
     const failure = loadStudioConfig(file, probeOf("linux", []));
     await expect(failure).rejects.toThrow(AuthorError);
-    await expect(failure).rejects.toThrow("(`winePath` in reforged.config.ts)");
+    await expect(failure).rejects.toThrow(
+      "`gameExecutable` in reforged.config.ts is a path of Wine's Windows side (`winePath`)",
+    );
   });
 });
 

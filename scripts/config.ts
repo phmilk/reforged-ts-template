@@ -498,7 +498,7 @@ export async function loadStudioConfig(
   const { game } = config;
   if (game.winePath !== undefined && !probe.exists(game.executable))
     throw new AuthorError(
-      `"${game.executable}" is a path of Wine's Windows side (\`winePath\` in ${CONFIG_FILE}), and the Studio reads the game from this machine: run \`pnpm exec reforged-studio --map <map folder> --game <the game's executable on this machine>\` instead.`,
+      `\`gameExecutable\` in ${CONFIG_FILE} is a path of Wine's Windows side (\`winePath\`), "${game.executable}", and the Studio reads the game from this machine: run \`pnpm exec reforged-studio --map <map folder> --game <the game's executable on this machine>\` instead.`,
     );
   return {
     ...config,

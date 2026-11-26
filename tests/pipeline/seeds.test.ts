@@ -110,8 +110,10 @@ describe("AGENTS.md", () => {
     expect(bullet).toContain("Never edit the bytes of its files by hand");
     expect(bullet).toContain("`git diff`");
     expect(bullet).toContain("`TRIGSTR_nnn`");
-    expect(bullet).toContain("written here only by the `objects:` commands");
-    // Object sync (#114): Object data has two ways in, the rest of the map folder one.
+    expect(bullet).toContain(
+      "written here only by the `objects:` commands and the Studio",
+    );
+    // Object sync (#114) and the Studio (#145): Object data has three ways in, the rest of the map folder one.
     expect(agents).toContain(
       "Object data changes through the World Editor, the Studio, or Object definitions and `pnpm objects:sync`; everything else in the map folder changes only through the World Editor.",
     );
