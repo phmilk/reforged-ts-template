@@ -1,6 +1,6 @@
 # Template Tickets
 
-A Ticket of the Spec in `phmilk/reforged-ts-template`, which `pnpm spec:frontier` prints in full form (`phmilk/reforged-ts-template#<n>`), is worked the way [`SKILL.md`](SKILL.md) works a library Ticket, with the differences below. Every `gh issue` and `gh pr` call on it carries `-R phmilk/reforged-ts-template`, and every `git` call on its checkout or worktree carries `-C <path>`. Its default branch is `main`.
+A Ticket of the Spec in `phmilk/reforged-ts-template`, whose `repository` is `phmilk/reforged-ts-template` in `pnpm spec:frontier <spec> --json`, is worked the way [`SKILL.md`](SKILL.md) works a library Ticket, with the differences below. Every `gh issue` and `gh pr` call on it carries `-R phmilk/reforged-ts-template`, and every `git` call on its checkout or worktree carries `-C <path>`. Its default branch is `main`.
 
 ## The checkout beside the library's
 
@@ -21,11 +21,13 @@ A Template Ticket's worktree is made from `origin/main`, in a folder beside the 
 
 ```sh
 git -C "$template" fetch origin main
-git -C "$template" worktree add "$template-worktrees/<ticket>" -b <type>/<ticket>-<slug> origin/main
+git -C "$template" worktree add --no-track "$template-worktrees/<ticket>" -b <type>/<ticket>-<slug> origin/main
 git -C "$template-worktrees/<ticket>" merge-base --is-ancestor origin/main HEAD
 ```
 
-It is removed as a library worktree is, through the Template's checkout: `git -C "$template" worktree remove "$template-worktrees/<ticket>"`, then `git -C "$template" branch -D <branch>` once its pull request merged.
+`--no-track`, as for a library worktree, keeps the branch from tracking `origin/main`.
+
+It is removed as a library worktree is ([Removing a worktree](SKILL.md#removing-a-worktree)), through the Template's checkout: every `git` command there takes `-C "$template"`.
 
 ## Its Claim
 
@@ -80,6 +82,6 @@ An implementer that finds, in its work, that it needs a library change no blocke
 
 ## Its implementer and pull request
 
-Its implementer gets the prompt of [`implementer.md`](implementer.md) with the Template's values in its placeholders: its repository, `main`, its worktree's path, and the absolute paths of the library's skill and check lock, since the Template's copy of the shared skills may lag behind the library's. It runs `/ship` from its worktree, so its pull request opens in the Template, against `main`, and merges by auto-merge (squash), as the Template's repository settings allow (phmilk/reforged-ts-template#137). The Template has no `.changeset/` folder, so it carries no changeset.
+Its implementer gets the prompt of [`implementer.md`](implementer.md) with the Template's values in its placeholders: its repository, `main`, its worktree's path, and the absolute paths of the library's skill and check lock, since the Template's copy of the shared skills may lag behind the library's. It runs `/ship-branch` from its worktree, so its pull request opens in the Template, against `main`, and merges by auto-merge (squash), as the Template's repository settings allow (phmilk/reforged-ts-template#137). The Template has no `.changeset/` folder, so it carries no changeset.
 
 Its required checks are the Template's own, and a red one is settled as [A red CI](SKILL.md#a-red-ci) says.
