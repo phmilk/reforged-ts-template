@@ -113,7 +113,7 @@ describe("AGENTS.md", () => {
     expect(bullet).toContain("written here only by the `objects:` commands");
     // Object sync (#114): Object data has two ways in, the rest of the map folder one.
     expect(agents).toContain(
-      "Object data changes through the World Editor or through Object definitions and `pnpm objects:sync`; everything else in the map folder changes only through the World Editor.",
+      "Object data changes through the World Editor, the Studio, or Object definitions and `pnpm objects:sync`; everything else in the map folder changes only through the World Editor.",
     );
     expect(agents).not.toContain(
       "Files in the map folder change only through the World Editor.",

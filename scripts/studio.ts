@@ -22,18 +22,12 @@ export type StartStudio = (options: StudioOptions) => Promise<Studio>;
  * Starts the Studio on `config`'s map folder, with the game `pnpm test:map`
  * finds and the World Editor beside it, and opens its page in the browser.
  * A map folder or an install the Studio cannot read is an AuthorError with
- * its message, which names what to fix. A game run through Wine is one too:
- * the Studio reads the install's files from this machine, and the path of
- * a Wine launch is the Windows side's.
+ * its message, which names what to fix.
  */
 export async function runStudio(
   config: StudioConfig,
   start: StartStudio = startStudio,
 ): Promise<Studio> {
-  if (config.game.winePath !== undefined)
-    throw new AuthorError(
-      `the Studio does not read a game run through Wine (\`winePath\` in ${CONFIG_FILE}): run \`pnpm exec reforged-studio --map <map folder> --game <the game's executable on this machine>\` instead.`,
-    );
   try {
     return await start({
       projectRoot: config.root,

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository is a Map project: a Warcraft III 3.0.1 map whose code is TypeScript compiled to Lua with typescript-to-lua and [reforged-ts](https://github.com/phmilk/reforged-ts). The World Editor owns the map data (terrain, object data, placed units); this repository owns the code, its Object definitions included. Object data changes through the World Editor or through Object definitions and `pnpm objects:sync`; everything else in the map folder changes only through the World Editor. The project vocabulary lives in `GLOSSARY.md`; use its terms.
+This repository is a Map project: a Warcraft III 3.0.1 map whose code is TypeScript compiled to Lua with typescript-to-lua and [reforged-ts](https://github.com/phmilk/reforged-ts). The World Editor owns the map data (terrain, object data, placed units); this repository owns the code, its Object definitions included. Object data changes through the World Editor, the Studio, or Object definitions and `pnpm objects:sync`; everything else in the map folder changes only through the World Editor. The project vocabulary lives in `GLOSSARY.md`; use its terms.
 
 ## Commands
 
@@ -20,7 +20,7 @@ A task is finished when `pnpm check` is green.
 
 - `src/`: the map's code; `src/main.ts` is the entry point. New code goes here.
 - `src/objects/`: the Object definitions, one `define<Kind>` call per object from `reforged-map/objects`, laid out by adoption as `src/objects/<kind>/<Name>_<rawcode>.ts`. Node modules the build loads, never part of the map's Lua: `tsconfig.objects.json` type-checks them.
-- The map folder (`mapFolder` in `reforged.config.ts`): owned by the World Editor, written here only by the `objects:` commands. Never edit the bytes of its files by hand.
+- The map folder (`mapFolder` in `reforged.config.ts`): owned by the World Editor, written here only by the `objects:` commands and the Studio. Never edit the bytes of its files by hand.
   - Read a change to its Object data with `git diff`, which shows each file as text: an object's line names its table and Rawcode (`custom h000 from hfoo`), and each line under it a field and its value (`umvs int = 320`). A `TRIGSTR_nnn` value is a string of `war3map.wts`, whose own diff shows its text. `pnpm install` sets the driver in the clone's git configuration.
 - `object-manifest.json`: the Object manifest, the objects the code owns and what the last sync wrote of each. Committed; written only by the `objects:` commands, never by hand.
 - `.reforged-studio.json`: the running Studio's runtime file, its address, which it writes on start and removes on stop. Ignored by git.

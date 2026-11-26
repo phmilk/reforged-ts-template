@@ -4,6 +4,7 @@ import { MapFolderError } from "reforged-map";
 import { InstallNotFoundError, type StudioOptions } from "reforged-studio";
 import { describe, expect, it } from "vitest";
 import {
+  EXECUTABLE_ENV,
   loadLaunchConfig,
   loadObjectsConfig,
   loadStudioConfig,
@@ -44,6 +45,13 @@ const GAME =
   "C:\\Program Files (x86)\\Warcraft III\\_retail_\\x86_64\\Warcraft III.exe";
 const EDITOR =
   "C:\\Program Files (x86)\\Warcraft III\\_retail_\\x86_64\\World Editor.exe";
+/** The game's executable as a path of this machine, inside a Wine prefix. */
+const ON_THIS_MACHINE = path.resolve(
+  "wine-prefix",
+  "drive_c",
+  "Warcraft III",
+  "Warcraft III.exe",
+);
 
 describe("loadStudioConfig", () => {
   it("resolves the map folder, the game and the World Editor as pnpm test:map and pnpm objects:sync do", async () => {
@@ -80,6 +88,28 @@ describe("loadStudioConfig", () => {
       probeOf("win32", [GAME], windowsEnv),
     );
     expect(studio.worldEditorExecutable).toBeUndefined();
+  });
+
+  it("reads a game Wine launches when its executable is a path of this machine", async () => {
+    const file = writeConfig({ mapFolder: "my-map.w3m", winePath: "wine" });
+    const studio = await loadStudioConfig(
+      file,
+      probeOf("linux", [ON_THIS_MACHINE], {
+        [EXECUTABLE_ENV]: ON_THIS_MACHINE,
+      }),
+    );
+    expect(studio.game.executable).toBe(ON_THIS_MACHINE);
+  });
+
+  it("refuses a Wine-side path to the game, naming the setting", async () => {
+    const file = writeConfig({
+      mapFolder: "my-map.w3m",
+      winePath: "wine",
+      gameExecutable: GAME,
+    });
+    const failure = loadStudioConfig(file, probeOf("linux", []));
+    await expect(failure).rejects.toThrow(AuthorError);
+    await expect(failure).rejects.toThrow("(`winePath` in reforged.config.ts)");
   });
 });
 
@@ -133,7 +163,7 @@ describe("runStudio", () => {
     ["map folder", new MapFolderError("The map folder my-map.w3m is missing.")],
     [
       "install",
-      new InstallNotFoundError("No Warcraft III install at C:\\Games."),
+      new InstallNotFoundError("No Warcraft III install holds .build.info."),
     ],
   ])(
     "turns a %s the Studio cannot read into an AuthorError with its message",
@@ -148,20 +178,6 @@ describe("runStudio", () => {
       await expect(failure).rejects.toThrow(refusal.message);
     },
   );
-
-  it("refuses a game run through Wine, naming the setting, before starting anything", async () => {
-    const file = writeConfig({
-      mapFolder: "my-map.w3m",
-      winePath: "wine",
-      gameExecutable: GAME,
-    });
-    const config = await loadStudioConfig(file, probeOf("linux", []));
-    const start = recordingStart();
-    const failure = runStudio(config, start);
-    await expect(failure).rejects.toThrow(AuthorError);
-    await expect(failure).rejects.toThrow("(`winePath` in reforged.config.ts)");
-    expect(start.calls).toEqual([]);
-  });
 });
 
 describe("pnpm studio", () => {
@@ -190,7 +206,7 @@ describe("pnpm studio", () => {
 });
 
 describe("reforged-studio", () => {
-  it("is a library package: in devDependencies at a next range, packed by pnpm use:local and bumped by the sync", () => {
+  it("is a library package: in devDependencies at a next range, packed by pnpm use:local", () => {
     const manifest = JSON.parse(readRepoFile("package.json")) as {
       devDependencies: Record<string, string>;
     };

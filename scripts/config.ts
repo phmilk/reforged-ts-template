@@ -485,17 +485,23 @@ export interface StudioConfig extends LaunchConfig {
  * The configuration of `pnpm studio`: the map folder as every command
  * resolves it, the game as `pnpm test:map` finds it (`resolveGameLaunch`;
  * none found is its AuthorError, naming `gameExecutable`), and the World
- * Editor beside it as the `objects:` commands find it.
+ * Editor beside it as the `objects:` commands find it. The Studio reads the
+ * game's install from this machine's files, so a game Wine launches from a
+ * path of the Windows side only (a `gameExecutable` inside the prefix, which
+ * `pnpm test:map` does not check) is an AuthorError naming `winePath`.
  */
 export async function loadStudioConfig(
   configPath: string,
   probe: ExecutableProbe = systemProbe,
 ): Promise<StudioConfig> {
-  const { config, root, version } = await importConfigFile(configPath);
-  const game = resolveGameLaunch(config, root, probe);
+  const config = await loadLaunchConfig(configPath, [], probe);
+  const { game } = config;
+  if (game.winePath !== undefined && !probe.exists(game.executable))
+    throw new AuthorError(
+      `"${game.executable}" is a path of Wine's Windows side (\`winePath\` in ${CONFIG_FILE}), and the Studio reads the game from this machine: run \`pnpm exec reforged-studio --map <map folder> --game <the game's executable on this machine>\` instead.`,
+    );
   return {
-    ...resolveConfig(config, root, {}, version),
-    game,
+    ...config,
     worldEditorExecutable: worldEditorBeside(game, probe),
   };
 }
