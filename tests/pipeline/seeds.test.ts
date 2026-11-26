@@ -110,10 +110,12 @@ describe("AGENTS.md", () => {
     expect(bullet).toContain("Never edit the bytes of its files by hand");
     expect(bullet).toContain("`git diff`");
     expect(bullet).toContain("`TRIGSTR_nnn`");
-    expect(bullet).toContain("written here only by the `objects:` commands");
-    // Object sync (#114): Object data has two ways in, the rest of the map folder one.
+    expect(bullet).toContain(
+      "written here only by the `objects:` commands and the Studio",
+    );
+    // Object sync (#114) and the Studio (#145): Object data has three ways in, the rest of the map folder one.
     expect(agents).toContain(
-      "Object data changes through the World Editor or through Object definitions and `pnpm objects:sync`; everything else in the map folder changes only through the World Editor.",
+      "Object data changes through the World Editor, the Studio, or Object definitions and `pnpm objects:sync`; everything else in the map folder changes only through the World Editor.",
     );
     expect(agents).not.toContain(
       "Files in the map folder change only through the World Editor.",
@@ -147,6 +149,23 @@ describe("AGENTS.md", () => {
       "never forced",
     ])
       expect(objects, text).toContain(text);
+  });
+
+  it("says what the Studio does, that an agent leaves it to the author, and names its runtime file (#145)", () => {
+    expect(section(agents, "Commands")).toMatch(/^- `pnpm studio`: /m);
+    const objects = section(agents, "Object definitions");
+    for (const text of [
+      "The Studio",
+      "through `reforged-map`",
+      "takes turns with the World Editor",
+      "never runs `pnpm studio` for the author",
+      "nor edits through its API without being asked",
+      "Object definitions stay the code's",
+    ])
+      expect(objects, text).toContain(text);
+    expect(section(agents, "Layout")).toMatch(
+      /^- `\.reforged-studio\.json`: /m,
+    );
   });
 
   it("fits in the line cap", () => {
@@ -222,6 +241,11 @@ describe("GLOSSARY.md", () => {
     expect(readRepoFile("docs/agents/domain.md")).toContain(
       "**`GLOSSARY.md`** at the repo root",
     );
+  });
+
+  it("carries the Studio (#145)", () => {
+    expect(LIBRARY_TERMS).toContain("Studio");
+    expect(markedBlock(glossary, "terms")).toContain("\n**Studio**:\n");
   });
 
   it("carries the terms of Object definitions (#114)", () => {

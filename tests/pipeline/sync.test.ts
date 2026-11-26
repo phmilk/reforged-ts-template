@@ -42,6 +42,7 @@ const payload = (): ReleasePayload => ({
     "eslint-plugin-reforged": "1.0.0-alpha.4",
     "reforged-map": "1.0.0-alpha.2",
     "reforged-builtins": "1.0.0-alpha.1",
+    "reforged-studio": "1.0.0-alpha.3",
   },
   contextUrl: GLOSSARY_URL,
   matrixUrl: MATRIX_URL,
@@ -77,6 +78,7 @@ const LIBRARY_ORDER = [
   "Built-in object",
   "Custom object",
   "Editor form",
+  "Studio",
   "Object definition",
   "Object sync",
   "Object manifest",
@@ -128,7 +130,7 @@ function outsideBlocks(text: string): string {
 }
 
 /**
- * The shipped package.json with the six packages on `^0.0.0`, a range no
+ * The shipped package.json with the seven packages on `^0.0.0`, a range no
  * release writes, so a test sees each of them change whatever the Template
  * ships: the sync workflow runs the tests after applying the release, when
  * a shipped version may already be the payload's.
@@ -142,7 +144,7 @@ function unreleasedManifest(): string {
 }
 
 describe("the sync's entry point", () => {
-  it("sets the six packages to caret ranges on the released versions, nothing else in package.json", () => {
+  it("sets the seven packages to caret ranges on the released versions, nothing else in package.json", () => {
     const before = unreleasedManifest();
     const after = apply({ ...shipped(), "package.json": before }).files[
       "package.json"
@@ -153,6 +155,7 @@ describe("the sync's entry point", () => {
       '"eslint-plugin-reforged": "^1.0.0-alpha.4",',
       '"reforged-builtins": "^1.0.0-alpha.1",',
       '"reforged-map": "^1.0.0-alpha.2",',
+      '"reforged-studio": "^1.0.0-alpha.3",',
       '"reforged-test": "^1.0.3",',
     ]);
     const manifest = JSON.parse(after) as {
@@ -175,6 +178,7 @@ describe("the sync's entry point", () => {
         "eslint-plugin-reforged": "^1.0.0-alpha.0",
         "reforged-builtins": "^1.0.0-alpha.0",
         "reforged-map": "^1.0.0-alpha.0",
+        "reforged-studio": "^1.0.0-alpha.0",
         "reforged-test": "^1.0.0-alpha.0",
         "other-dev": "1.0.0-alpha.0",
       },
@@ -197,13 +201,14 @@ describe("the sync's entry point", () => {
         "eslint-plugin-reforged": "^1.0.0-alpha.3",
         "reforged-builtins": "^1.0.0-alpha.3",
         "reforged-map": "^1.0.0-alpha.3",
+        "reforged-studio": "^1.0.0-alpha.3",
         "reforged-test": "^1.0.0-alpha.3",
       },
     });
-    expect(changedLines(before, after)).toHaveLength(6);
+    expect(changedLines(before, after)).toHaveLength(7);
   });
 
-  it("ships the six packages with caret ranges", () => {
+  it("ships the seven packages with caret ranges", () => {
     const manifest = JSON.parse(shipped()["package.json"]) as {
       dependencies: Record<string, string>;
       devDependencies: Record<string, string>;
