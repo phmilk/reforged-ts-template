@@ -29,7 +29,7 @@
     "check": "pnpm run lint && pnpm run typecheck && pnpm run test"
   },
   "dependencies": {
-    "reforged-ts": "^1.0.0-alpha.22",
+    "reforged-ts": "^1.0.0-alpha.23",
     "reforged-types": "^1.0.0-alpha.8"
   },
   "devDependencies": {
