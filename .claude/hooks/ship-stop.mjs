@@ -1,17 +1,17 @@
 // @ts-check
 // The ship Stop check of ADR 0026 (#807), registered in .claude/settings.json
-// on Stop. Every implement ends with /ship, which pushes the branch and opens
-// its pull request; a forgotten /ship is caught here. A turn that ends after
-// an implement, with commits ahead of the remote default and no pull request
-// (or a draft, which cannot carry auto-merge), is blocked once and the Agent
-// told to run /ship or say why it stops. The stop after that passes, since
-// its stop hook is already active, so a false alarm costs one look and never
-// a loop; and so does any stop when the transcript, `git` or `gh` cannot be
-// read, so a network failure never traps a session.
+// on Stop. Every implement ends with /ship-branch, which pushes the branch and
+// opens its pull request; a forgotten /ship-branch is caught here. A turn that
+// ends after an implement, with commits ahead of the remote default and no
+// pull request (or a draft, which cannot carry auto-merge), is blocked once
+// and the Agent told to run /ship-branch or say why it stops. The stop after
+// that passes, since its stop hook is already active, so a false alarm costs
+// one look and never a loop; and so does any stop when the transcript, `git`
+// or `gh` cannot be read, so a network failure never traps a session.
 //
 // The decision is verdict(), a pure function from the hook input and three
 // facts: whether an implement (/implement or /implement-spec, typed or a
-// Skill tool call) ran after the last /ship, read from the transcript by
+// Skill tool call) ran after the last /ship-branch, read from the transcript by
 // implementPending(), a pure function over its lines; how many commits the
 // branch has ahead of the remote default, read with `git`; and the state of
 // the branch's open pull request, read with `gh` (pullRequestStateOf()). run()
@@ -49,7 +49,8 @@ import { fileURLToPath } from "node:url";
  * or that run() did not need to read: either way the stop passes.
  *
  * @typedef {object} Facts
- * @property {boolean} pending Whether an implement ran after the last /ship.
+ * @property {boolean} pending Whether an implement ran after the last
+ *   /ship-branch.
  * @property {number | null} ahead The branch's commits ahead of the remote default.
  * @property {PullRequestState | null} pullRequest
  */
@@ -72,10 +73,15 @@ import { fileURLToPath } from "node:url";
  * @typedef {{ verdict: "pass" } | { verdict: "block", reason: string, output: object }} Verdict
  */
 
-/** The implements: each ends with /ship (ADR 0026). */
+/** The implements: each ends with /ship-branch (ADR 0026). */
 const IMPLEMENTS = ["implement", "implement-spec"];
 
-const SHIP = "ship";
+/**
+ * The skill that ships, by its own name. Claude Code reserves `ship` for its
+ * built-in /ship, which never runs the skill and is not matched here (#940):
+ * the open pull request it leaves passes through the repository state.
+ */
+const SHIP = "ship-branch";
 
 const SOURCE = "ADR 0026, .claude/hooks/ship-stop.mjs";
 
@@ -133,8 +139,8 @@ function invokedSkills(line) {
 
 /**
  * Whether an implement (/implement or /implement-spec) ran after the last
- * /ship, given the transcript's lines in order: an implement with no /ship
- * after it.
+ * /ship-branch, given the transcript's lines in order: an implement with no
+ * /ship-branch after it.
  *
  * @param {readonly string[]} lines
  * @returns {boolean}
@@ -208,7 +214,7 @@ export function verdict(input, facts) {
     pullRequest === "none"
       ? "no pull request"
       : "a draft pull request without auto-merge";
-  const reason = `This session ran an implement after its last /ship, and its branch has ${commits} ahead of the remote default with ${state} (${SOURCE}). Every implement ends with /ship: run /ship now, which reviews the branch, pushes it, opens or readies its pull request and turns on auto-merge unless a human is needed. If the work stops here on purpose, say why in your reply instead.`;
+  const reason = `This session ran an implement after its last /ship-branch, and its branch has ${commits} ahead of the remote default with ${state} (${SOURCE}). Every implement ends with /ship-branch: run /ship-branch now, which reviews the branch, pushes it, opens or readies its pull request and turns on auto-merge unless a human is needed. If the work stops here on purpose, say why in your reply instead.`;
   return { verdict: "block", reason, output: { decision: "block", reason } };
 }
 
