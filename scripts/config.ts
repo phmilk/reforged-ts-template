@@ -433,6 +433,14 @@ export function findWorldEditor(
     if (error instanceof AuthorError) return undefined;
     throw error;
   }
+  return worldEditorBeside(game, probe);
+}
+
+/** `World Editor.exe` beside `game`'s executable when it is there and the game does not run through Wine; else undefined. */
+function worldEditorBeside(
+  game: GameLaunch,
+  probe: ExecutableProbe,
+): string | undefined {
   if (game.winePath !== undefined) return undefined;
   // A Windows path (`C:\...`, from WC3_EXECUTABLE or the Battle.net folders), whatever the host.
   const paths = game.executable.includes("\\") ? path.win32 : path;
@@ -464,5 +472,36 @@ export async function loadObjectsConfig(
   return {
     ...resolveConfig(config, root, overrides, version),
     worldEditorExecutable: findWorldEditor(config, root, probe),
+  };
+}
+
+/** A launch configuration that also knows the World Editor's executable: what `pnpm studio` loads. */
+export interface StudioConfig extends LaunchConfig {
+  /** `World Editor.exe` beside the game, as `findWorldEditor` finds it. */
+  worldEditorExecutable: string | undefined;
+}
+
+/**
+ * The configuration of `pnpm studio`: the map folder as every command
+ * resolves it, the game as `pnpm test:map` finds it (`resolveGameLaunch`;
+ * none found is its AuthorError, naming `gameExecutable`), and the World
+ * Editor beside it as the `objects:` commands find it. The Studio reads the
+ * game's install from this machine's files, so a game Wine launches from a
+ * path of the Windows side only (a `gameExecutable` inside the prefix, which
+ * `pnpm test:map` does not check) is an AuthorError naming `winePath`.
+ */
+export async function loadStudioConfig(
+  configPath: string,
+  probe: ExecutableProbe = systemProbe,
+): Promise<StudioConfig> {
+  const config = await loadLaunchConfig(configPath, [], probe);
+  const { game } = config;
+  if (game.winePath !== undefined && !probe.exists(game.executable))
+    throw new AuthorError(
+      `\`gameExecutable\` in ${CONFIG_FILE} is a path of Wine's Windows side (\`winePath\`), "${game.executable}", and the Studio reads the game from this machine: run \`pnpm exec reforged-studio --map <map folder> --game <the game's executable on this machine>\` instead.`,
+    );
+  return {
+    ...config,
+    worldEditorExecutable: worldEditorBeside(game, probe),
   };
 }

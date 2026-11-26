@@ -25,9 +25,10 @@
 // When it lets /implement or /implement-spec through, it adds a line to the
 // Agent's context (#745, #806): on the default branch, create the branch
 // <type>/<n>-<slug> from the remote default first; then end the work with
-// /ship (ADR 0026) and the next-step skill. The current and default branches
-// reach that line as facts, read with `git`. When it lets /grill-with-docs,
-// /write-spec or /split-spec through, the line is the next-step one alone:
+// /ship-branch (ADR 0026) and the next-step skill. The current and default
+// branches reach that line as facts, read with `git`. When it lets
+// /grill-with-docs, /write-spec or /split-spec through, the line is the
+// next-step one alone:
 // next-step prints the next steps at every hand-over of the main flow. The
 // first two name no issue to check, so they read nothing from GitHub.
 //
@@ -125,7 +126,7 @@ const ISSUE_CHECKED = [
 ];
 
 /**
- * The implements: they end with /ship, then next-step.
+ * The implements: they end with /ship-branch, then next-step.
  *
  * @type {readonly Skill[]}
  */
@@ -416,12 +417,12 @@ const NEXT_STEP_SOURCE = "ADR 0026, .claude/hooks/skill-target.mjs";
 /**
  * The line an implement let through gets in the Agent's context (#745,
  * #806): the branch to create first when the session is on the default
- * one, or may be, then /ship and next-step.
+ * one, or may be, then /ship-branch and next-step.
  *
  * @param {Branches | null} branches `null` when `git` could not read them.
  */
 function implementLine(branches) {
-  const end = `This repository ends every implement with /ship, which reviews the branch, pushes it and opens its pull request, then with the next-step skill, which prints the next steps from the state of the issue, its Spec and its pull request (${NEXT_STEP_SOURCE}).`;
+  const end = `This repository ends every implement with /ship-branch, which reviews the branch, pushes it and opens its pull request, then with the next-step skill, which prints the next steps from the state of the issue, its Spec and its pull request (${NEXT_STEP_SOURCE}).`;
   if (branches === null) {
     return `When this session is on the default branch, first create the work's branch <type>/<n>-<slug> from the remote default (git fetch origin <default>, then git switch -c <type>/<n>-<slug> origin/<default>). ${end}`;
   }
@@ -442,7 +443,7 @@ function handOverLine(skill) {
 /**
  * The output that lets `request` through: for /implement and
  * /implement-spec, the line that names the branch to create on the default
- * branch, /ship and next-step, given the session's `branches` (`null`:
+ * branch, /ship-branch and next-step, given the session's `branches` (`null`:
  * unread); for /grill-with-docs, /write-spec and /split-spec, the next-step
  * line; nothing for /ship-spec.
  *

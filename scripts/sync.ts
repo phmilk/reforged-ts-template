@@ -39,6 +39,7 @@ export const LIBRARY_TERMS = [
   "Built-in object",
   "Custom object",
   "Editor form",
+  "Studio",
   "Object definition",
   "Object sync",
   "Object manifest",
@@ -133,7 +134,7 @@ function branchComponent(tag: string): string {
 /**
  * The sync pull request's branch and title, from a checked payload. The
  * title names the package the release's tag names (`<package>@<version>`,
- * the first of the six the release published): a release without the
+ * the first of the seven the release published): a release without the
  * library is titled after the package it released. A tag that names no
  * package of `versions` at its version titles after reforged-ts.
  */
@@ -334,7 +335,7 @@ function replaceLlmsLink(text: string, llmsUrl: string): string {
 /**
  * The sync's entry point: the synced files' current content, the payload
  * and the fetched sources in; the new content and a change summary out.
- * `package.json` gets caret ranges on the six released versions; between
+ * `package.json` gets caret ranges on the seven released versions; between
  * their markers, GLOSSARY.md gets the library terms, AGENTS.md and the README
  * the llms.txt link, the README the compatibility matrix. Nothing else
  * changes. A file whose markers are missing or broken comes back unchanged

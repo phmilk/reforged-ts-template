@@ -217,6 +217,9 @@ importers:
       reforged-map:
         specifier: ^1.0.0-alpha.11
         version: 1.0.0-alpha.11(reforged-builtins@1.0.0-alpha.8(reforged-types@1.0.0-alpha.8))(reforged-types@1.0.0-alpha.8)(typescript@6.0.2)
+      reforged-studio:
+        specifier: ^1.0.0-alpha.9
+        version: 1.0.0-alpha.9(reforged-map@1.0.0-alpha.11(reforged-builtins@1.0.0-alpha.8(reforged-types@1.0.0-alpha.8))(reforged-types@1.0.0-alpha.8)(typescript@6.0.2))
       reforged-test:
         specifier: ^1.0.0-alpha.6
         version: 1.0.0-alpha.6(typescript-to-lua@1.37.1(typescript@6.0.2))(typescript@6.0.2)(vitest@5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0)))
@@ -1177,6 +1180,13 @@ packages:
         optional: true
       typescript:
         optional: true
+
+  reforged-studio@1.0.0-alpha.9:
+    resolution: {integrity: sha512-bZS2RefmbcKHIrYJxBZuuh09/MIeF90LFuXxvpayLIka+uY+80kifJaOS1UXcl5gOTB35oA9ftyaJbHvsULrzg==}
+    engines: {node: '>=22.13'}
+    hasBin: true
+    peerDependencies:
+      reforged-map: ^1.0.0-alpha.11
 
   reforged-test@1.0.0-alpha.6:
     resolution: {integrity: sha512-GTwLf1ytnC8p7EqtLBcD9LrxawO6c/eDWA42hisWzn0aYccFFeP/LkET7fCzuc8QxE0X7M8DdAtfQw4LpPZzkw==}
@@ -2220,6 +2230,10 @@ snapshots:
     optionalDependencies:
       reforged-builtins: 1.0.0-alpha.8(reforged-types@1.0.0-alpha.8)
       typescript: 6.0.2
+
+  reforged-studio@1.0.0-alpha.9(reforged-map@1.0.0-alpha.11(reforged-builtins@1.0.0-alpha.8(reforged-types@1.0.0-alpha.8))(reforged-types@1.0.0-alpha.8)(typescript@6.0.2)):
+    dependencies:
+      reforged-map: 1.0.0-alpha.11(reforged-builtins@1.0.0-alpha.8(reforged-types@1.0.0-alpha.8))(reforged-types@1.0.0-alpha.8)(typescript@6.0.2)
 
   reforged-test@1.0.0-alpha.6(typescript-to-lua@1.37.1(typescript@6.0.2))(typescript@6.0.2)(vitest@5.0.2(@types/node@24.19.0)(vite@8.3.1(@types/node@24.19.0))):
     dependencies:

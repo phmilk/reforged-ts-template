@@ -16,6 +16,7 @@ minimumReleaseAgeExclude:
   - eslint-plugin-reforged
   - reforged-map
   - reforged-builtins
+  - reforged-studio
 
 # The dependencies whose install scripts may run; an install that meets one
 # not listed here fails. unrs-resolver (the lint's import resolver) ships its

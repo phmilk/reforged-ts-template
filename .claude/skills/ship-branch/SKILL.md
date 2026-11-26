@@ -1,5 +1,5 @@
 ---
-name: ship
+name: ship-branch
 description: Push an implement's branch and open its pull request, with a Review section and auto-merge unless a human is needed. Use at the end of every implement, or when explicitly asked to ship a branch.
 ---
 

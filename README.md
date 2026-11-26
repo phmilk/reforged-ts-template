@@ -56,6 +56,7 @@ Either way, the install wrote the generated files under `src/generated`; after t
 | `pnpm objects:sync`         | Writes the Object definitions of `src/objects/` into the map folder and the Object manifest.                      |
 | `pnpm objects:adopt`        | Hands objects of the map folder to the code (`<rawcode...>` or `--all`), as definition files.                     |
 | `pnpm objects:release`      | Hands objects the code owns back to the map folder (`<rawcode...>`), deleting their definition files.             |
+| `pnpm studio`               | Starts the Studio on the map folder and opens its page, until Ctrl+C ([The Studio](#the-studio)).                 |
 
 The archive's name is the map folder's name without its suffix, then the `version` of `package.json` (left out when there is none), then `-dev` for a dev build, then the map folder's suffix; `archiveName` in `reforged.config.ts` replaces it, used as written. `pnpm test:map` launches that archive: since Patch 3.0.1 the game no longer opens a map folder given to `-loadfile`, only a packed map (phmilk/reforged-ts#642).
 
@@ -159,14 +160,20 @@ export const Sergeant_h002 = defineUnit({
 - **`pnpm objects:sync`** writes the definitions into the map folder itself, in the form the World Editor saves, so that the World Editor and `git diff` show them, and records them in the manifest. A second sync writes nothing. It prints its report and exits non-zero when it refuses, writing nothing: an invalid definition, a collision (adopt the object, or choose another Rawcode), an owned object changed outside the code (copy each change listed into its definition, or `--force` to overwrite them), unsaved edits in the World Editor, or a manifest it cannot read.
 - **`pnpm objects:adopt <rawcode...>`**, or `--all`, hands objects made in the World Editor to the code: each gets a definition file, formatted with the project's Prettier, and an entry in the manifest; the map folder is left byte for byte. A Rawcode two kinds share names its kind: `buff:B000`.
 - **`pnpm objects:release <rawcode...>`** hands objects back: each is synced one last time, then leaves the manifest, and its definition file is deleted, its placements on the terrain kept. Deleting a definition instead removes its object at the next sync, and its placements at the World Editor's next save.
-- **The Object manifest**, `object-manifest.json` at the root, records what the code owns and what the last sync wrote of each object. It is committed, written only by the three commands, never by hand; `.prettierignore` leaves it as `reforged-map` writes it. A merge conflict in it is resolved by keeping both sides' entries, then `pnpm objects:sync`.
+- **The Object manifest**, `object-manifest.json` at the root, records what the code owns and what the last sync wrote of each object. It is committed, written only by the three commands and the Studio's "Adopt into code", never by hand; `.prettierignore` leaves it as `reforged-map` writes it. A merge conflict in it is resolved by keeping both sides' entries, then `pnpm objects:sync`.
 - **In `pnpm dev`**, `devObjectSync: true` in `reforged.config.ts` (off by default) runs Object sync before each build and watches the manifest too; a refused sync is printed, and the build still runs with the definitions merged.
 
 Each command takes `--force`, which overrides only what that command's refusal says it may. **Take turns with the World Editor**: it keeps the map it loaded in memory and its next save writes all of it back, so save or discard its edits before a sync, an adoption or a release; a window title ending in ` *]` refuses them. After a sync that writes the map folder, a World Editor holding the map without unsaved edits is reloaded with `World Editor.exe -launch -loadfile <map folder>`, the executable beside the game `pnpm test:map` finds; when the game is not found, the sync warns to reload the map by hand (File > Open). Edit an owned object in code, not in the Object Editor. Everything else in the map folder (terrain, placed units, triggers, the map's options) changes only through the World Editor.
 
+### The Studio
+
+`pnpm studio` starts the Studio, [`reforged-studio`](https://github.com/phmilk/reforged-ts/tree/master/packages/reforged-studio): a local app that edits the map folder's Object data in the browser, with icons and model previews read from your own Warcraft III install. It reads the map folder of `reforged.config.ts`, the game `pnpm test:map` finds and the World Editor beside it, then opens `http://localhost:<port>/objects` and runs until Ctrl+C. When the game is not found, it says to set `gameExecutable` (or `WC3_EXECUTABLE`). It reads the game's files from this machine: under Wine, a `gameExecutable` of the Windows side is refused, and `pnpm exec reforged-studio --map <map folder> --game <executable>` takes the game's path on this machine instead. While it runs, `.reforged-studio.json` at the root (ignored by git) holds its address, and a second `pnpm studio` opens the running one.
+
+It writes the map folder through `reforged-map`, as the `objects:` commands do, and takes turns with the World Editor the same way: nothing is written before a save, a save waits while the World Editor holds unsaved edits, and after a save it offers to reload the map there. An Object definition stays the code's: the Studio shows it read-only, with its file, and "Adopt into code" does what `pnpm objects:adopt` does. The library's guide, [The Studio](https://phmilk.github.io/reforged-ts/docs/next/guides/studio), gives every detail.
+
 ## Compatibility matrix
 
-Which versions of the six library packages, which game Patch and which Toolchain go together. The block is generated at each library release and pasted here by the sync workflow: do not edit it by hand.
+Which versions of the seven library packages, which game Patch and which Toolchain go together. The block is generated at each library release and pasted here by the sync workflow: do not edit it by hand.
 
 <!-- reforged-ts:matrix:start -->
 
@@ -213,7 +220,7 @@ The type-aware rules find each file's program through the nearest `tsconfig.json
 
 ## The library packages
 
-The Template depends on six packages of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts): `reforged-ts` and `reforged-types` (the map's code), `reforged-test` (the Lua test harness), `eslint-plugin-reforged` (the lint rules), `reforged-map` (the map folder reader the build calls to write `src/generated`) and [`reforged-builtins`](https://github.com/phmilk/reforged-ts/tree/master/packages/reforged-builtins) (the Built-in objects of the Patch: their constants, `Units.Footman_hfoo` from `reforged-builtins/units`, and the index `reforged-map` reads for base names). `package.json` declares the six the same way, as caret ranges on the latest released versions, which the Template's sync sets on each library release. They are on the `next` channel, each at a caret range on its latest alpha (`^1.0.0-alpha.N`).
+The Template depends on seven packages of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts): `reforged-ts` and `reforged-types` (the map's code), `reforged-test` (the Lua test harness), `eslint-plugin-reforged` (the lint rules), `reforged-map` (the map folder reader the build calls to write `src/generated`), [`reforged-builtins`](https://github.com/phmilk/reforged-ts/tree/master/packages/reforged-builtins) (the Built-in objects of the Patch: their constants, `Units.Footman_hfoo` from `reforged-builtins/units`, and the index `reforged-map` reads for base names) and [`reforged-studio`](https://github.com/phmilk/reforged-ts/tree/master/packages/reforged-studio) (the Studio `pnpm studio` starts, [below](#the-studio)). `package.json` declares the seven the same way, as caret ranges on the latest released versions, which the Template's sync sets on each library release. They are on the `next` channel, each at a caret range on its latest alpha (`^1.0.0-alpha.N`).
 
 ### The Built-in objects' overloads
 
@@ -232,14 +239,14 @@ During the build phase the library publishes its packages as `1.0.0-alpha.N` und
 To try a change to reforged-ts in the game before any package is published, point the project at a local checkout of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts):
 
 ```sh
-pnpm use:local ../reforged-ts   # build, pack and install the six library packages from the checkout
+pnpm use:local ../reforged-ts   # build, pack and install the seven library packages from the checkout
 pnpm build                      # or pnpm test, pnpm test:map
 pnpm use:local --reset          # back to the registry versions
 ```
 
-`pnpm use:local <path>` runs the checkout's build for the six packages (`eslint-plugin-reforged` included, so `pnpm lint` runs the checkout's rules), packs them into `.local-packages/` (ignored by git) and installs them in place of the registry versions. It works on a fresh clone with no `node_modules`. Rerun it after changing the library to pick up the change.
+`pnpm use:local <path>` runs the checkout's build for the seven packages (`eslint-plugin-reforged` included, so `pnpm lint` runs the checkout's rules), packs them into `.local-packages/` (ignored by git) and installs them in place of the registry versions. It works on a fresh clone with no `node_modules`. Rerun it after changing the library to pick up the change.
 
-Nothing committed changes, in either direction: the committed pnpm hook `.pnpmfile.cjs` swaps the six packages for their tarballs only while `.local-packages/packages.json` exists, and neither command writes the lockfile: `use:local` installs without it (`--no-lockfile`) and `--reset` reinstalls from the committed one (`--frozen-lockfile`). `git status` stays clean after `use:local` and after `--reset`. While the local packages are in use, reinstall with `pnpm use:local` rather than a plain `pnpm install`, which sees no change to the manifests and keeps the tarballs it installed last.
+Nothing committed changes, in either direction: the committed pnpm hook `.pnpmfile.cjs` swaps the seven packages for their tarballs only while `.local-packages/packages.json` exists, and neither command writes the lockfile: `use:local` installs without it (`--no-lockfile`) and `--reset` reinstalls from the committed one (`--frozen-lockfile`). `git status` stays clean after `use:local` and after `--reset`. While the local packages are in use, reinstall with `pnpm use:local` rather than a plain `pnpm install`, which sees no change to the manifests and keeps the tarballs it installed last.
 
 ## Deletable in a generated project
 
