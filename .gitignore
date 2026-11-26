@@ -15,3 +15,7 @@ src/generated/
 # pnpm use:local: the tarballs packed from a local reforged-ts checkout and
 # the list the pnpm hook (.pnpmfile.cjs) reads. `pnpm use:local --reset` removes it.
 .local-packages/
+
+# pnpm studio: the running Studio's address, written while it runs and
+# removed when it stops.
+.reforged-studio.json

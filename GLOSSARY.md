@@ -90,6 +90,10 @@ _Avoid_: map object, custom unit
 Object data as the 3.0 World Editor itself saves it (localizable strings as `TRIGSTR` references into a sorted and commented `war3map.wts`, each field in the file the editor keeps it in, every object in both files, new string numbers above every existing one), which a World Editor save leaves byte for byte.
 _Avoid_: canonical form
 
+**Studio**:
+The Toolchain's local app for editing what code does not express well, one area per thing it edits; today Object data, where it creates, edits and deletes any object of a Map project's map folder. It is not the Object Editor.
+_Avoid_: external editor, object editor, web editor
+
 **Object definition**:
 A type of object declared in a Map project's code rather than authored in an editor: a new Custom object, or a change to a Built-in object the map folder does not already change. It belongs to the code alone, never also to the map folder.
 _Avoid_: code object, compiletime object

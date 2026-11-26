@@ -21,6 +21,7 @@
     "objects:sync": "node scripts/objects.ts sync",
     "objects:adopt": "node scripts/objects.ts adopt",
     "objects:release": "node scripts/objects.ts release",
+    "studio": "node scripts/studio.ts",
     "use:local": "node scripts/use-local.ts",
     "template:detach": "node scripts/detach.ts",
     "lint": "eslint --max-warnings 0 .",
@@ -29,7 +30,7 @@
   },
   "dependencies": {
     "reforged-ts": "^1.0.0-alpha.21",
-    "reforged-types": "^1.0.0-alpha.6"
+    "reforged-types": "^1.0.0-alpha.8"
   },
   "devDependencies": {
     "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",
@@ -44,9 +45,10 @@
     "eslint-plugin-reforged": "^1.0.0-alpha.9",
     "mdx-m3-viewer-th": "5.13.4",
     "prettier": "^3.9.9",
-    "reforged-builtins": "^1.0.0-alpha.7",
-    "reforged-map": "^1.0.0-alpha.7",
-    "reforged-test": "^1.0.0-alpha.5",
+    "reforged-builtins": "^1.0.0-alpha.8",
+    "reforged-map": "^1.0.0-alpha.11",
+    "reforged-studio": "^1.0.0-alpha.9",
+    "reforged-test": "^1.0.0-alpha.6",
     "typescript": "6.0.2",
     "typescript-eslint": "^8.70.1",
     "typescript-to-lua": "^1.37.1",

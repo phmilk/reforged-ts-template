@@ -149,6 +149,23 @@ describe("AGENTS.md", () => {
       expect(objects, text).toContain(text);
   });
 
+  it("says what the Studio does, that an agent leaves it to the author, and names its runtime file (#145)", () => {
+    expect(section(agents, "Commands")).toMatch(/^- `pnpm studio`: /m);
+    const objects = section(agents, "Object definitions");
+    for (const text of [
+      "The Studio",
+      "through `reforged-map`",
+      "takes turns with the World Editor",
+      "never runs `pnpm studio` for the author",
+      "nor edits through its API without being asked",
+      "Object definitions stay the code's",
+    ])
+      expect(objects, text).toContain(text);
+    expect(section(agents, "Layout")).toMatch(
+      /^- `\.reforged-studio\.json`: /m,
+    );
+  });
+
   it("fits in the line cap", () => {
     expect(agents.trimEnd().split("\n").length).toBeLessThanOrEqual(
       AGENTS_MAX_LINES,
@@ -222,6 +239,11 @@ describe("GLOSSARY.md", () => {
     expect(readRepoFile("docs/agents/domain.md")).toContain(
       "**`GLOSSARY.md`** at the repo root",
     );
+  });
+
+  it("carries the Studio (#145)", () => {
+    expect(LIBRARY_TERMS).toContain("Studio");
+    expect(markedBlock(glossary, "terms")).toContain("\n**Studio**:\n");
   });
 
   it("carries the terms of Object definitions (#114)", () => {

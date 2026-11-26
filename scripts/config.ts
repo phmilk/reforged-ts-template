@@ -433,6 +433,14 @@ export function findWorldEditor(
     if (error instanceof AuthorError) return undefined;
     throw error;
   }
+  return worldEditorBeside(game, probe);
+}
+
+/** `World Editor.exe` beside `game`'s executable when it is there and the game does not run through Wine; else undefined. */
+function worldEditorBeside(
+  game: GameLaunch,
+  probe: ExecutableProbe,
+): string | undefined {
   if (game.winePath !== undefined) return undefined;
   // A Windows path (`C:\...`, from WC3_EXECUTABLE or the Battle.net folders), whatever the host.
   const paths = game.executable.includes("\\") ? path.win32 : path;
@@ -464,5 +472,30 @@ export async function loadObjectsConfig(
   return {
     ...resolveConfig(config, root, overrides, version),
     worldEditorExecutable: findWorldEditor(config, root, probe),
+  };
+}
+
+/** A launch configuration that also knows the World Editor's executable: what `pnpm studio` loads. */
+export interface StudioConfig extends LaunchConfig {
+  /** `World Editor.exe` beside the game, as `findWorldEditor` finds it. */
+  worldEditorExecutable: string | undefined;
+}
+
+/**
+ * The configuration of `pnpm studio`: the map folder as every command
+ * resolves it, the game as `pnpm test:map` finds it (`resolveGameLaunch`;
+ * none found is its AuthorError, naming `gameExecutable`), and the World
+ * Editor beside it as the `objects:` commands find it.
+ */
+export async function loadStudioConfig(
+  configPath: string,
+  probe: ExecutableProbe = systemProbe,
+): Promise<StudioConfig> {
+  const { config, root, version } = await importConfigFile(configPath);
+  const game = resolveGameLaunch(config, root, probe);
+  return {
+    ...resolveConfig(config, root, {}, version),
+    game,
+    worldEditorExecutable: worldEditorBeside(game, probe),
   };
 }
