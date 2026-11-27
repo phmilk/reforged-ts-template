@@ -36,16 +36,16 @@ The vocabulary is the glossary's, under "Domain docs" in [`AGENTS.md`](../../../
    - `/implement <n>`, for the first Ticket of the Frontier's `takeable`, other than the one just worked;
    - when the Spec has no open Ticket left once this pull request merges: `pnpm spec:check <spec>`, then, on green, `gh issue close <spec> --comment "..."` ([Closing a Spec](https://github.com/phmilk/reforged-ts/blob/master/docs/agents/issue-tracker.md#claim), ADR 0023). The board comments the same verdict on the Spec once its Tickets are all closed, as a reminder: it closes nothing, so the close is still this step.
 
-   An issue outside a Spec stops after `/clear`. Done when the list holds at most five steps, the first one runnable now.
+   An issue outside a Spec stops after `/clear`. Then read the labels of each issue a kept step names (the Ticket to claim, the Ticket to implement next), where step 1 did not: `gh issue view <n> --json labels --jq '.labels[].name'`. Done when the list holds at most five steps, the first one runnable now, and the labels of each issue it names are read.
 
-3. **Print them.** In the conversation's language, one heading line, `Next step:` for one step and `Next steps:` for several (`Próximo passo:` or `Próximos passos:` in Portuguese), then at most five numbered lines and nothing else, each one naming the skill or command to run with its argument:
+3. **Print them.** In the conversation's language, one heading line, `Next step:` for one step and `Next steps:` for several (`Próximo passo:` or `Próximos passos:` in Portuguese), then at most five numbered lines and nothing else, each one naming the skill or command to run with its argument. A line that names an issue labelled `probe` (its Claim, its `/implement`) ends with a note in brackets, in the conversation's language: its work includes a Probe run, so it needs someone within reach for the Battle.net login ([The `probe` label](https://github.com/phmilk/reforged-ts/blob/master/docs/agents/triage-labels.md#the-probe-label)).
 
    ```text
    Next steps:
    1. /code-review origin/master
    2. /ship-branch
    3. /clear
-   4. /implement 744
+   4. /implement 744 (Probe run: stay within reach for the Battle.net login)
    ```
 
    Done when the list is printed.

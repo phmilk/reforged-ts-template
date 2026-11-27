@@ -7,29 +7,31 @@ description: Run a split Spec from its Frontier to its close, each Ticket claime
 
 An Agent skill both Board repositories share, which invokes `/tdd`, `/code-review`, `/diagnosing-bugs` and `/ship-branch` by name, copies no steps of an Upstream skill and records no `upstream`, so it is not a Skill variant ([Skill variants](https://github.com/phmilk/reforged-ts/blob/master/docs/agents/development-loop.md#skill-variants)). `/ship-spec <spec>` takes a split Spec of the library and runs it to its close: it claims each Ticket of the Frontier the login may take as its work starts, has an implementer Subagent work it in its own worktree and ship it, starts what each merge unblocked, and closes the Spec on a green coverage check. Each pull request merges by auto-merge behind the required checks, after `/code-review` and its fixes ([ADR 0021](https://github.com/phmilk/reforged-ts/blob/master/docs/adr/0021-an-agent-merges-its-own-pull-request-behind-the-required-checks-and-a-code-review.md)). `implement`, `implement-spec` and `to-tickets` (which `split-spec` replaces) are human-only, so for what it takes from them it holds steps of its own, below.
 
-The vocabulary is the glossary's, under "Domain docs" in [`AGENTS.md`](../../../AGENTS.md#domain-docs) (Spec, Ticket, Frontier, Claim, Coverage table, Subagent). The protocol is the [Claim section](https://github.com/phmilk/reforged-ts/blob/master/docs/agents/issue-tracker.md#claim) of the library's tracker doc, the Subagent rules are the development loop doc's [Subagents](https://github.com/phmilk/reforged-ts/blob/master/docs/agents/development-loop.md#subagents), and both bind every step below. Run it from a clone of the library: `pnpm spec:frontier` and `pnpm spec:check` live there. Both are read through `--json`, by their fields, never their text: that JSON shape is a contract, so a change to it changes this skill in the same pull request (the library README's [Commands](https://github.com/phmilk/reforged-ts/blob/master/README.md#commands)). A Ticket of the Template is worked in a checkout of the Template beside that clone, as [`template-tickets.md`](template-tickets.md) says; read it before the first Template Ticket of a run.
+The vocabulary is the glossary's, under "Domain docs" in [`AGENTS.md`](../../../AGENTS.md#domain-docs) (Spec, Ticket, Probe Ticket, Frontier, Claim, Coverage table, Subagent). The protocol is the [Claim section](https://github.com/phmilk/reforged-ts/blob/master/docs/agents/issue-tracker.md#claim) of the library's tracker doc, the Subagent rules are the development loop doc's [Subagents](https://github.com/phmilk/reforged-ts/blob/master/docs/agents/development-loop.md#subagents), and both bind every step below. Run it from a clone of the library: `pnpm spec:frontier` and `pnpm spec:check` live there. Both are read through `--json`, by their fields, never their text: that JSON shape is a contract, so a change to it changes this skill in the same pull request (the library README's [Commands](https://github.com/phmilk/reforged-ts/blob/master/README.md#commands)). A Ticket of the Template is worked in a checkout of the Template beside that clone, as [`template-tickets.md`](template-tickets.md) says; read it before the first Template Ticket of a run.
 
 ## Pointers only
 
 Your own context holds pointers: the Spec's number, its Tickets' numbers, each one's worktree, branch, implementer Subagent id and pull request, and the run's ledger (below). The Spec's body and a Ticket's criteria are read by whoever works on them, never carried here. Each implementer starts from its Ticket, with the prompt of [`implementer.md`](implementer.md).
 
-The **ledger** is the end comment in the making: one line per merged pull request, per stop with its reason, and the coverage verdict. Add to it as each event happens.
+The **ledger** is the end comment in the making: one line per merged pull request, per stop with its reason, per Probe Ticket left out, and the coverage verdict. Add to it as each event happens.
 
 ## Steps
 
-1. **Check the Spec.** Read `gh issue view <spec> --json state,labels,body` and its sub-issues, `gh api repos/phmilk/reforged-ts/issues/<spec>/sub_issues --paginate`. The Spec is labelled `spec`, open, has at least one sub-issue, and its body has a `## Coverage table` section. When any of these fails, stop and say so: the issue is not a split Spec, and its split is `/split-spec <spec>`, a human's decision with its quiz. Never split it yourself. Done when the four hold, or you stopped naming `/split-spec <spec>`.
+1. **Check the Spec.** Read `gh issue view <spec> --json state,labels,body` and its sub-issues, `gh api repos/phmilk/reforged-ts/issues/<spec>/sub_issues --paginate`. The Spec is labelled `spec`, open, has at least one sub-issue, and its body has a `## Coverage table` section. When any of these fails, stop and say so: the issue is not a split Spec, and its split is `/split-spec <spec>`, a human's decision with its quiz. Never split it yourself. Keep the numbers of the open sub-issues labelled `probe`, the Spec's Probe Tickets: when the run takes them, one is open and the machine has the game, check the Battle.net login now ([Probe Tickets](#probe-tickets)). Done when the four hold and the login is checked where the run needs it, or you stopped naming `/split-spec <spec>`.
 2. **Clear a stale lock.** Remove the check lock only when it is stale ([The check lock](#the-check-lock)): a live one is another run's, on another Spec, and stays. Done when no stale lock is left.
 3. **Read the Frontier.** `pnpm spec:frontier <spec> --json`. It prints one JSON object for the token's login (`login`) with three lists: `takeable`, the Tickets it may take now; `held`, those it holds; and `heldByOthers`, those other logins hold. Each Ticket carries its `repository`, `number`, `title`, `assignees` and `pullRequests`, its open pull requests, each a `repository` and a `number`. Read the Frontier only through it, so that this skill, the skill-target check and `next-step` agree. On a non-zero exit stdout holds no JSON object and stderr says why: stop the run and say so. Done when you hold the three lists.
 4. **Resume what the login holds.** For each Ticket of `held`:
    - **With an open pull request** (its `pullRequests` not empty): carry it on from that pull request, never restarting it: watch it as step 7 does. When auto-merge is off and its body says what waits for a human, it is a stop already made: put it in the ledger.
    - **Without one:** read the Ticket's last "Stopping" comment and what came after it. When a human answered what was pending, start it as step 5 does, from its branch when one exists (`git branch --list '*/<ticket>-*'`, in the Template's checkout for a Template Ticket) rather than from the default branch. A Template Ticket stopped for a library version resumes as [Resuming it](template-tickets.md#a-library-version-not-yet-published) says. Otherwise its stop stands: put it in the ledger.
 
+   A Probe Ticket of `held` without an open pull request, in a run asked for no Probe Tickets, is not resumed: its Claim stays as it is, and it goes in the ledger as left out ([Probe Tickets](#probe-tickets)). One with an open pull request is carried on as any other.
+
    Done when each held Ticket is in flight or in the ledger.
 
-5. **Start the takeable Tickets**, as many as [Three in flight](#three-in-flight) allows (in flight: from its Claim to its merge or its stop). Take them in the order of `takeable`; a Probe Ticket waits while another Probe Ticket is in flight. A Ticket of the Template takes the differences of [`template-tickets.md`](template-tickets.md) at each sub-step. For each one:
-   1. **Read it**, `gh issue view <ticket> --json title,body`, for the stops [Where a human is needed](#where-a-human-is-needed) names.
+5. **Start the takeable Tickets**, as many as [Three in flight](#three-in-flight) allows (in flight: from its Claim to its merge or its stop). Take them in the order of `takeable`; a Probe Ticket, told by its label `probe` and never by its body ([Probe Tickets](#probe-tickets)), waits while another Probe Ticket is in flight. A Ticket of the Template takes the differences of [`template-tickets.md`](template-tickets.md) at each sub-step. For each one:
+   1. **Read it**, `gh issue view <ticket> --json title,body,labels`, for its labels and the stops [Where a human is needed](#where-a-human-is-needed) names. A Probe Ticket of a run asked for no Probe Tickets ends here: no Claim, no worktree and no "Stopping" comment. Put it in the ledger once, as left out, and carry on with the others.
    2. **Claim it with its Spec, in one command**, as its work starts and never ahead: `gh issue edit <ticket> <spec> --add-assignee @me`. Read it back: a second login on the Ticket means it was taken meanwhile: withdraw (`gh issue edit <ticket> <spec> --remove-assignee @me`, the Spec only when you hold no other Ticket of it), comment why, and skip it.
-   3. **A stop before the work:** a Ticket that needs a Probe run on a machine without the game, or a Template Ticket that needs a library version not yet published ([A library version not yet published](template-tickets.md#a-library-version-not-yet-published)), gets its "Stopping" comment now ([Stopping](#stopping)) and no worktree.
+   3. **A stop before the work:** a Probe Ticket on a machine without the game, or a Template Ticket that needs a library version not yet published ([A library version not yet published](template-tickets.md#a-library-version-not-yet-published)), gets its "Stopping" comment now ([Stopping](#stopping)) and no worktree.
    4. **Make its worktree** from `origin/master` (a Template Ticket's, from the Template's `origin/main`: [Its worktree](template-tickets.md#its-worktree)), then check its base:
 
       ```sh
@@ -46,7 +48,7 @@ The **ledger** is the end comment in the making: one line per merged pull reques
 
 6. **Hear each implementer's report.** It ends one of two ways:
    - **Shipped:** its pull request is open, with auto-merge on. Watch it (step 7).
-   - **Stopped:** it names why (an ambiguous criterion with its options, a red `pnpm check` after one fix, a conflict it could not resolve by intent, something only a human can check). Make the stop ([Stopping](#stopping)).
+   - **Stopped:** it names why (an ambiguous criterion with its options, a red `pnpm check` after one fix, a conflict it could not resolve by intent, a Probe run that ended `not-started` at the Battle.net login, something only a human can check). Make the stop ([Stopping](#stopping)).
 
    Before relaying anything, check the real state: the worktree's commits, `gh pr view <pr> --json state,isDraft,autoMergeRequest`. Done when each report is matched to the state it claims.
 
@@ -58,10 +60,10 @@ The **ledger** is the end comment in the making: one line per merged pull reques
 
    Done when the pull request is merged or its Ticket stopped.
 
-8. **Loop.** After a stop, start no new Ticket: every other Ticket in flight runs to its own end (merged or stopped), then go to step 9. Otherwise, after each merge, step 3 again. When the Frontier's `takeable` is empty, nothing is in flight, and Tickets remain open: those of `heldByOthers`, named with their `assignees` in the ledger, are the run's stop. Done when nothing is in flight and the Frontier holds nothing this run will start.
-9. **Close, or leave the close.** Read the Spec's open sub-issues.
+8. **Loop.** After a stop, start no new Ticket: every other Ticket in flight runs to its own end (merged or stopped), then go to step 9. Otherwise, after each merge, step 3 again. When the Frontier's `takeable` is empty, nothing is in flight, and Tickets remain open: those of `heldByOthers`, named with their `assignees` in the ledger, are the run's stop. A `takeable` that holds only Probe Tickets left out counts as empty: they are no stop, and the run ends with them in its end comment. Done when nothing is in flight and the Frontier holds nothing this run will start.
+9. **Close, or leave the close.** Read the Spec's open sub-issues, with their labels. In a run asked for no Probe Tickets, put in the ledger as left out each open one labelled `probe` that the run did not work and no other login holds, a blocked one that was never takeable included.
    - **No Ticket open:** run `pnpm spec:check <spec> --json`. It prints one JSON object: the `spec`, whether it is `delivered`, the `counts` of `items`, `rows` and `tickets`, and the `gaps`, each with its `kind`, its fields and the `sentence` the text form prints for it. On green (`delivered` true, exit 0), close the Spec with the end comment, as the Claim section's "Closing a Spec" does: `gh issue close <spec> --comment "$(cat <file>)"`. On red (`delivered` false, exit 1), leave the Spec open and post the end comment (`gh issue comment <spec> --body-file <file>`) with each gap's `sentence`: a gap goes back to a human and `/split-spec`, so create no Ticket. With no JSON object on stdout, the check could not run or read the state (stderr says why, and `pnpm` exits 1 for it too): leave the Spec open and post the end comment with that reason.
-   - **Any Ticket open** (held by another login, stopped, or not started after a stop): post the end comment on the Spec and leave it open; whoever merges the last Ticket closes it ([Closing a Spec](https://github.com/phmilk/reforged-ts/blob/master/docs/agents/issue-tracker.md#claim)).
+   - **Any Ticket open** (held by another login, stopped, a Probe Ticket left out, or not started after a stop): post the end comment on the Spec and leave it open; whoever merges the last Ticket closes it ([Closing a Spec](https://github.com/phmilk/reforged-ts/blob/master/docs/agents/issue-tracker.md#claim)).
 
    Then remove every worktree of the run that is left ([Removing a worktree](#removing-a-worktree)), and the check lock when it is stale. Done when the end comment is on the Spec and printed in the chat, word for word.
 
@@ -80,6 +82,10 @@ Written to a file, posted on the Spec as step 9 says, and printed in the chat, f
 
 - #<ticket> <title>: @<assignee>, or no assignee
 
+### Probe Tickets left out
+
+- #<ticket> <title>: blocks #<ticket>, #<ticket>, or nothing
+
 ### Stops
 
 - #<ticket>: <the reason>, <where its branch and pull request stand>
@@ -95,9 +101,18 @@ Each section says "None." when empty. A Template Ticket or pull request is writt
 
 The repository's rules name where a human is needed; there, the Ticket stops ([Stopping](#stopping)):
 
-- **A Probe run** ([`probe/README.md`](https://github.com/phmilk/reforged-ts/blob/master/probe/README.md#what-stays-for-a-human)): a Ticket whose fact only the game can settle needs native Windows with the game installed. Without it, the Ticket stops before its work (step 5). With it, a Probe Ticket runs one at a time: no other Probe Ticket is in flight while one is, since the game runs one Probe run at once.
+- **A Probe run** ([`probe/README.md`](https://github.com/phmilk/reforged-ts/blob/master/probe/README.md#what-stays-for-a-human)): a Probe Ticket needs native Windows with the game installed, and a human within reach for the Battle.net login ([Probe Tickets](#probe-tickets)). Without the game, the Ticket stops before its work (step 5). With it, a Probe Ticket runs one at a time: no other Probe Ticket is in flight while one is, since the game runs one Probe run at once.
 - **A screen check or multiplayer:** the implementer works the Ticket to its pull request, and `/ship-branch` leaves auto-merge off with the check that waits for a human in its body; then the Ticket stops.
 - **An ambiguous criterion:** a criterion the Ticket, the Spec, the docs and the ADRs leave open to more than one reading that is not a Judgement call. The implementer stops and reports the options; the Ticket stops with them as the question, and nothing is guessed.
+
+## Probe Tickets
+
+A **Probe Ticket** is a Ticket labelled `probe`: its work includes a Probe run, so a human may have to log in to Battle.net while it is worked ([The `probe` label](https://github.com/phmilk/reforged-ts/blob/master/docs/agents/triage-labels.md#the-probe-label)). Tell one by its label, never by its body: a Ticket that speaks of the game without the label is not one.
+
+- **The default is to take them.** They are left out only when the prompt asks for it ("no Probe Tickets").
+- **Asked for no Probe Tickets:** the run takes no Claim on one, creates no worktree and writes no "Stopping" comment (step 5), and carries on with the others; one the login already holds, with no open pull request, keeps its Claim and is not resumed (step 4). Its end comment lists every Probe Ticket the run left out, the never takeable ones among them (step 9), each with the open Tickets it blocks, read from its `dependencies/blocking` and followed through each open Ticket they name: `gh api repos/<owner>/<repo>/issues/<ticket>/dependencies/blocking --jq '.[].number'`.
+- **Otherwise, the login is checked first.** At step 1, when the Spec has an open Probe Ticket and the machine has the game, run `pnpm probe:run hello` ([Running a Probe run](https://github.com/phmilk/reforged-ts/blob/master/probe/README.md#running-a-probe-run)) while the Collaborator is still there: an expired Battle.net login shows at the start, and not hours in with nobody to log in. When it ends any other way than `finished`, stop the run and say so. On a machine without the game there is nothing to check: each Probe Ticket stops before its work (step 5).
+- **A fact met mid-work.** An implementer that finds, in a Ticket without the label, a fact only the game can settle adds `probe` to the Ticket before anything else: it is a Probe Ticket from then on. Then it runs the Probe, by default. In a run asked for no Probe Tickets, or on a machine without the game, it does not: its pull request ships with auto-merge off and the fact as an Open decision, and the Ticket stops (step 7). Such a fact is never a Judgement call. [`implementer.md`](implementer.md) carries the rule to each implementer, and `/ship-branch` holds it at the pull request.
 
 ## Stopping
 
@@ -107,10 +122,8 @@ A stop is per Ticket. It leaves the Claim protocol's "Stopping" comment on the T
 
 Every removal of a worktree of the run, at a merge, a stop or the run's end, goes through its repository's checkout (the Template's for a Template Ticket):
 
-1. `git worktree remove <path>`. When it succeeds, go to step 3.
-2. When it fails, read `git worktree list`, whatever the error said:
-   - **It no longer names `<path>`:** the remove unregistered the worktree and failed to delete its folder, as it did on Windows for every worktree of the first run ("Directory not empty", with `core.longpaths` set). `rm -rf <path>`.
-   - **It still names `<path>`,** a dirty worktree among the causes: leave the folder and the branch as they are, since uncommitted work may be in it. Put the path and the error in the ledger, and end this removal here.
+1. Remove the worktree by the development loop doc's recipe ([Removing a worktree](https://github.com/phmilk/reforged-ts/blob/master/docs/agents/development-loop.md#removing-a-worktree)), which says what to run, what to do when the remove fails and why it fails on Windows.
+2. When the recipe leaves the worktree in place, its folder and its branch stay: put the path and the error in the ledger, and end this removal here.
 3. After a merge only, `git branch -D <branch>`. Then remove the check lock when its holder names this Ticket ([The check lock](#the-check-lock)).
 
 ## A red CI
@@ -138,7 +151,7 @@ echo "<spec> <ticket>" > "$lock/holder"                                         
 rm -rf "$lock"                                                                                # release it
 ```
 
-The wait is a series of short tries, each its own foreground command within the Bash tool's default timeout of 120 s: a try that ends on its timeout (exit 124) took nothing, and is run again. Another worktree's check holds the lock for many minutes, and a single wait that long outlasts the tool's timeout: in the [first run](https://github.com/phmilk/reforged-ts/issues/814), one was moved to the background after about three minutes, and its implementer ended its turn waiting on it, idle until a message resumed it. Another run of `ship-spec`, on another Spec in the same clone, shares the lock, so a lock is **stale** only when one of these holds, and only then removed (`rm -rf "$lock"`):
+The wait is a series of short tries, each its own foreground command within the Bash tool's default timeout of 120 s: a try that ends on its timeout (exit 124) took nothing, and is run again. Another worktree's check holds the lock for many minutes, and a single wait that long does not stay in the foreground: the harness moves a Subagent's foreground command to the background after 120 s without a `timeout` on the tool call and after 180 s with `timeout: 600000`, as measured on 2026-11-26 with Claude Code 2.1.332 ([When the harness moves a foreground command to the background](https://github.com/phmilk/reforged-ts/blob/master/docs/agents/development-loop.md#when-the-harness-moves-a-foreground-command-to-the-background)). A try of 100 s fits under both. In the [first run](https://github.com/phmilk/reforged-ts/issues/814), one long wait was moved so, and its implementer ended its turn waiting on it, idle until a message resumed it. Another run of `ship-spec`, on another Spec in the same clone, shares the lock, so a lock is **stale** only when one of these holds, and only then removed (`rm -rf "$lock"`):
 
 - its holder names this run's Spec and a Ticket of it not in flight now (at step 2, none is): remove it when you remove that Ticket's worktree, or at step 2;
 - its folder is older than the longest check: the `check` script's commands at ten minutes each, with a margin, two hours: `find "$lock" -maxdepth 0 -mmin +120` prints it. A lock with no holder file yet, between its `mkdir` and its `echo`, is judged by the folder's age alone.

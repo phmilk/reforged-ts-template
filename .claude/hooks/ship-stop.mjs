@@ -7,17 +7,25 @@
 // and the Agent told to run /ship-branch or say why it stops. The stop after
 // that passes, since its stop hook is already active, so a false alarm costs
 // one look and never a loop; and so does any stop when the transcript, `git`
-// or `gh` cannot be read, so a network failure never traps a session.
+// or `gh` cannot be read, so a network failure never traps a session. A stop
+// with work in flight (a running Subagent or background command, or a wakeup
+// the session scheduled) passes before any read, since the work has not ended
+// (#953): the stop after it finishes meets the check again. A branch whose
+// pull request is merged with the branch's last commit as its head passes
+// too: a squash leaves its commits ahead of the remote default, and the work
+// is shipped all the same (#971).
 //
 // The decision is verdict(), a pure function from the hook input and three
 // facts: whether an implement (/implement or /implement-spec, typed or a
 // Skill tool call) ran after the last /ship-branch, read from the transcript by
 // implementPending(), a pure function over its lines; how many commits the
 // branch has ahead of the remote default, read with `git`; and the state of
-// the branch's open pull request, read with `gh` (pullRequestStateOf()). run()
-// reads the facts in that order, each only when the ones before it call for
-// it, through readers the script gives it; the rest is those readers and the
-// printing of the output after reading stdin. The hook never fails a stop on
+// the branch's pull request, read with `gh` and, to tell a merged one that
+// shipped the branch as it stands, the branch's last commit
+// (pullRequestStateOf()). run() reads the facts in that order, each only
+// when the ones before it call for it, through readers the script gives it;
+// the rest is those readers and the printing of the output after reading
+// stdin. The hook never fails a stop on
 // its own error and always exits 0.
 //
 // Dependency-free: it runs on the Node that runs the session, before any
@@ -35,13 +43,18 @@ import { fileURLToPath } from "node:url";
  * @property {boolean} [stop_hook_active]
  * @property {string} [transcript_path]
  * @property {string} [cwd]
+ * @property {readonly unknown[]} [background_tasks] The running Subagents
+ *   and background commands.
+ * @property {readonly unknown[]} [session_crons] The wakeups the session
+ *   scheduled.
  */
 
 /**
- * The state of the branch's open pull request: none, a draft, open with
- * auto-merge on, or open without it.
+ * The state of the branch's pull request: none, a draft, open with
+ * auto-merge on, open without it, or merged with the branch's last commit
+ * as its head.
  *
- * @typedef {"none" | "draft" | "auto-merge" | "open"} PullRequestState
+ * @typedef {"none" | "draft" | "auto-merge" | "open" | "merged"} PullRequestState
  */
 
 /**
@@ -57,13 +70,15 @@ import { fileURLToPath } from "node:url";
 
 /**
  * What run() reads its facts with: the transcript's lines, the commits
- * ahead, and `gh pr list`'s answer for the branch. Each throws when it
- * cannot read.
+ * ahead, `gh pr list`'s answer for the branch, and the branch's last
+ * commit. Each throws when it cannot read.
  *
  * @typedef {object} Readers
  * @property {() => readonly string[]} transcript
  * @property {() => number} ahead
  * @property {() => string} pullRequest
+ * @property {() => string} lastCommit The hash of the branch's last
+ *   commit, read with the pull request.
  */
 
 /**
@@ -157,41 +172,64 @@ export function implementPending(lines) {
 }
 
 /**
- * The state of the branch's open pull request from the answer of
- * `gh pr list --head <branch> --state open --json isDraft,autoMergeRequest`;
- * throws on any other answer.
+ * The state of the branch's pull request from the answer of
+ * `gh pr list --head <branch> --state all --json
+ * state,isDraft,autoMergeRequest,headRefOid`, given `lastCommit`, the hash
+ * of the branch's last commit: the open one's when there is one; else
+ * merged, when one was merged with `lastCommit` as its head, so that
+ * commits made after a merge are still unshipped; else none, a closed one
+ * included. Throws on any other answer.
  *
  * @param {string} answer
+ * @param {string} lastCommit
  * @returns {PullRequestState}
  */
-export function pullRequestStateOf(answer) {
+export function pullRequestStateOf(answer, lastCommit) {
   /** @type {unknown} */
   const list = JSON.parse(answer);
   if (!Array.isArray(list)) throw new Error("gh pr list: not a list");
-  if (list.length === 0) return "none";
-  /** @type {unknown} */
-  const first = list[0];
-  if (
-    first === null ||
-    typeof first !== "object" ||
-    !("isDraft" in first) ||
-    !("autoMergeRequest" in first)
-  ) {
-    throw new Error("gh pr list: not a pull request");
+  const pullRequests = list.map((/** @type {unknown} */ one) => {
+    if (
+      one === null ||
+      typeof one !== "object" ||
+      !("state" in one) ||
+      !("isDraft" in one) ||
+      !("autoMergeRequest" in one) ||
+      !("headRefOid" in one)
+    ) {
+      throw new Error("gh pr list: not a pull request");
+    }
+    return one;
+  });
+  const open = pullRequests.find(({ state }) => state === "OPEN");
+  if (open !== undefined) {
+    if (open.isDraft === true) return "draft";
+    return open.autoMergeRequest === null ? "open" : "auto-merge";
   }
-  if (first.isDraft === true) return "draft";
-  return first.autoMergeRequest === null ? "open" : "auto-merge";
+  return pullRequests.some(
+    ({ state, headRefOid }) => state === "MERGED" && headRefOid === lastCommit,
+  )
+    ? "merged"
+    : "none";
 }
 
 /**
  * Whether the check looks at a hook input at all: a Stop whose stop hook is
- * not already active.
+ * not already active, with no work in flight. A Stop that lists a running
+ * Subagent or background command, or a wakeup the session scheduled, is not
+ * the end of the work: the Stop after that work finishes meets the check
+ * again (#953).
  *
  * @param {HookInput} input
  * @returns {boolean}
  */
 function applies(input) {
-  return input.hook_event_name === "Stop" && input.stop_hook_active !== true;
+  return (
+    input.hook_event_name === "Stop" &&
+    input.stop_hook_active !== true &&
+    (input.background_tasks ?? []).length === 0 &&
+    (input.session_crons ?? []).length === 0
+  );
 }
 
 /**
@@ -237,7 +275,10 @@ export function run(input, read) {
     if (!facts.pending) return decide();
     facts.ahead = read.ahead();
     if (facts.ahead <= 0) return decide();
-    facts.pullRequest = pullRequestStateOf(read.pullRequest());
+    facts.pullRequest = pullRequestStateOf(
+      read.pullRequest(),
+      read.lastCommit(),
+    );
   } catch {
     return { verdict: "pass" };
   }
@@ -323,14 +364,15 @@ function readersOf(input) {
           "--head",
           branch,
           "--state",
-          "open",
+          "all",
           "--json",
-          "isDraft,autoMergeRequest",
+          "state,isDraft,autoMergeRequest,headRefOid",
         ],
         cwd,
         GH_TIMEOUT_MS,
       );
     },
+    lastCommit: () => git("rev-parse", "HEAD"),
   };
 }
 

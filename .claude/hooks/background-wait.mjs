@@ -48,7 +48,7 @@ import { fileURLToPath } from "node:url";
  */
 
 const FOREGROUND =
-  "A Subagent does not start background commands (.claude/hooks/background-wait.mjs): the notice that one ended may never reach it. Run this command in the foreground instead (no run_in_background), with a timeout of at most 600000 ms (ten minutes), or split it into steps that each fit in ten minutes.";
+  "A Subagent does not start background commands (.claude/hooks/background-wait.mjs): the notice that one ended may never reach it. Run this command in the foreground instead (no run_in_background), with a timeout of at most 600000 ms (ten minutes), or split it into steps that each fit in ten minutes. The harness moves a Subagent's foreground command to the background all the same, once it has run 180 s with that timeout and 120 s without one (measured: https://github.com/phmilk/reforged-ts/blob/master/docs/agents/development-loop.md#when-the-harness-moves-a-foreground-command-to-the-background): the command goes on there, so keep your turn and read its output file with short foreground commands until it ends.";
 
 // A reply that says it waits on background work: phrases of waiting, in
 // Portuguese and English, never a bare "segundo plano", "background" or
