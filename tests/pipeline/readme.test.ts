@@ -29,7 +29,7 @@ describe("README.md", () => {
     expect(commands.filter((block) => block.includes("@next"))).toEqual([]);
   });
 
-  it("puts no alpha under the `next` dist-tag outside the synced matrix", () => {
+  it("puts no alpha under the `next` dist-tag, nor asks `@next` for one, outside the synced matrix", () => {
     const { from, to } = locateBlock(readme, "matrix");
     const sentences = (readme.slice(0, from) + readme.slice(to)).split(
       /(?<=\.)\s/,
@@ -38,7 +38,8 @@ describe("README.md", () => {
       sentences.filter(
         (sentence) =>
           sentence.includes("alpha") &&
-          /`next` (?:dist-tag|channel)/.test(sentence),
+          (/`next` (?:dist-tag|channel)/.test(sentence) ||
+            sentence.includes("`@next`")),
       ),
     ).toEqual([]);
   });
