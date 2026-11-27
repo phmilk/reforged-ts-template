@@ -300,6 +300,29 @@ describe("GLOSSARY.md", () => {
     }
   });
 
+  it("carries the terms of a map's tests, but Test control and Shipped stub (#153)", () => {
+    const block = markedBlock(glossary, "terms");
+    for (const term of [
+      "Test game",
+      "Stub",
+      "Game action",
+      "Event dispatch",
+      "Firing context",
+      "Dispatching Native",
+      "Game clock",
+      "Recorded call",
+      "Spy",
+      "Caught error",
+    ]) {
+      expect(LIBRARY_TERMS, term).toContain(term);
+      expect(block, term).toContain(`\n**${term}**:\n`);
+    }
+    for (const term of ["Test control", "Shipped stub"]) {
+      expect(LIBRARY_TERMS, term).not.toContain(term);
+      expect(block, term).not.toContain(`\n**${term}**:\n`);
+    }
+  });
+
   it("holds the library terms between the terms markers, then Your map's terms", () => {
     const block = markedBlock(glossary, "terms");
     // The sync writes them in the library file's order, which may change.

@@ -19,6 +19,14 @@ describe("README.md", () => {
     expect(markedBlock(readme, "matrix").trim()).not.toBe("");
   });
 
+  it("links the guide to the map's tests and names no stub file of its own (#153)", () => {
+    expect(readme).toContain(
+      "(https://phmilk.github.io/reforged-ts/docs/next/guides/testing-your-map)",
+    );
+    for (const text of ["tests/stubs", "stubs.d.ts", "__stub_"])
+      expect(readme, text).not.toContain(text);
+  });
+
   it("holds the llms.txt link between the docs markers", () => {
     expect(markedBlock(readme, "docs")).toMatch(
       /\]\(https:\/\/\S+\/llms\.txt\)/,

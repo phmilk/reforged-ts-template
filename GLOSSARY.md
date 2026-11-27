@@ -114,6 +114,46 @@ _Avoid_: import, convert, export
 The reverse of an Object adoption: an object that belongs to an Object definition goes back to the map folder as the code last defined it, and leaves the code and the Object manifest.
 _Avoid_: eject, release (a library release is something else)
 
+**Test game**:
+The game one test of a Map project runs in: a fresh Lua state with the **Shipped stubs** and the map's script loaded, started by the test. One Test game per test is the isolation rule.
+_Avoid_: test world, sandbox, game state (alone)
+
+**Stub**:
+The function that answers for a Native in a **Test game**.
+_Avoid_: mock, fake, map-specific stub (a Stub a test defines)
+
+**Game action**:
+An action of the test API that says what happens in the game (`game.kill`, `game.chat`): it makes the **Event dispatch** the game would make and writes the state its name states.
+_Avoid_: simulation, emit, fire (alone, which is `game.fire`, the escape hatch for the events no Game action covers)
+
+**Event dispatch**:
+Delivering one event to every Trigger registered for it, as the game would.
+_Avoid_: firing (alone, which runs one Trigger), emit, broadcast
+
+**Firing context**:
+The answers of the response Natives (`GetTriggerUnit`, `GetKillingUnit`) for the length of one firing.
+_Avoid_: event payload (what an Event descriptor reads from it), event data, context (alone)
+
+**Dispatching Native**:
+A Native whose **Stub** makes its **Event dispatch** inside the call (`KillUnit`), because a Probe showed that the game fires that event synchronously.
+_Avoid_: firing Native, event Native
+
+**Game clock**:
+The game time of a **Test game**, which only the test moves. Not `os.clock`, the client's wall clock, and not the `gametime` System behind `getElapsedTime`.
+_Avoid_: fake timers, scheduler, clock (alone)
+
+**Recorded call**:
+A call of a Native, kept by its **Stub** with its arguments, which a test reads through `expect(Native)` or `calls`.
+_Avoid_: mock call, invocation, call log (the library's own tests' list of lines, `stubCalls()`)
+
+**Spy**:
+A function made by `fn()`, which keeps its own calls.
+_Avoid_: mock (nothing here replaces behaviour), fake, stub (a Stub answers for a Native)
+
+**Caught error**:
+An error the library caught from a Map project's callback and reported. A test **expects** it; one is _expected_ or _unexpected_.
+_Avoid_: reported error (reads as `Reforged.debug.report()`), failure (the library's word for the report's row, `CallbackFailure`)
+
 <!-- reforged-ts:terms:end -->
 
 ## Your map's terms
