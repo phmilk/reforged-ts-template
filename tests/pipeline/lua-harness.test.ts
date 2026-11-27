@@ -177,8 +177,13 @@ describe("pnpm test: the Lua harness", () => {
       "tests/lua/spawn.test.ts spawn fails on a Native no stub defines",
     );
     expect(unstubbed?.status).toBe("failed");
-    expect(unstubbed?.failureMessages.join("\n")).toContain(
-      "Native GetRectCenterY is not stubbed",
+    // reforged-test 1.0.0-alpha.13 names the Native as "Native X is not
+    // stubbed", and later versions as "X is a Native reforged-test does not
+    // stub: give it an answer with stubNative(…)" (phmilk/reforged-ts#990):
+    // the library's Template gate installs the next version, this
+    // repository the published one (#163).
+    expect(unstubbed?.failureMessages.join("\n")).toMatch(
+      /Native GetRectCenterY is not stubbed|GetRectCenterY is a Native reforged-test does not stub: give it an answer with stubNative\("GetRectCenterY"/,
     );
     expect(run.status).toBe(1);
     // The generated folder was written by the run itself.
