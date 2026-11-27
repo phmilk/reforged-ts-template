@@ -27,12 +27,11 @@ export default defineConfig({
         },
       },
     ],
-    // The Lua tests, the sources and the stubs are not in vitest's module
-    // graph: a change to one of them reruns the harness spec (watch mode).
+    // The Lua tests and the sources are not in vitest's module graph: a
+    // change to one of them reruns the harness spec (watch mode).
     watchTriggerPatterns: [
       {
-        pattern:
-          /[\\/](?:src|tests[\\/]lua|tests[\\/]stubs)[\\/].+\.(?:ts|lua)$/,
+        pattern: /[\\/](?:src|tests[\\/]lua)[\\/].+\.(?:ts|lua)$/,
         testsToRun: () => "tests/harness/lua.spec.ts",
       },
     ],

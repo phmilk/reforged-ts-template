@@ -42,9 +42,6 @@
   // on the other ignored files (the git-ignored build output included).
   // Prettier cannot format Lua: saving a Lua file leaves it as written.
   "Lua.runtime.version": "Lua 5.3",
-  // The map's stubs in tests/stubs call __stub_record, which reforged-test's
-  // stubs/base.lua defines and the harness loads first.
-  "Lua.diagnostics.globals": ["__stub_record"],
   "Lua.workspace.ignoreDir": [".vscode", "*.w3m", "*.w3x"],
   "Lua.diagnostics.ignoredFiles": "Disable",
   "[lua]": { "editor.formatOnSave": false }

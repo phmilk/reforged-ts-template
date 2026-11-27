@@ -2,9 +2,10 @@
   // The Lua tests: typescript-to-lua compiles src and tests/lua together, one
   // Lua module per file (no bundle), into ../../dist-test, where the
   // reforged-test glue runs them on Lua 5.3 (tests/harness). The default build
-  // mode copies the packages the code imports (reforged-ts, reforged-test/lua)
+  // mode copies the packages the code imports (reforged-ts, reforged-test/map)
   // into lua_modules. Language settings: ../../tsconfig.base.json, the same
-  // as the map's compile.
+  // as the map's compile. No "types" of its own: the tests import what they
+  // need from reforged-test/map.
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "../..",

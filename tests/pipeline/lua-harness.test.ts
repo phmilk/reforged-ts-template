@@ -55,7 +55,7 @@ function runLuaProject(project: string): {
 }
 
 describe("pnpm test: the Lua harness", () => {
-  it("runs map code on Lua 5.3 with the editor-globals stub and the map-specific stubs, one vitest test per it", () => {
+  it("runs map code on Lua 5.3 with the editor-globals stub, one vitest test per it, a Native without a Stub answered by stubNative", () => {
     const project = copyProject();
     // No prior build and no generated folder: the run generates and compiles.
     fs.rmSync(path.join(project, "src", "generated"), {
@@ -91,35 +91,25 @@ describe("pnpm test: the Lua harness", () => {
         "",
       ].join("\n"),
     );
-    // A map-specific stub: GetRectCenterX only; GetRectCenterY stays unstubbed.
-    fs.mkdirSync(path.join(project, "tests", "stubs"), { recursive: true });
-    fs.writeFileSync(
-      path.join(project, "tests", "stubs", "rects.lua"),
-      [
-        "function GetRectCenterX(whichRect)",
-        '  __stub_record("GetRectCenterX", whichRect)',
-        "  return (whichRect.minX + whichRect.maxX) / 2",
-        "end",
-        "",
-      ].join("\n"),
-    );
     fs.writeFileSync(
       path.join(project, "tests", "lua", "spawn.test.ts"),
       [
-        "/** @noSelfInFile */",
-        'import { describe, expect, it, stubCalls } from "reforged-test/lua";',
+        'import { describe, expect, it, stubNative } from "reforged-test/map";',
         'import { spawnCount, spawnPoint } from "../../src/spawn";',
+        "// GetRectCenterX only: GetRectCenterY stays without a Stub.",
+        'stubNative("GetRectCenterX", () => 128);',
         'describe("spawn", () => {',
         '  it("reads the editor variable from the generated stub", () => {',
         "    expect(spawnCount()).toBe(3);",
         "  });",
-        '  it("fails on a Native no stub defines", () => {',
+        '  it("fails on a Native without a Stub", () => {',
         "    gg_rct_Spawn = Rect(0, 0, 256, 512);",
         "    spawnPoint();",
         "  });",
-        '  it("uses the map-specific stub", () => {',
-        "    expect(GetRectCenterX(gg_rct_Spawn)).toBe(128);",
-        '    expect(stubCalls()).toContainCall("GetRectCenterX(rect#1048577)");',
+        '  it("answers a Native with stubNative", () => {',
+        "    const spawn = Rect(0, 0, 256, 512);",
+        "    expect(GetRectCenterX(spawn)).toBe(128);",
+        "    expect(GetRectCenterX).toHaveBeenCalledWith(spawn);",
         "  });",
         "});",
         "",
@@ -129,8 +119,7 @@ describe("pnpm test: the Lua harness", () => {
     fs.writeFileSync(
       path.join(project, "tests", "lua", "map-own.test.ts"),
       [
-        "/** @noSelfInFile */",
-        'import { describe, expect, it } from "reforged-test/lua";',
+        'import { describe, expect, it } from "reforged-test/map";',
         'describe("the map\'s own test", () => {',
         '  it("passes", () => {',
         "    expect(1 + 1).toBe(2);",
@@ -147,18 +136,18 @@ describe("pnpm test: the Lua harness", () => {
     expect([...byName.keys()], run.output).toEqual(
       expect.arrayContaining([
         "tests/lua/main.test.ts the starter source prints its line when the game starts",
-        "tests/lua/main.test.ts the starter source runs the Subscription's handler when a unit dies",
-        "tests/lua/main.test.ts the starter source starts a Timer repeating every 60 seconds",
+        "tests/lua/main.test.ts the starter source prints the name of a unit that dies",
+        "tests/lua/main.test.ts the starter source counts the minutes played",
         "tests/lua/spawn.test.ts spawn reads the editor variable from the generated stub",
-        "tests/lua/spawn.test.ts spawn fails on a Native no stub defines",
-        "tests/lua/spawn.test.ts spawn uses the map-specific stub",
+        "tests/lua/spawn.test.ts spawn fails on a Native without a Stub",
+        "tests/lua/spawn.test.ts spawn answers a Native with stubNative",
       ]),
     );
     // The map's own test ran and passed.
     expect(
       byName.get("tests/lua/map-own.test.ts the map's own test passes")?.status,
     ).toBe("passed");
-    // The starter's test still passes beside a second map-specific stub file.
+    // The starter's test still passes beside the other test files.
     for (const test of run.tests.filter((test) =>
       test.fullName.startsWith("tests/lua/main.test.ts"),
     )) {
@@ -170,21 +159,16 @@ describe("pnpm test: the Lua harness", () => {
       )?.status,
     ).toBe("passed");
     expect(
-      byName.get("tests/lua/spawn.test.ts spawn uses the map-specific stub")
-        ?.status,
+      byName.get(
+        "tests/lua/spawn.test.ts spawn answers a Native with stubNative",
+      )?.status,
     ).toBe("passed");
     const unstubbed = byName.get(
-      "tests/lua/spawn.test.ts spawn fails on a Native no stub defines",
+      "tests/lua/spawn.test.ts spawn fails on a Native without a Stub",
     );
     expect(unstubbed?.status).toBe("failed");
-    // reforged-test 1.0.0-alpha.13 names the Native as "Native X is not
-    // stubbed", and later versions as "X is a Native reforged-test does not
-    // stub: give it an answer with stubNative(…)" (phmilk/reforged-ts#990):
-    // the library's Template gate installs the next version, this
-    // repository the published one (#163). Keep the second alone once
-    // package.json installs reforged-test 1.0.0-alpha.16 or later.
     expect(unstubbed?.failureMessages.join("\n")).toMatch(
-      /Native GetRectCenterY is not stubbed|GetRectCenterY is a Native reforged-test does not stub: give it an answer with stubNative\("GetRectCenterY"/,
+      /GetRectCenterY is a Native reforged-test does not stub: give it an answer with stubNative\("GetRectCenterY"/,
     );
     expect(run.status).toBe(1);
     // The generated folder was written by the run itself.
