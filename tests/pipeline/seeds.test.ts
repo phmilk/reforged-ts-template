@@ -61,6 +61,10 @@ const AGENTS_SECTIONS = [
   "Your project",
 ];
 
+/** The library's guide to a Map project's tests. */
+const TESTING_GUIDE =
+  "https://phmilk.github.io/reforged-ts/docs/next/guides/testing-your-map";
+
 /** The cap of spec phmilk/reforged-ts-template#4: an agent loads the whole file on every turn. */
 const AGENTS_MAX_LINES = 120;
 
@@ -168,6 +172,23 @@ describe("AGENTS.md", () => {
     );
   });
 
+  it("states how a test is written, on reforged-test/map (#153)", () => {
+    const testing = section(agents, "Testing");
+    for (const text of [
+      "Import from `reforged-test/map`",
+      "one `startGame()` per test",
+      "Game actions",
+      "`game.advanceTime`",
+      "`game.fire` only for what they do not cover",
+      "what the player observes",
+      "A Native without a Stub goes through `stubNative`",
+      `(${TESTING_GUIDE})`,
+    ])
+      expect(testing, text).toContain(text);
+    for (const text of ["tests/stubs", "__stub_", "reforged-test/lua"])
+      expect(agents, text).not.toContain(text);
+  });
+
   it("fits in the line cap", () => {
     expect(agents.trimEnd().split("\n").length).toBeLessThanOrEqual(
       AGENTS_MAX_LINES,
@@ -211,6 +232,23 @@ describe("the Agent skills", () => {
       expect(skill).toMatch(/^1\. \S/m);
     },
   );
+
+  it("map-feature tests on reforged-test/map, in one line (#153)", () => {
+    const skill = readRepoFile(".claude/skills/map-feature/SKILL.md");
+    const lines = skill
+      .split("\n")
+      .filter((line) => line.includes("reforged-test/map"));
+    expect(lines).toHaveLength(1);
+    for (const text of [
+      "`startGame()`",
+      "Game actions",
+      "`game.advanceTime`",
+      "`game.fire`",
+      "what the player observes",
+      "`stubNative`",
+    ])
+      expect(lines[0], text).toContain(text);
+  });
 
   it.each(SKILLS)("%s is listed in AGENTS.md by its path", (name) => {
     expect(section(agents, "Agent skills")).toContain(
