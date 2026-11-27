@@ -52,10 +52,12 @@ on:
 permissions:
   contents: read
 
-# Runs queue per event and ref, never cancelled: a dry run from a branch
-# neither waits for nor cancels a release's run.
+# Runs queue per event, ref and, for a release, the Template branch its
+# payload names, never cancelled: a dry run from a branch neither waits for
+# nor cancels a release's run, and a release of one channel never replaces
+# the pending run of the other (GitHub keeps one pending run per group).
 concurrency:
-  group: sync-${{ github.event_name }}-${{ github.ref }}
+  group: sync-${{ github.event_name }}-${{ github.ref }}-${{ github.event.client_payload.branch }}
   cancel-in-progress: false
 
 jobs:

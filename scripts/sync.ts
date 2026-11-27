@@ -1,8 +1,9 @@
 // The sync: applies a reforged-ts release to the Template's files. The
 // library's release workflow dispatches a payload (the released versions,
-// the tag and three URLs) to the Template's sync workflow
-// (.github/workflows/sync.yml), which runs this script, builds, checks and
-// opens a pull request with its summary.
+// the tag, the Template branch of the release's channel and three URLs) to
+// the Template's sync workflow (.github/workflows/sync.yml), which runs this
+// script on that branch, builds, checks and opens a pull request against it
+// with its summary.
 // Template maintenance: a generated Map project deletes it (see AGENTS.md).
 import fs from "node:fs";
 import path from "node:path";
@@ -493,9 +494,9 @@ const USAGE =
  * run from the repository root by the sync workflow. Reads the dispatch
  * payload from the JSON file, syncs, prints the summary and, with
  * `--summary`, also writes it to that file (the pull request's body). With
- * `--check`, it checks the payload and syncs nothing: the workflow learns the
- * branch to check out before it syncs. In GitHub Actions it also sets the
- * step outputs `branch`, `title` and `base` (`pullRequestNames`).
+ * `--check`, it checks the payload, syncs nothing and, in GitHub Actions,
+ * sets the step outputs `branch`, `title` and `base` (`pullRequestNames`):
+ * the workflow learns the branch to check out before it syncs.
  */
 await runAsEntry(import.meta.url, "sync", async () => {
   const args = process.argv.slice(2);
@@ -531,5 +532,4 @@ await runAsEntry(import.meta.url, "sync", async () => {
   const result = await syncRepository(process.cwd(), release);
   if (summaryFile !== undefined) fs.writeFileSync(summaryFile, result.summary);
   console.log(result.summary);
-  writeGithubOutputs(pullRequestNames(release));
 });

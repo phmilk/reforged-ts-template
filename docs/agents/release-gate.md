@@ -19,13 +19,13 @@ What that asks of the Template:
 
 The overrides, the lockfile they produce and the build output stay in the throwaway clone. None of it is ever committed here.
 
-During the alpha phase the install prints unmet-peer warnings: the library's packages declare their peer ranges as `^1.0.0`, which no `1.0.0-alpha.N` satisfies. The install still succeeds (exit 0) and the gate goes on. The fix, prerelease-aware peer ranges, belongs in the library.
+During the build phase the install prints unmet-peer warnings: the library's packages declare their peer ranges as `^1.0.0`, which no `1.0.0-alpha.N` satisfies. The install still succeeds (exit 0) and the gate goes on. The fix, prerelease-aware peer ranges, belongs in the library.
 
 ## The ranges and the lockfile
 
 `package.json` declares the seven library packages as `^<latest released version>`: on each library release the sync (`scripts/sync.ts`) sets them to the versions it released. During the build phase each is at a caret range on its latest alpha (`^1.0.0-alpha.N`), the alphas being published under npm's `latest` dist-tag. A caret range on a prerelease admits later prereleases of the same `major.minor.patch` only (`^1.0.0-alpha.0` matches `1.0.0-alpha.3`, not `1.1.0-alpha.0`), and any later release of that major.
 
-The lockfile is committed, from a plain `pnpm install` against the registry after the library's first `next` publish; `pnpm install --frozen-lockfile` installs it on a fresh clone. The sync workflow keeps it following the ranges: after the sync it runs `pnpm update` on the seven library packages (a non-frozen `pnpm install` would keep a locked version the new range no longer admits), checks the result with `pnpm install --frozen-lockfile`, and commits the refreshed lockfile in the same sync pull request.
+The lockfile is committed, from a plain `pnpm install` against the registry after the library's first publish; `pnpm install --frozen-lockfile` installs it on a fresh clone. The sync workflow keeps it following the ranges: after the sync it runs `pnpm update` on the seven library packages (a non-frozen `pnpm install` would keep a locked version the new range no longer admits), checks the result with `pnpm install --frozen-lockfile`, and commits the refreshed lockfile in the same sync pull request.
 
 ## Installing tarballs without committing them
 

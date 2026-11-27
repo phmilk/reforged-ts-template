@@ -27,13 +27,20 @@ describe("README.md", () => {
     );
     expect(commands.join("")).toContain("npx create-reforged-map my-map");
     expect(commands.filter((block) => block.includes("@next"))).toEqual([]);
-    expect(readme).not.toMatch(/Write `@next`/);
   });
 
-  it("names no `next` dist-tag for the build phase outside the synced matrix", () => {
+  it("puts no alpha under the `next` dist-tag outside the synced matrix", () => {
     const { from, to } = locateBlock(readme, "matrix");
-    const prose = readme.slice(0, from) + readme.slice(to);
-    expect(prose).not.toMatch(/`next` (?:dist-tag|channel)/);
+    const sentences = (readme.slice(0, from) + readme.slice(to)).split(
+      /(?<=\.)\s/,
+    );
+    expect(
+      sentences.filter(
+        (sentence) =>
+          sentence.includes("alpha") &&
+          /`next` (?:dist-tag|channel)/.test(sentence),
+      ),
+    ).toEqual([]);
   });
 
   it("holds the llms.txt link between the docs markers", () => {

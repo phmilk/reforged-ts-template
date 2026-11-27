@@ -696,6 +696,14 @@ describe("the sync workflow", () => {
       );
   });
 
+  // GitHub keeps one pending run per concurrency group: a release of one
+  // channel never replaces the pending sync of the other.
+  it("queues a release's run with the releases of its own channel alone", () => {
+    expect(workflow).toMatch(
+      /^ {2}group: sync-\$\{\{ github\.event_name \}\}-\$\{\{ github\.ref \}\}-\$\{\{ github\.event\.client_payload\.branch \}\}$/m,
+    );
+  });
+
   it("opens the pull request against the Template branch the payload names", () => {
     const pullRequest = jobs(workflow).get("pull-request") ?? "";
     expect(pullRequest).toContain("ref: ${{ needs.sync.outputs.base }}");
