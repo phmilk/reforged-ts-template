@@ -2,7 +2,7 @@
 
 A Map project template: a Warcraft III 3.0.1 map whose code is TypeScript compiled to Lua with typescript-to-lua and [reforged-ts](https://github.com/phmilk/reforged-ts). You write the map's code in `src`, `pnpm build` appends it to the script the World Editor saved and packs the map, and `pnpm test:map` opens it in the game. The World Editor owns the map's data (terrain, object data, placed units); this repository owns the code, and the types of object it declares as [Object definitions](#object-definitions). The way the build works (the editor's map folder, the code appended to its script, the archive packed) comes from cipherxof's [wc3-ts-template](https://github.com/cipherxof/wc3-ts-template) (MIT).
 
-**Status: under construction.** The Template is being built in the open specs of its issue tracker, at https://github.com/phmilk/reforged-ts-template/issues. The library packages are published as alphas under npm's `next` dist-tag (see [the library packages](#the-library-packages)); the documentation site is not live yet: its links, the `llms.txt` one included, are placeholders until it is.
+**Status: under construction.** The Template is being built in the open specs of its issue tracker, at https://github.com/phmilk/reforged-ts-template/issues. The library packages are published as alphas under npm's `latest` dist-tag, like stable versions (see [the library packages](#the-library-packages)); the documentation site is not live yet: its links, the `llms.txt` one included, are placeholders until it is.
 
 ## Requirements
 
@@ -19,11 +19,11 @@ On Linux the game runs through Wine: set `winePath` in `reforged.config.ts`.
 The Creation CLI, [`create-reforged-map`](https://github.com/phmilk/reforged-ts/tree/master/packages/create-reforged-map), makes a Map project from the Template in one command. Run it from the folder to create the project in; it makes the project's own folder, `my-map` here:
 
 ```sh
-npx create-reforged-map@next my-map   # or: pnpm create reforged-map@next my-map
+npx create-reforged-map my-map   # or: pnpm create reforged-map my-map
 cd my-map
 ```
 
-In a terminal it asks for the project name, the folder's name when left blank, and a one-line description of the map. Then it downloads the Template into `my-map`, writes the name into `package.json` and this README, names the map folder after it (`my-map.w3m`, at the project root) and points `mapFolder` in `reforged.config.ts` at it, writes the description, when given, there and into `AGENTS.md`'s "Your project", makes the folder a git repository, installs the packages, runs `pnpm template:detach` to remove the files that serve only the Template's own development, and makes a first commit. It needs pnpm, and git unless `--skip-git`; [its README](https://github.com/phmilk/reforged-ts/tree/master/packages/create-reforged-map#usage) lists the other options. Write `@next` until 1.0.0: npm keeps `latest` on the first alpha, so a bare `npx create-reforged-map` runs that one.
+In a terminal it asks for the project name, the folder's name when left blank, and a one-line description of the map. Then it downloads the Template into `my-map`, writes the name into `package.json` and this README, names the map folder after it (`my-map.w3m`, at the project root) and points `mapFolder` in `reforged.config.ts` at it, writes the description, when given, there and into `AGENTS.md`'s "Your project", makes the folder a git repository, installs the packages, runs `pnpm template:detach` to remove the files that serve only the Template's own development, and makes a first commit. It needs pnpm, and git unless `--skip-git`; [its README](https://github.com/phmilk/reforged-ts/tree/master/packages/create-reforged-map#usage) lists the other options. During the build phase it runs the newest alpha, which npm's `latest` names.
 
 The other way in is GitHub's **Use this template**, which shows your repository as generated from the Template:
 
@@ -220,7 +220,7 @@ The type-aware rules find each file's program through the nearest `tsconfig.json
 
 ## The library packages
 
-The Template depends on seven packages of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts): `reforged-ts` and `reforged-types` (the map's code), `reforged-test` (the Lua test harness), `eslint-plugin-reforged` (the lint rules), `reforged-map` (the map folder reader the build calls to write `src/generated`), [`reforged-builtins`](https://github.com/phmilk/reforged-ts/tree/master/packages/reforged-builtins) (the Built-in objects of the Patch: their constants, `Units.Footman_hfoo` from `reforged-builtins/units`, and the index `reforged-map` reads for base names) and [`reforged-studio`](https://github.com/phmilk/reforged-ts/tree/master/packages/reforged-studio) (the Studio `pnpm studio` starts, [below](#the-studio)). `package.json` declares the seven the same way, as caret ranges on the latest released versions, which the Template's sync sets on each library release. They are on the `next` channel, each at a caret range on its latest alpha (`^1.0.0-alpha.N`).
+The Template depends on seven packages of [phmilk/reforged-ts](https://github.com/phmilk/reforged-ts): `reforged-ts` and `reforged-types` (the map's code), `reforged-test` (the Lua test harness), `eslint-plugin-reforged` (the lint rules), `reforged-map` (the map folder reader the build calls to write `src/generated`), [`reforged-builtins`](https://github.com/phmilk/reforged-ts/tree/master/packages/reforged-builtins) (the Built-in objects of the Patch: their constants, `Units.Footman_hfoo` from `reforged-builtins/units`, and the index `reforged-map` reads for base names) and [`reforged-studio`](https://github.com/phmilk/reforged-ts/tree/master/packages/reforged-studio) (the Studio `pnpm studio` starts, [below](#the-studio)). `package.json` declares the seven the same way, as caret ranges on the latest released versions, which the Template's sync sets on each library release. During the build phase each is at a caret range on its latest alpha (`^1.0.0-alpha.N`), and `pnpm update` installs the newest alpha.
 
 ### The Built-in objects' overloads
 
@@ -232,7 +232,7 @@ The Template depends on seven packages of [phmilk/reforged-ts](https://github.co
 
 The map's own overloads in `src/generated/map-objects.d.ts` still win for a Built-in object the map modifies, so its hover gives the map's name.
 
-During the build phase the library publishes its packages as `1.0.0-alpha.N` under npm's `next` dist-tag. The committed lockfile pins the versions a fresh `pnpm install` gets from the registry. To try a library change before it is published, use a local checkout of the library (below).
+During the build phase the library publishes its packages as `1.0.0-alpha.N` under npm's `latest` dist-tag, like stable versions. The committed lockfile pins the versions a fresh `pnpm install` gets from the registry. To try a library change before it is published, use a local checkout of the library (below).
 
 ### Developing against a local checkout of the library
 
