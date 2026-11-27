@@ -60,10 +60,27 @@ export type SyncedFile = (typeof SYNCED_FILES)[number];
 /** The content of each synced file. */
 export type SyncFiles = Record<SyncedFile, string>;
 
+/**
+ * The Template's branches a release can name, one per Release channel of
+ * the library (its ADR 0031): `main` for a release from `master`, `next` for
+ * one from the Next branch.
+ */
+export const TEMPLATE_BRANCHES = ["main", "next"] as const;
+
+export type TemplateBranch = (typeof TEMPLATE_BRANCHES)[number];
+
+const isTemplateBranch = (value: unknown): value is TemplateBranch =>
+  TEMPLATE_BRANCHES.some((name) => name === value);
+
 /** What the library's release sends: the Template computes none of it. */
 export interface ReleasePayload {
   /** The release's git tag in the library repository. */
   tag: string;
+  /**
+   * The Template's branch of the release's channel: the sync applies the
+   * release to it and opens its sync pull request against it.
+   */
+  branch: TemplateBranch;
   versions: ReleasedVersions;
   /**
    * The raw URL of the library's glossary at the tag, read whatever the file
@@ -132,15 +149,17 @@ function branchComponent(tag: string): string {
 }
 
 /**
- * The sync pull request's branch and title, from a checked payload. The
- * title names the package the release's tag names (`<package>@<version>`,
+ * The sync pull request's branch, title and base, from a checked payload.
+ * The title names the package the release's tag names (`<package>@<version>`,
  * the first of the seven the release published): a release without the
  * library is titled after the package it released. A tag that names no
- * package of `versions` at its version titles after reforged-ts.
+ * package of `versions` at its version titles after reforged-ts. The base is
+ * the payload's `branch`, the Template branch of the release's channel.
  */
 export function pullRequestNames(payload: ReleasePayload): {
   branch: string;
   title: string;
+  base: TemplateBranch;
 } {
   const at = payload.tag.lastIndexOf("@");
   const tagged = LIBRARY_PACKAGES.find(
@@ -152,6 +171,7 @@ export function pullRequestNames(payload: ReleasePayload): {
   return {
     branch: `sync/${payload.tag}`,
     title: `chore(deps): ${name} ${payload.versions[name]}`,
+    base: payload.branch,
   };
 }
 
@@ -176,6 +196,11 @@ export function parsePayload(value: unknown): ReleasePayload {
       );
     return found;
   };
+  const branch = value.branch;
+  if (!isTemplateBranch(branch))
+    throw new AuthorError(
+      `the payload's \`branch\` names no Template branch of a Release channel (\`main\` or \`next\`): ${branch === undefined ? "none" : JSON.stringify(branch)}`,
+    );
   const versions = value.versions;
   if (!isRecord(versions))
     throw new AuthorError("the payload has no `versions` object.");
@@ -196,6 +221,7 @@ export function parsePayload(value: unknown): ReleasePayload {
     );
   return {
     tag: branchComponent(requiredString("tag")),
+    branch,
     versions: parsed,
     contextUrl: httpsUrl("contextUrl"),
     matrixUrl: httpsUrl("matrixUrl"),
@@ -459,26 +485,32 @@ export async function syncRepository(
   return result;
 }
 
-const USAGE = "Usage: node scripts/sync.ts <payload.json> [--summary <file>]";
+const USAGE =
+  "Usage: node scripts/sync.ts <payload.json> [--check | --summary <file>]";
 
 /**
- * Command line: `node scripts/sync.ts <payload.json> [--summary <file>]`, run
- * from the repository root by the sync workflow. Reads the dispatch payload
- * from the JSON file, syncs, prints the summary and, with `--summary`, also
- * writes it to that file (the pull request's body). In GitHub Actions it also
- * sets the step outputs `branch` and `title` (`pullRequestNames`).
+ * Command line: `node scripts/sync.ts <payload.json> [--check | --summary <file>]`,
+ * run from the repository root by the sync workflow. Reads the dispatch
+ * payload from the JSON file, syncs, prints the summary and, with
+ * `--summary`, also writes it to that file (the pull request's body). With
+ * `--check`, it checks the payload and syncs nothing: the workflow learns the
+ * branch to check out before it syncs. In GitHub Actions it also sets the
+ * step outputs `branch`, `title` and `base` (`pullRequestNames`).
  */
 await runAsEntry(import.meta.url, "sync", async () => {
   const args = process.argv.slice(2);
+  const check = args.includes("--check");
   const summaryAt = args.indexOf("--summary");
   const summaryFile = summaryAt === -1 ? undefined : args[summaryAt + 1];
-  const rest =
-    summaryAt === -1
-      ? args
-      : args.filter((_, i) => i !== summaryAt && i !== summaryAt + 1);
+  const rest = args.filter(
+    (arg, i) =>
+      arg !== "--check" &&
+      (summaryAt === -1 || (i !== summaryAt && i !== summaryAt + 1)),
+  );
   if (
     rest.length !== 1 ||
     rest[0].startsWith("-") ||
+    (check && summaryAt !== -1) ||
     (summaryAt !== -1 && (summaryFile === undefined || summaryFile === ""))
   )
     throw new AuthorError(USAGE);
@@ -491,6 +523,11 @@ await runAsEntry(import.meta.url, "sync", async () => {
     );
   }
   const release = parsePayload(payload);
+  if (check) {
+    console.log(`The release syncs the Template's ${release.branch}.`);
+    writeGithubOutputs(pullRequestNames(release));
+    return;
+  }
   const result = await syncRepository(process.cwd(), release);
   if (summaryFile !== undefined) fs.writeFileSync(summaryFile, result.summary);
   console.log(result.summary);
