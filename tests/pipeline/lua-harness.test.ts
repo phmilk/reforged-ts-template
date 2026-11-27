@@ -181,7 +181,8 @@ describe("pnpm test: the Lua harness", () => {
     // stubbed", and later versions as "X is a Native reforged-test does not
     // stub: give it an answer with stubNative(…)" (phmilk/reforged-ts#990):
     // the library's Template gate installs the next version, this
-    // repository the published one (#163).
+    // repository the published one (#163). Keep the second alone once
+    // package.json installs reforged-test 1.0.0-alpha.16 or later.
     expect(unstubbed?.failureMessages.join("\n")).toMatch(
       /Native GetRectCenterY is not stubbed|GetRectCenterY is a Native reforged-test does not stub: give it an answer with stubNative\("GetRectCenterY"/,
     );
