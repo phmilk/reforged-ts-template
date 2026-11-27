@@ -12,9 +12,8 @@ This repository is a Map project: a Warcraft III 3.0.1 map whose code is TypeScr
 - `pnpm test:map`: builds (dev mode unless `--mode release`), then launches the game on the packed archive.
 - `pnpm studio`: starts the Studio on the map folder, with the game `pnpm test:map` finds and the World Editor beside it, and opens its page; until Ctrl+C. The author's tool (see Object definitions).
 - `pnpm test`: runs the map's tests and the Template's pipeline tests, without the game (see Testing).
-- `pnpm check`: lint, type check and tests, stopping at the first failure.
-
-A task is finished when `pnpm check` is green.
+- `pnpm check`: lint, type check and tests, stopping at the first failure. A task is finished when it is green.
+- `pnpm update`: updates the packages, the library's among them, to the newest versions the ranges of `package.json` admit, and the lockfile with them. A beta of the library, its packages at `@next`, is installed only when the author asks for one.
 
 ## Layout
 
