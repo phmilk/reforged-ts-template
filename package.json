@@ -48,7 +48,7 @@
     "reforged-builtins": "^1.0.0-alpha.8",
     "reforged-map": "^1.0.0-alpha.11",
     "reforged-studio": "^1.0.0-alpha.9",
-    "reforged-test": "^1.0.0-alpha.13",
+    "reforged-test": "^1.0.0-alpha.16",
     "typescript": "6.0.2",
     "typescript-eslint": "^8.70.1",
     "typescript-to-lua": "^1.37.1",
