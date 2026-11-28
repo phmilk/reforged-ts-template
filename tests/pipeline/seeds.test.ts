@@ -168,6 +168,17 @@ describe("AGENTS.md", () => {
     );
   });
 
+  it("says in one line of its Commands how the project updates, and that a beta waits for the author (phmilk/reforged-ts#1062)", () => {
+    // In Commands, a section a generated Map project keeps: its Agent reads it.
+    const lines = section(agents, "Commands")
+      .split("\n")
+      .filter((line) => line.includes("`pnpm update`"));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/^- `pnpm update`: /);
+    expect(lines[0]).toContain("`@next`");
+    expect(lines[0]).toContain("only when the author asks for one");
+  });
+
   it("fits in the line cap", () => {
     expect(agents.trimEnd().split("\n").length).toBeLessThanOrEqual(
       AGENTS_MAX_LINES,

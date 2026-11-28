@@ -6,7 +6,7 @@ The Template is the Map project the library tests its releases against: no relea
 
 ## What the gate does to a Template checkout
 
-1. **The clone.** It clones the Template at `v<major>` of the library version it releases. Every 1.x, alphas included, maps to `v1`. There is no fallback to `main`: a missing ref stops the release.
+1. **The clone.** It clones the Template at the Template branch of the release's Release channel (the library's ADR 0031): `main` for a release from the library's `master`, `next` for one from its Next branch. A missing branch stops the release.
 2. **The install.** It writes one `overrides` entry into the clone's `pnpm-workspace.yaml` per package the release publishes, pointing at that package's tarball (`file:<tarball>`), then runs `pnpm install --no-frozen-lockfile`: the overrides change the committed lockfile's configuration, so a frozen install would refuse them. It checks that the Template's direct dependencies resolved to the packed versions. A package the release does not publish comes from npm.
 3. **The commands.** It runs the scripts `build --mode release`, `lint` and `test`, by name and in that order, and stops at the first one that fails or is missing.
 
@@ -19,13 +19,13 @@ What that asks of the Template:
 
 The overrides, the lockfile they produce and the build output stay in the throwaway clone. None of it is ever committed here.
 
-During the alpha phase the install prints unmet-peer warnings: the library's packages declare their peer ranges as `^1.0.0`, which no `1.0.0-alpha.N` satisfies. The install still succeeds (exit 0) and the gate goes on. The fix, prerelease-aware peer ranges, belongs in the library.
+During the build phase the install prints unmet-peer warnings: the library's packages declare their peer ranges as `^1.0.0`, which no `1.0.0-alpha.N` satisfies. The install still succeeds (exit 0) and the gate goes on. The fix, prerelease-aware peer ranges, belongs in the library.
 
 ## The ranges and the lockfile
 
-`package.json` declares the seven library packages as `^<latest released version>`: on each library release the sync (`scripts/sync.ts`) sets them to the versions it released. They are on the `next` channel, each at a caret range on its latest alpha (`^1.0.0-alpha.N`). The floor matters, not just the channel: when npm's `latest` dist-tag satisfies a range, pnpm installs it rather than the highest match, and `latest` still names `1.0.0-alpha.0`, the one-time manual first publish. `^1.0.0-alpha.0` would install that one. A caret range on a prerelease admits later prereleases of the same `major.minor.patch` only (`^1.0.0-alpha.0` matches `1.0.0-alpha.3`, not `1.1.0-alpha.0`), and any later release of that major.
+`package.json` declares the seven library packages as `^<latest released version>`: on each library release the sync (`scripts/sync.ts`) sets them to the versions it released. During the build phase each is at a caret range on its latest alpha (`^1.0.0-alpha.N`), the alphas being published under npm's `latest` dist-tag. A caret range on a prerelease admits later prereleases of the same `major.minor.patch` only (`^1.0.0-alpha.0` matches `1.0.0-alpha.3`, not `1.1.0-alpha.0`), and any later release of that major.
 
-The lockfile is committed, from a plain `pnpm install` against the registry after the library's first `next` publish; `pnpm install --frozen-lockfile` installs it on a fresh clone. The sync workflow keeps it following the ranges: after the sync it runs `pnpm update` on the seven library packages (a non-frozen `pnpm install` would keep a locked version the new range no longer admits), checks the result with `pnpm install --frozen-lockfile`, and commits the refreshed lockfile in the same sync pull request.
+The lockfile is committed, from a plain `pnpm install` against the registry after the library's first publish; `pnpm install --frozen-lockfile` installs it on a fresh clone. The sync workflow keeps it following the ranges: after the sync it runs `pnpm update` on the seven library packages (a non-frozen `pnpm install` would keep a locked version the new range no longer admits), checks the result with `pnpm install --frozen-lockfile`, and commits the refreshed lockfile in the same sync pull request.
 
 ## Installing tarballs without committing them
 
@@ -48,17 +48,12 @@ git clone --branch main https://github.com/phmilk/reforged-ts-template.git ../t
 pnpm release:template-gate --template ../t --pack-dir ../pack
 ```
 
-Clone the branch under test in place of `main` (the release itself clones `v<major>`). Without the library's gate script, the same sequence by hand in the clone: add an `overrides` entry per tarball to its `pnpm-workspace.yaml` (`reforged-ts: file:<path to the tarball>`), then `pnpm install --no-frozen-lockfile`, `pnpm build --mode release`, `pnpm lint`, `pnpm test`. Delete the clone afterwards.
+Clone the branch under test in place of `main` (the release itself clones the Template branch of its channel). Without the library's gate script, the same sequence by hand in the clone: add an `overrides` entry per tarball to its `pnpm-workspace.yaml` (`reforged-ts: file:<path to the tarball>`), then `pnpm install --no-frozen-lockfile`, `pnpm build --mode release`, `pnpm lint`, `pnpm test`. Delete the clone afterwards.
 
 Never make that change in a working copy you commit from: a committed override points every Map project at a file that exists on one machine only (the absolute-path test fails on an absolute one, as the gate writes). The same goes for a lockfile written while the overrides or `use:local` were in effect.
 
-## One line per library major
+## One branch per Release channel
 
-- `main` tracks the current library major.
-- Each library major has a branch named after it (`v1`, `v2`). The gate clones `v<major>`, so the branch must exist before the major's first gated release.
-- During the current major, `v<major>` is kept up to date with `main`: the maintainer fast-forwards it (`git push origin main:v1`) before each gated release.
-- When a new library major starts, `v<previous major>` stops following `main` and is kept for that line; `main` moves on to the new major, and a new `v<major>` branch follows it.
-
-**The ref today:** `v1` exists as a tag on `main`, which the gate accepts as well as a branch. A tag is moved rather than fast-forwarded: before each gated release, `git tag -f v1 main && git push --force origin v1`. Replacing it with a `v1` branch (`git push origin :refs/tags/v1 main:refs/heads/v1`) turns that into the fast-forward above. The Template is public, so the gate clones it without a token.
-
-If the library's gate fell back to `main` for the current major, the fast-forward step would go away. That is a change to the library's gate, not to this repository.
+- `main` follows the library's stable line, its `master`. A release from `master` gates it, the Creation CLI it packs downloads it, and its sync opens its pull request against it.
+- `next` exists only while a library major is in preparation: it is cut from `main` when the library cuts its Next branch, a release from the library's `next` gates it and syncs it, and it is merged into `main` before the library's `next` merges into `master`, then deleted. The library's `docs/release.md`, "Release channels", holds the procedure.
+- No branch or tag is moved by hand before a release, and there is no `v<major>` line. The `v1` tag stays where it was last moved until a Ticket of phmilk/reforged-ts#1062 deletes it, once no Creation CLI on `latest` downloads it. The Template is public, so the gate clones it without a token.

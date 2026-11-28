@@ -1,9 +1,12 @@
 # The sync: when reforged-ts releases, its release workflow dispatches
 # `reforged-ts-release` here with the payload scripts/sync.ts consumes (the
-# released versions, the tag and three URLs). The job sync applies the
-# release, refreshes the lockfile, builds in release mode and runs
-# `pnpm check`; the job pull-request then opens a pull request a maintainer
-# merges. Any red step stops before the pull request opens; there is no
+# released versions, the tag, the Template branch of the release's channel
+# and three URLs). The job sync checks out that branch, `main` for a release
+# from the library's `master` and `next` for one from its Next branch,
+# applies the release, refreshes the lockfile, builds in release mode and
+# runs `pnpm check`; the job pull-request then opens a pull request against
+# that branch, which a maintainer merges. A payload without the branch is
+# refused. Any red step stops before the pull request opens; there is no
 # auto-merge.
 #
 # Template maintenance: a generated Map project deletes this file (see
@@ -29,10 +32,11 @@
 # Dry run with a fake payload:
 #   gh workflow run sync.yml --ref <branch> -f payload="$(cat payload.json)"
 # From a branch other than main, the job sync runs in full (sync, lockfile,
-# build, check) and the run stops before the pull request, saying so in a
-# notice: the job pull-request runs on main alone, since the environment
-# refuses any other ref. With --ref main, a dry run opens the pull request
-# as a release would.
+# build, check) on that branch, whatever branch the payload names, and the
+# run stops before the pull request, saying so in a notice: the job
+# pull-request runs on main alone, since the environment refuses any other
+# ref. With --ref main, a dry run syncs the payload's branch and opens the
+# pull request against it, as a release would.
 name: sync
 
 on:
@@ -48,10 +52,12 @@ on:
 permissions:
   contents: read
 
-# Runs queue per event and ref, never cancelled: a dry run from a branch
-# neither waits for nor cancels a release's run.
+# Runs queue per event, ref and, for a release, the Template branch its
+# payload names, never cancelled: a dry run from a branch neither waits for
+# nor cancels a release's run, and a release of one channel never replaces
+# the pending run of the other (GitHub keeps one pending run per group).
 concurrency:
-  group: sync-${{ github.event_name }}-${{ github.ref }}
+  group: sync-${{ github.event_name }}-${{ github.ref }}-${{ github.event.client_payload.branch }}
   cancel-in-progress: false
 
 jobs:
@@ -60,15 +66,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
-      branch: ${{ steps.sync.outputs.branch }}
-      title: ${{ steps.sync.outputs.title }}
+      branch: ${{ steps.payload.outputs.branch }}
+      title: ${{ steps.payload.outputs.title }}
+      base: ${{ steps.payload.outputs.base }}
     steps:
+      # The workflow's own ref, main for a release: its sync script checks
+      # the payload before the branch the payload names is checked out.
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-
-      # The pnpm version comes from package.json's packageManager.
-      - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v7
         with:
@@ -82,10 +88,26 @@ jobs:
         run: printf '%s' "$PAYLOAD" > "$RUNNER_TEMP/payload.json"
 
       # scripts/sync.ts imports only Node built-ins: it runs before any install.
-      # It checks the tag names a git branch and sets the outputs `branch`
-      # (sync/<tag>) and `title` (after the package and version the tag names).
+      # It checks the payload, the tag names a git branch and the branch is
+      # `main` or `next`, and sets the outputs `branch` (sync/<tag>), `title`
+      # (after the package and version the tag names) and `base` (the
+      # payload's `branch`, the Template branch of the release's channel).
+      - name: Check the payload
+        id: payload
+        run: node scripts/sync.ts "$RUNNER_TEMP/payload.json" --check
+
+      # A release syncs the Template branch of its channel, `main` or `next`.
+      # A dry run from another branch syncs that branch, so it tries the
+      # branch's own sync.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref == 'refs/heads/main' && steps.payload.outputs.base || github.ref }}
+          persist-credentials: false
+
+      # The pnpm version comes from package.json's packageManager.
+      - uses: pnpm/action-setup@v6
+
       - name: Sync
-        id: sync
         run: |
           node scripts/sync.ts "$RUNNER_TEMP/payload.json" --summary "$RUNNER_TEMP/summary.md"
           cat "$RUNNER_TEMP/summary.md" >> "$GITHUB_STEP_SUMMARY"
@@ -153,8 +175,11 @@ jobs:
             exit 1
           fi
 
+      # The Template branch the job sync synced, which the pull request
+      # targets.
       - uses: actions/checkout@v7
         with:
+          ref: ${{ needs.sync.outputs.base }}
           persist-credentials: false
 
       - uses: actions/download-artifact@v8
@@ -180,11 +205,12 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
 
-      # Only the synced files and the lockfile.
+      # Only the synced files and the lockfile, against the payload's branch.
       - name: Open the pull request
         uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ steps.app.outputs.token || secrets.SYNC_TOKEN }}
+          base: ${{ needs.sync.outputs.base }}
           branch: ${{ needs.sync.outputs.branch }}
           title: ${{ needs.sync.outputs.title }}
           commit-message: ${{ needs.sync.outputs.title }}
