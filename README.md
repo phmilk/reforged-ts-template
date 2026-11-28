@@ -62,6 +62,8 @@ The archive's name is the map folder's name without its suffix, then the `versio
 
 `pnpm lint` and `pnpm lint:fix` run ESLint alone ([Lint](#lint)), `pnpm typecheck` the TypeScript compiler alone, and `pnpm use:local <checkout>` installs the library from a local checkout ([below](#developing-against-a-local-checkout-of-the-library)).
 
+The map's tests live in `tests/lua`, `pnpm test:lua` runs them alone, and `tests/lua/main.test.ts` is the first one: written on `reforged-test/map`, each test starts a Test game of its own, makes things happen in it and checks what the player observes. The guide [Testing your map](https://phmilk.github.io/reforged-ts/docs/next/guides/testing-your-map) is the page to read.
+
 ## Toolchain
 
 How the map's TypeScript becomes the map script inside the packed archive. `pnpm build` runs the solid edges once, in the order of `scripts/build.ts`: stage the map folder, merge the Object definitions, write `src/generated/`, compile, compose the map script, pack. `pnpm dev` runs them again on every change, and `pnpm install` writes `src/generated/` without building. The dashed edges are no step of the build: lint checks the source, and the Lua tests load the stub of the Editor globals.

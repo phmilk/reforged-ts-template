@@ -85,6 +85,16 @@ const LIBRARY_ORDER = [
   "Object manifest",
   "Object adoption",
   "Object release",
+  "Test game",
+  "Stub",
+  "Game action",
+  "Event dispatch",
+  "Firing context",
+  "Dispatching Native",
+  "Game clock",
+  "Recorded call",
+  "Spy",
+  "Caught error",
 ];
 const libraryGlossary = (terms: readonly string[] = LIBRARY_ORDER) =>
   [

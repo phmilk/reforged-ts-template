@@ -19,7 +19,11 @@ declare module "vitest" {
   export interface ProvidedContext {
     /** The output folder of the compile, where the glue finds the tests. */
     outDir: string;
-    /** The stub files after the package's own, in load order (absolute). */
+    /**
+     * The stub files after the package's own (absolute): the stub of the
+     * Editor globals. A Native without a Stub is answered in the tests, with
+     * stubNative of reforged-test/map.
+     */
     stubs: string[];
     /** The error of the last generate or compile, or "" when none. */
     compileErrors: string;
@@ -30,8 +34,6 @@ const root = fileURLToPath(new URL("../../", import.meta.url));
 const tsconfig = path.join(root, "tests", "lua", "tsconfig.json");
 /** The outDir of tests/lua/tsconfig.json. */
 const outDir = path.join(root, "dist-test");
-/** The map-specific stubs. The package's stubs are never edited. */
-const mapStubs = path.join(root, "tests", "stubs");
 
 interface Prepared {
   stubs: string[];
@@ -50,19 +52,11 @@ async function prepare(): Promise<Prepared> {
       compileErrors: `Generating the Editor globals failed: ${error instanceof Error ? error.message : String(error)}`,
     };
   }
-  // The Editor globals first, so a map-specific stub can give a gg_ global a handle.
-  const stubs = [generatedStub, ...luaFilesIn(mapStubs)];
   fs.rmSync(outDir, { recursive: true, force: true });
-  return { stubs, compileErrors: compileLuaProject(tsconfig) };
-}
-
-function luaFilesIn(folder: string): string[] {
-  if (!fs.existsSync(folder)) return [];
-  return fs
-    .readdirSync(folder)
-    .filter((name) => name.endsWith(".lua"))
-    .sort()
-    .map((name) => path.join(folder, name));
+  return {
+    stubs: [generatedStub],
+    compileErrors: compileLuaProject(tsconfig),
+  };
 }
 
 function provide(project: TestProject, prepared: Prepared): void {

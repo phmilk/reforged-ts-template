@@ -8,6 +8,9 @@ import config from "../../reforged.config.ts";
 import { resolveConfig } from "../../scripts/config.ts";
 
 export const ROOT = path.resolve(fileURLToPath(import.meta.url), "../../..");
+/** The library's guide to a Map project's tests, which the Seeds and the README link. */
+export const TESTING_GUIDE =
+  "https://phmilk.github.io/reforged-ts/docs/next/guides/testing-your-map";
 /**
  * The map folder `reforged.config.ts` names, relative to the project root,
  * with forward slashes: the same in the repository and in a `copyProject()`

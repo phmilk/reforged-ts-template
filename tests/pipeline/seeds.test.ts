@@ -21,7 +21,7 @@ import {
 } from "../../scripts/detach.ts";
 import { ENV_FILE } from "../../scripts/generate.ts";
 import { endMarker, LIBRARY_TERMS } from "../../scripts/sync.ts";
-import { ROOT } from "./helpers.ts";
+import { ROOT, TESTING_GUIDE } from "./helpers.ts";
 import { markedBlock, readRepoFile } from "./sync-markers.ts";
 
 /** The `## ` headings of a Markdown file, in order, code blocks left out. */
@@ -168,6 +168,24 @@ describe("AGENTS.md", () => {
     );
   });
 
+  it("states how a test is written, on reforged-test/map (#153)", () => {
+    const testing = section(agents, "Testing");
+    for (const text of [
+      "Import from `reforged-test/map`",
+      "its library from `reforged-ts`",
+      "one `startGame()` per test",
+      "Game actions",
+      "`game.advanceTime`",
+      "`game.fire` only for what they do not cover",
+      "what the player observes",
+      "A Native without a Stub goes through `stubNative`",
+      `(${TESTING_GUIDE})`,
+    ])
+      expect(testing, text).toContain(text);
+    for (const text of ["tests/stubs", "__stub_", "reforged-test/lua"])
+      expect(agents, text).not.toContain(text);
+  });
+
   it("says in one line of its Commands how the project updates, and that a beta waits for the author (phmilk/reforged-ts#1062)", () => {
     // In Commands, a section a generated Map project keeps: its Agent reads it.
     const lines = section(agents, "Commands")
@@ -223,6 +241,23 @@ describe("the Agent skills", () => {
     },
   );
 
+  it("map-feature tests on reforged-test/map, in one line (#153)", () => {
+    const skill = readRepoFile(".claude/skills/map-feature/SKILL.md");
+    const lines = skill
+      .split("\n")
+      .filter((line) => line.includes("reforged-test/map"));
+    expect(lines).toHaveLength(1);
+    for (const text of [
+      "`startGame()`",
+      "Game actions",
+      "`game.advanceTime`",
+      "`game.fire`",
+      "what the player observes",
+      "`stubNative`",
+    ])
+      expect(lines[0], text).toContain(text);
+  });
+
   it.each(SKILLS)("%s is listed in AGENTS.md by its path", (name) => {
     expect(section(agents, "Agent skills")).toContain(
       `.claude/skills/${name}/SKILL.md`,
@@ -270,6 +305,29 @@ describe("GLOSSARY.md", () => {
     ]) {
       expect(LIBRARY_TERMS, term).toContain(term);
       expect(block, term).toContain(`\n**${term}**:\n`);
+    }
+  });
+
+  it("carries the terms of a map's tests, but Test control and Shipped stub (#153)", () => {
+    const block = markedBlock(glossary, "terms");
+    for (const term of [
+      "Test game",
+      "Stub",
+      "Game action",
+      "Event dispatch",
+      "Firing context",
+      "Dispatching Native",
+      "Game clock",
+      "Recorded call",
+      "Spy",
+      "Caught error",
+    ]) {
+      expect(LIBRARY_TERMS, term).toContain(term);
+      expect(block, term).toContain(`\n**${term}**:\n`);
+    }
+    for (const term of ["Test control", "Shipped stub"]) {
+      expect(LIBRARY_TERMS, term).not.toContain(term);
+      expect(block, term).not.toContain(`\n**${term}**:\n`);
     }
   });
 

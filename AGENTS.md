@@ -26,7 +26,7 @@ This repository is a Map project: a Warcraft III 3.0.1 map whose code is TypeScr
 - `reforged.config.ts`: the typed build configuration. It is committed, so it holds only what every machine shares.
 - `pnpm-workspace.yaml`: pnpm's settings. The project runs on pnpm 12 (`packageManager` in `package.json`; `npm install --global pnpm@12` installs it), which reads its settings nowhere else. A new dependency with an install script fails the install until `allowBuilds` lists it.
 - `src/generated/`: `env.ts` (the build mode); the Editor globals (`editor-globals.d.ts`, `editor-globals.lua` for the harness), the `gg_` and `udg_` globals of the map folder, which `reforged-map` declares from `war3map.lua` and `war3map.wtg`; and the map's objects, which it reads from the map folder's Object data: `map-objects.d.ts` (a `FourCC` overload per Custom object and per Built-in object the map modifies) and a constants module per Object kind (`custom-units.ts`, `custom-items.ts`, `custom-abilities.ts`, `custom-buffs.ts`, `custom-destructables.ts`, `custom-doodads.ts`, `custom-upgrades.ts`). Rewritten by every install and build. Read-only: change the config or the map instead.
-- `tests/lua/`: the map's tests on the harness; `tests/stubs/`: the extra Native stubs they need.
+- `tests/lua/`: the map's tests (see Testing).
 - `dist/` and `dist-test/`: build output (the map, the compiled Lua tests), ignored by git.
 
 ## Runtime constraints
@@ -76,7 +76,7 @@ A disable comment without a reason fails lint. Saving applies only the automatic
 
 ## Testing
 
-The map's tests live in `tests/lua` and run on the `reforged-test` harness (`pnpm test:lua` runs them alone): real Lua 5.3 with the Natives stubbed. The stubs record every Native call with its arguments, give each Handle a stable identity and let a test fire triggers and timers. The harness stands in for the Natives only, not for the engine: pathing, combat, rendering and object data are absent, and its integers are 64-bit. A Native no stub defines fails with "Native X is not stubbed": stub it in `tests/stubs`. What only the game can answer is verified with `pnpm test:map`.
+The map's tests live in `tests/lua` and run on the `reforged-test` harness (`pnpm test:lua` runs them alone): real Lua 5.3, each Native answered by its Stub. The harness stands in for the Natives only, not for the engine: pathing, combat, rendering and object data are absent, and its integers are 64-bit. What only the game can answer is verified with `pnpm test:map`. Import from `reforged-test/map` everything of the test API (`describe`, `it`, `expect`, `startGame`, `stubNative` and the rest), the map's code from `src` and its library from `reforged-ts`. Call one `startGame()` per test: each test runs in a Test game of its own, its units created with the map's own API. Act with Game actions (`game.kill`, `game.chat`, `game.select`, `game.deselect`, `game.leave`) and move time with `game.advanceTime`; use `game.fire` only for what they do not cover. Assert what the player observes: `game.printed`, `game.displayed`, and the Natives the map called, as `expect(TimerStart).toHaveBeenCalledWith(…)`. A Native without a Stub goes through `stubNative`, in a module the tests import. The rules in full: [Testing your map](https://phmilk.github.io/reforged-ts/docs/next/guides/testing-your-map).
 
 ## Domain docs
 

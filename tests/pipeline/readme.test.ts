@@ -5,6 +5,7 @@
 // Template maintenance, deleted with the rest of it (see AGENTS.md).
 import { describe, expect, it } from "vitest";
 import { locateBlock } from "../../scripts/sync.ts";
+import { TESTING_GUIDE } from "./helpers.ts";
 import { markedBlock, readRepoFile } from "./sync-markers.ts";
 
 describe("README.md", () => {
@@ -18,6 +19,12 @@ describe("README.md", () => {
 
   it("holds the compatibility matrix between the matrix markers", () => {
     expect(markedBlock(readme, "matrix").trim()).not.toBe("");
+  });
+
+  it("links the guide to the map's tests and names no stub file of its own (#153)", () => {
+    expect(readme).toContain(`(${TESTING_GUIDE})`);
+    for (const text of ["tests/stubs", "stubs.d.ts", "__stub_"])
+      expect(readme, text).not.toContain(text);
   });
 
   // During the build phase the alphas are on `latest` (phmilk/reforged-ts#1062).

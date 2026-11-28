@@ -46,6 +46,18 @@ export const LIBRARY_TERMS = [
   "Object manifest",
   "Object adoption",
   "Object release",
+  // A map's tests (phmilk/reforged-ts#970): all but Test control and Shipped
+  // stub, which only the library's own tests and Stubs use.
+  "Test game",
+  "Stub",
+  "Game action",
+  "Event dispatch",
+  "Firing context",
+  "Dispatching Native",
+  "Game clock",
+  "Recorded call",
+  "Spy",
+  "Caught error",
 ] as const;
 
 /** The files the sync rewrites, relative to the repository root. */
