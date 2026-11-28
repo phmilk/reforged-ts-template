@@ -172,6 +172,7 @@ describe("AGENTS.md", () => {
     const testing = section(agents, "Testing");
     for (const text of [
       "Import from `reforged-test/map`",
+      "its library from `reforged-ts`",
       "one `startGame()` per test",
       "Game actions",
       "`game.advanceTime`",
