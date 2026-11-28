@@ -4,6 +4,7 @@
 // In a generated Map project the README is the author's own: this test is
 // Template maintenance, deleted with the rest of it (see AGENTS.md).
 import { describe, expect, it } from "vitest";
+import { locateBlock } from "../../scripts/sync.ts";
 import { TESTING_GUIDE } from "./helpers.ts";
 import { markedBlock, readRepoFile } from "./sync-markers.ts";
 
@@ -24,6 +25,30 @@ describe("README.md", () => {
     expect(readme).toContain(`(${TESTING_GUIDE})`);
     for (const text of ["tests/stubs", "stubs.d.ts", "__stub_"])
       expect(readme, text).not.toContain(text);
+  });
+
+  // During the build phase the alphas are on `latest` (phmilk/reforged-ts#1062).
+  it("installs from the build phase's `latest`: no command names `@next`", () => {
+    const commands = [...readme.matchAll(/^```sh\n([\s\S]*?)^```$/gm)].map(
+      ([, block]) => block,
+    );
+    expect(commands.join("")).toContain("npx create-reforged-map my-map");
+    expect(commands.filter((block) => block.includes("@next"))).toEqual([]);
+  });
+
+  it("puts no alpha under the `next` dist-tag, nor asks `@next` for one, outside the synced matrix", () => {
+    const { from, to } = locateBlock(readme, "matrix");
+    const sentences = (readme.slice(0, from) + readme.slice(to)).split(
+      /(?<=\.)\s/,
+    );
+    expect(
+      sentences.filter(
+        (sentence) =>
+          sentence.includes("alpha") &&
+          (/`next` (?:dist-tag|channel)/.test(sentence) ||
+            sentence.includes("`@next`")),
+      ),
+    ).toEqual([]);
   });
 
   it("holds the llms.txt link between the docs markers", () => {

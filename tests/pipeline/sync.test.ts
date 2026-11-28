@@ -35,6 +35,7 @@ const LLMS_URL = "https://phmilk.github.io/reforged-ts/1.2/llms.txt";
 
 const payload = (): ReleasePayload => ({
   tag: "reforged-ts@1.2.0",
+  branch: "main",
   versions: {
     "reforged-ts": "1.2.0",
     "reforged-types": "1.1.0",
@@ -407,6 +408,24 @@ describe("the release payload", () => {
     expect(() => parsePayload({ ...payload(), ...change })).toThrow(message);
   });
 
+  it.each(["main", "next"] as const)(
+    "accepts the Template branch %s of the release's channel",
+    (branch) => {
+      expect(parsePayload({ ...payload(), branch }).branch).toBe(branch);
+    },
+  );
+
+  it.each([
+    ["no branch", undefined],
+    ["an empty branch", ""],
+    ["a branch of no Release channel", "v1"],
+    ["a branch that is not a string", 1],
+  ])("refuses %s, naming the field and both branches", (_, branch) => {
+    expect(() => parsePayload({ ...payload(), branch })).toThrow(
+      /`branch`.*`main`.*`next`/,
+    );
+  });
+
   it.each([
     ["an empty tag", ""],
     ["a tag with ..", "reforged-ts@1..2"],
@@ -433,6 +452,22 @@ describe("the release payload", () => {
     expect(pullRequestNames(payload())).toEqual({
       branch: "sync/reforged-ts@1.2.0",
       title: "chore(deps): reforged-ts 1.2.0",
+      base: "main",
+    });
+  });
+
+  it("opens the pull request of a release from the Next branch against the Template's next", () => {
+    expect(
+      pullRequestNames({
+        ...payload(),
+        tag: "reforged-ts@2.0.0-beta.1",
+        branch: "next",
+        versions: { ...payload().versions, "reforged-ts": "2.0.0-beta.1" },
+      }),
+    ).toEqual({
+      branch: "sync/reforged-ts@2.0.0-beta.1",
+      title: "chore(deps): reforged-ts 2.0.0-beta.1",
+      base: "next",
     });
   });
 
@@ -442,6 +477,7 @@ describe("the release payload", () => {
     ).toEqual({
       branch: "sync/reforged-types@1.1.0",
       title: "chore(deps): reforged-types 1.1.0",
+      base: "main",
     });
   });
 
@@ -528,6 +564,65 @@ describe("the sync command", () => {
     expect(result.stderr).toMatch(/sync failed: .*tag/);
   });
 
+  it.each(["main", "next"] as const)(
+    "with --check, sets the step outputs of a release to %s and syncs nothing",
+    (branch) => {
+      // A folder without the synced files: a sync, or a fetch, would fail.
+      const dir = makeTempDir();
+      const file = path.join(dir, "payload.json");
+      const outputs = path.join(dir, "github-output");
+      fs.writeFileSync(file, JSON.stringify({ ...payload(), branch }));
+      fs.writeFileSync(outputs, "");
+      const result = runScript(
+        dir,
+        path.join(ROOT, "scripts/sync.ts"),
+        [file, "--check"],
+        { GITHUB_OUTPUT: outputs },
+      );
+      expect(result.stderr).toBe("");
+      expect(result.status).toBe(0);
+      expect(fs.readFileSync(outputs, "utf8")).toBe(
+        [
+          "branch=sync/reforged-ts@1.2.0",
+          "title=chore(deps): reforged-ts 1.2.0",
+          `base=${branch}`,
+          "",
+        ].join("\n"),
+      );
+      expect(fs.readdirSync(dir).sort()).toEqual(
+        ["github-output", "payload.json"].sort(),
+      );
+    },
+  );
+
+  it("with --check, refuses a payload without a branch and sets no step output", () => {
+    const dir = makeTempDir();
+    const file = path.join(dir, "payload.json");
+    const outputs = path.join(dir, "github-output");
+    fs.writeFileSync(file, JSON.stringify({ ...payload(), branch: undefined }));
+    fs.writeFileSync(outputs, "");
+    const result = runScript(
+      dir,
+      path.join(ROOT, "scripts/sync.ts"),
+      [file, "--check"],
+      { GITHUB_OUTPUT: outputs },
+    );
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/sync failed: .*`branch`/);
+    expect(fs.readFileSync(outputs, "utf8")).toBe("");
+  });
+
+  it("refuses --check beside --summary", () => {
+    const result = runScript(ROOT, "scripts/sync.ts", [
+      "payload.json",
+      "--check",
+      "--summary",
+      "summary.md",
+    ]);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Usage:");
+  });
+
   it("sets no step output when the tag cannot name a branch", () => {
     const dir = makeTempDir();
     const file = path.join(dir, "payload.json");
@@ -588,6 +683,41 @@ describe("the sync workflow", () => {
     expect(sync).toContain("pnpm check");
     expect(sync).not.toMatch(/secrets\./);
     expect(sync).not.toMatch(/^ {4}environment:/m);
+  });
+
+  it("checks the payload, then syncs the Template branch it names, or a dry run's own branch", () => {
+    const sync = jobs(workflow).get("sync") ?? "";
+    const check = sync.indexOf(
+      'node scripts/sync.ts "$RUNNER_TEMP/payload.json" --check',
+    );
+    const checkout = sync.indexOf(
+      "ref: ${{ github.ref == 'refs/heads/main' && steps.payload.outputs.base || github.ref }}",
+    );
+    const syncStep = sync.indexOf(
+      'node scripts/sync.ts "$RUNNER_TEMP/payload.json" --summary',
+    );
+    expect(check).toBeGreaterThan(0);
+    expect(checkout).toBeGreaterThan(check);
+    expect(syncStep).toBeGreaterThan(checkout);
+    expect(sync).toMatch(/^ {8}id: payload$/m);
+    for (const output of ["branch", "title", "base"])
+      expect(sync).toContain(
+        `${output}: \${{ steps.payload.outputs.${output} }}`,
+      );
+  });
+
+  // GitHub keeps one pending run per concurrency group: a release of one
+  // channel never replaces the pending sync of the other.
+  it("queues a release's run with the releases of its own channel alone", () => {
+    expect(workflow).toMatch(
+      /^ {2}group: sync-\$\{\{ github\.event_name \}\}-\$\{\{ github\.ref \}\}-\$\{\{ github\.event\.client_payload\.branch \}\}$/m,
+    );
+  });
+
+  it("opens the pull request against the Template branch the payload names", () => {
+    const pullRequest = jobs(workflow).get("pull-request") ?? "";
+    expect(pullRequest).toContain("ref: ${{ needs.sync.outputs.base }}");
+    expect(pullRequest).toContain("base: ${{ needs.sync.outputs.base }}");
   });
 
   it("opens the pull request on main alone, in the environment board, after the sync", () => {
