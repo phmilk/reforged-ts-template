@@ -21,7 +21,7 @@ import {
 } from "../../scripts/detach.ts";
 import { ENV_FILE } from "../../scripts/generate.ts";
 import { endMarker, LIBRARY_TERMS } from "../../scripts/sync.ts";
-import { ROOT } from "./helpers.ts";
+import { ROOT, TESTING_GUIDE } from "./helpers.ts";
 import { markedBlock, readRepoFile } from "./sync-markers.ts";
 
 /** The `## ` headings of a Markdown file, in order, code blocks left out. */
@@ -60,10 +60,6 @@ const AGENTS_SECTIONS = [
   "Template maintenance",
   "Your project",
 ];
-
-/** The library's guide to a Map project's tests. */
-const TESTING_GUIDE =
-  "https://phmilk.github.io/reforged-ts/docs/next/guides/testing-your-map";
 
 /** The cap of spec phmilk/reforged-ts-template#4: an agent loads the whole file on every turn. */
 const AGENTS_MAX_LINES = 120;

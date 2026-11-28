@@ -1,7 +1,7 @@
 // The starter source's test, on reforged-test/map: each `it` runs in a Test
-// game of its own, which it starts with startGame(), makes things happen in
-// with Game actions and game.advanceTime, and checks by what the player
-// observes. The guide: https://phmilk.github.io/reforged-ts/docs/next/guides/testing-your-map
+// game of its own, starts it with startGame(), acts in it with Game actions
+// and game.advanceTime, and checks what the player observes. The guide:
+// https://phmilk.github.io/reforged-ts/docs/next/guides/testing-your-map
 
 import { describe, expect, it, startGame } from "reforged-test/map";
 import { MapPlayer, Unit } from "reforged-ts";

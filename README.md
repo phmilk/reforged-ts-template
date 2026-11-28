@@ -62,7 +62,7 @@ The archive's name is the map folder's name without its suffix, then the `versio
 
 `pnpm lint` and `pnpm lint:fix` run ESLint alone ([Lint](#lint)), `pnpm typecheck` the TypeScript compiler alone, and `pnpm use:local <checkout>` installs the library from a local checkout ([below](#developing-against-a-local-checkout-of-the-library)).
 
-The map's tests live in `tests/lua`, `pnpm test:lua` runs them alone, and `tests/lua/main.test.ts` is the first one: written on `reforged-test/map`, each test starts a game of its own, makes things happen in it and checks what the player observes. The guide [Testing your map](https://phmilk.github.io/reforged-ts/docs/next/guides/testing-your-map) is the page to read.
+The map's tests live in `tests/lua`, `pnpm test:lua` runs them alone, and `tests/lua/main.test.ts` is the first one: written on `reforged-test/map`, each test starts a Test game of its own, makes things happen in it and checks what the player observes. The guide [Testing your map](https://phmilk.github.io/reforged-ts/docs/next/guides/testing-your-map) is the page to read.
 
 ## Toolchain
 

@@ -4,6 +4,7 @@
 // In a generated Map project the README is the author's own: this test is
 // Template maintenance, deleted with the rest of it (see AGENTS.md).
 import { describe, expect, it } from "vitest";
+import { TESTING_GUIDE } from "./helpers.ts";
 import { markedBlock, readRepoFile } from "./sync-markers.ts";
 
 describe("README.md", () => {
@@ -20,9 +21,7 @@ describe("README.md", () => {
   });
 
   it("links the guide to the map's tests and names no stub file of its own (#153)", () => {
-    expect(readme).toContain(
-      "(https://phmilk.github.io/reforged-ts/docs/next/guides/testing-your-map)",
-    );
+    expect(readme).toContain(`(${TESTING_GUIDE})`);
     for (const text of ["tests/stubs", "stubs.d.ts", "__stub_"])
       expect(readme, text).not.toContain(text);
   });
